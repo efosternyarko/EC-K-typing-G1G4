@@ -33,9 +33,11 @@ The database contains **46 reference K-loci** (K24, K96, KL300-KL343) extracted 
 | File | Description |
 |------|-------------|
 | `DB/EC-K-typing_group1and4_v1.0.fasta` | Reference locus sequences (FASTA) |
+| `DB/EC-K-typing_group1and4_v1.0.gbk` | Annotated reference loci (GenBank, Kaptive-compatible) |
 | `DB/KL_G1G4_mapping.tsv` | KL nomenclature mapping (KL name, KX origin, source assembly, length) |
 | `DB/cluster_info.tsv` | Clustering details (cluster members, representative sequences) |
 | `scripts/build_G1G4_db.py` | Pipeline script for locus extraction and database construction |
+| `scripts/annotate_loci.py` | Annotation script (pyrodigal gene prediction + BLAST annotation) |
 | `flanking_genes/flanking_genes.fasta` | Flanking gene marker sequences used for locus detection |
 
 ### Nomenclature
@@ -65,14 +67,16 @@ The database contains **46 reference K-loci** (K24, K96, KL300-KL343) extracted 
 
 ### With Kaptive
 
-To use with [Kaptive](https://github.com/klebgenomics/Kaptive) for K-locus typing, the reference loci need to be annotated (e.g., with Prokka) and converted to GenBank format. A combined database covering all four groups can then be created:
+The GenBank file (`DB/EC-K-typing_group1and4_v1.0.gbk`) is ready for use with [Kaptive](https://github.com/klebgenomics/Kaptive). To create a combined database covering all four capsule groups:
 
 ```bash
-cat EC-K-typing_group2and3_v3.0.0.gbk EC-K-typing_G1G4_v1.0.gbk \
+cat EC-K-typing_group2and3_v3.0.0.gbk DB/EC-K-typing_group1and4_v1.0.gbk \
   > EC-K-typing_all_groups_v1.0.gbk
 
 kaptive assembly -k EC-K-typing_all_groups_v1.0.gbk -a genome.fasta
 ```
+
+Gene predictions were generated using [pyrodigal](https://github.com/althonos/pyrodigal) (metagenomic mode) with known capsule pathway genes (*galF*, *gnd*, *ugd*, *wza*, *wzc*) annotated via tBLASTn against *E. coli* K-12 MG1655 reference sequences.
 
 ### With BLAST
 
