@@ -34,6 +34,8 @@ The database contains **46 reference K-loci** (K24, K96, KL300-KL343) extracted 
 |------|-------------|
 | `DB/EC-K-typing_group1and4_v1.0.fasta` | Reference locus sequences (FASTA) |
 | `DB/EC-K-typing_group1and4_v1.0.gbk` | Annotated reference loci (GenBank, Kaptive-compatible) |
+| `DB/EC-K-typing_all_groups_v1.0.gbk` | **Combined database** — all 4 capsule groups (136 loci, Kaptive-ready) |
+| `DB/EC-K-typing_group2and3_v3.0.0.gbk` | Gladstone Group 2 & 3 database (90 loci, included for convenience) |
 | `DB/KL_G1G4_mapping.tsv` | KL nomenclature mapping (KL name, KX origin, source assembly, length) |
 | `DB/cluster_info.tsv` | Clustering details (cluster members, representative sequences) |
 | `scripts/build_G1G4_db.py` | Pipeline script for locus extraction and database construction |
@@ -67,16 +69,15 @@ The database contains **46 reference K-loci** (K24, K96, KL300-KL343) extracted 
 
 ### With Kaptive
 
-The GenBank file (`DB/EC-K-typing_group1and4_v1.0.gbk`) is ready for use with [Kaptive](https://github.com/klebgenomics/Kaptive). To create a combined database covering all four capsule groups:
+A pre-built combined database (`DB/EC-K-typing_all_groups_v1.0.gbk`) covering all four capsule groups (136 loci) is included and ready for direct use with [Kaptive](https://github.com/klebgenomics/Kaptive):
 
 ```bash
-cat EC-K-typing_group2and3_v3.0.0.gbk DB/EC-K-typing_group1and4_v1.0.gbk \
-  > EC-K-typing_all_groups_v1.0.gbk
-
-kaptive assembly -k EC-K-typing_all_groups_v1.0.gbk -a genome.fasta
+kaptive assembly -k DB/EC-K-typing_all_groups_v1.0.gbk -a genome.fasta
 ```
 
-Gene predictions were generated using [pyrodigal](https://github.com/althonos/pyrodigal) (metagenomic mode) with known capsule pathway genes (*galF*, *gnd*, *ugd*, *wza*, *wzc*) annotated via tBLASTn against *E. coli* K-12 MG1655 reference sequences.
+The combined database merges:
+- **Group 2 & 3:** 90 loci (KL1–KL175) from [Gladstone et al.](https://github.com/rgladstone/EC-K-typing) — annotated with Bakta + Panaroo
+- **Group 1 & 4:** 46 loci (K24, K96, KL300–KL343) from this study — annotated with [pyrodigal](https://github.com/althonos/pyrodigal) (metagenomic mode), known capsule pathway genes (*galF*, *gnd*, *ugd*, *wza*, *wzc*) identified via tBLASTn against *E. coli* K-12 MG1655 reference sequences
 
 ### With BLAST
 
