@@ -21,11 +21,12 @@ Groups 1 and 4 share the Wzy-dependent polymerisation pathway. Their capsule bio
 
 ### Reference loci
 
-The database contains **42 reference K-loci** (K96, KL300-KL340) extracted from bloodstream infection *E. coli* isolates:
+The database contains **46 reference K-loci** (K24, K96, KL300-KL343) extracted from bloodstream infection *E. coli* isolates:
 
 - **Size range:** 33.4 - 46.1 kb
-- **Total sequence:** 1.62 Mb
+- **Total sequence:** 1.77 Mb
 - **Clustering threshold:** 95% nucleotide identity, 80% query coverage
+- **KX types covered:** 19 of 20 FastKaptive-assigned types
 
 ### Files
 
@@ -41,8 +42,8 @@ The database contains **42 reference K-loci** (K96, KL300-KL340) extracted from 
 
 | KL designation | Description |
 |----------------|-------------|
-| K96 | Direct K-type call (known capsule type) |
-| KL300-KL340 | Novel locus types identified in this study |
+| K24, K96 | Direct K-type calls (known capsule types) |
+| KL300-KL343 | Novel locus types identified in this study |
 
 ## Methods
 
@@ -56,8 +57,8 @@ The database contains **42 reference K-loci** (K96, KL300-KL340) extracted from 
 
 ### Source data
 
-- 207 genome assemblies downloaded from the European Nucleotide Archive (ENA)
-- Assemblies from untypeable isolates in the [Gladstone et al.](https://www.medrxiv.org/content/10.1101/2024.11.22.24317484v1) *E. coli* bloodstream infection collection
+- 219 genome assemblies from the *E. coli* bloodstream infection collection (207 downloaded from ENA + 12 from EnteroBase)
+- Untypeable isolates from [Gladstone et al.](https://www.medrxiv.org/content/10.1101/2024.11.22.24317484v1) that did not match the Group 2 & 3 database
 - Initial K-locus type assignments from [FastKaptive](https://github.com/rmostowy/fastKaptive)
 
 ## Usage
