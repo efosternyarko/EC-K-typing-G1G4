@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """
-Annotate Group 1/4 K-locus reference sequences and generate Kaptive-compatible GenBank file.
+Annotate Group 1/4 K-locus reference sequences using Klebsiella K-locus gene models.
 
-Uses pyrodigal for gene prediction and BLAST for known gene annotation.
+Uses pyrodigal for gene prediction, then BLASTs predicted CDS against the
+Klebsiella K-locus reference database CDS to transfer gene names.
+This provides much richer annotation than flanking-genes-only, enabling
+Kaptive to discriminate between loci effectively.
 """
 
 import os
@@ -21,9 +24,10 @@ from Bio.SeqFeature import SeqFeature, FeatureLocation
 # Paths
 DB_DIR = "/Users/LSHEF4/Dropbox/work_2025/e_coli_db/db_build/database"
 FASTA_FILE = os.path.join(DB_DIR, "EC-K-typing_group1and4_v1.0.fasta")
-FLANKING_GENES = "/Users/LSHEF4/Dropbox/work_2025/e_coli_db/db_build/flanking_genes/flanking_genes.fasta"
-OUTPUT_GBK = os.path.join(DB_DIR, "EC-K-typing_group1and4_v1.0.gbk")
 MAPPING_FILE = os.path.join(DB_DIR, "KL_G1G4_mapping.tsv")
+OUTPUT_GBK = os.path.join(DB_DIR, "EC-K-typing_group1and4_v1.0.gbk")
+
+KLEB_REF_GBK = "/tmp/kleb_k_ref.gbk"
 
 
 def load_mapping():
@@ -34,51 +38,93 @@ def load_mapping():
         for line in f:
             parts = line.strip().split('\t')
             if len(parts) >= 4:
-                kl, kx_origin, source_asm, length = parts[0], parts[1], parts[2], parts[3]
-                mapping[kl] = {
-                    'kx_origin': kx_origin,
-                    'source_assembly': source_asm,
-                    'length': int(length)
+                mapping[parts[0]] = {
+                    'kx_origin': parts[1],
+                    'source_assembly': parts[2],
+                    'length': int(parts[3])
                 }
     return mapping
 
 
-def predict_genes(sequence):
-    """Predict genes using pyrodigal in metagenomic mode."""
+def extract_kleb_reference_proteins():
+    """Extract all CDS protein sequences from Klebsiella K-locus reference database.
+
+    Returns dict: gene_name -> (product, [protein_sequences])
+    Also writes a combined protein FASTA for BLAST.
+    """
+    gene_info = {}  # gene_name -> product
+    proteins = []   # list of (gene_name, protein_seq, unique_id)
+
+    idx = 0
+    for rec in SeqIO.parse(KLEB_REF_GBK, 'genbank'):
+        for f in rec.features:
+            if f.type == 'CDS' and 'gene' in f.qualifiers:
+                gene = f.qualifiers['gene'][0]
+                product = f.qualifiers.get('product', ['hypothetical protein'])[0]
+
+                # Extract and translate
+                nuc_seq = f.location.extract(rec.seq)
+                if len(nuc_seq) % 3 != 0:
+                    continue
+                try:
+                    prot_seq = str(nuc_seq.translate(to_stop=True))
+                except Exception:
+                    continue
+
+                if len(prot_seq) < 20:
+                    continue
+
+                if gene not in gene_info:
+                    gene_info[gene] = product
+
+                proteins.append((gene, prot_seq, f"ref_{idx}"))
+                idx += 1
+
+    # Write protein FASTA
+    ref_prot_file = tempfile.NamedTemporaryFile(
+        mode='w', suffix='.faa', delete=False, prefix='kleb_ref_'
+    )
+    for gene, prot, uid in proteins:
+        ref_prot_file.write(f">{uid} {gene}\n{prot}\n")
+    ref_prot_file.close()
+
+    # Build BLAST database
+    subprocess.run(
+        ['makeblastdb', '-in', ref_prot_file.name, '-dbtype', 'prot'],
+        capture_output=True
+    )
+
+    # Create lookup: uid -> (gene_name, product)
+    uid_to_gene = {uid: (gene, gene_info[gene]) for gene, _, uid in proteins}
+
+    return ref_prot_file.name, uid_to_gene
+
+
+def predict_and_annotate(sequence, ref_db, uid_to_gene):
+    """Predict genes with pyrodigal and annotate via BLAST against Klebsiella reference.
+
+    Returns list of (start, end, strand, gene_name, product).
+    """
     orf_finder = pyrodigal.GeneFinder(meta=True)
     genes = orf_finder.find_genes(bytes(sequence))
-    return genes
 
+    # Write predicted proteins to temp file
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.faa', delete=False) as pf:
+        prot_file = pf.name
+        for i, gene in enumerate(genes):
+            prot = gene.translate()
+            if prot and prot[-1] == '*':
+                prot = prot[:-1]
+            pf.write(f">cds_{i}\n{prot}\n")
 
-def blast_annotate(predicted_proteins, flanking_fasta):
-    """BLAST predicted proteins against known capsule genes to annotate them.
-
-    Uses tblastn: protein query vs nucleotide subject (flanking genes).
-    Returns dict mapping protein_index -> (gene_name, product, identity).
-    """
-    annotations = {}
-
-    # Write predicted proteins to temp FASTA
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.faa', delete=False) as prot_f:
-        prot_file = prot_f.name
-        for i, (prot_seq, start, end, strand) in enumerate(predicted_proteins):
-            prot_f.write(f">gene_{i}\n{prot_seq}\n")
-
-    # Known gene products
-    gene_products = {
-        'galF': 'UTP--glucose-1-phosphate uridylyltransferase',
-        'gnd': 'UDP-glucose 6-dehydrogenase Gnd',
-        'ugd': 'UDP-glucose 6-dehydrogenase Ugd',
-        'wza': 'Polysaccharide export outer membrane protein Wza',
-        'wzc': 'Tyrosine-protein kinase Wzc',
-    }
+    # BLAST against Klebsiella reference
+    annotations = {}  # gene_index -> (gene_name, product, identity, coverage)
 
     try:
-        # Run tblastn: protein query vs nucleotide subject
         result = subprocess.run(
-            ['tblastn', '-query', prot_file, '-subject', flanking_fasta,
-             '-outfmt', '6 qseqid sseqid pident qcovs evalue',
-             '-evalue', '1e-10'],
+            ['blastp', '-query', prot_file, '-db', ref_db,
+             '-outfmt', '6 qseqid sseqid pident qcovs evalue bitscore',
+             '-evalue', '1e-5', '-max_target_seqs', '5'],
             capture_output=True, text=True
         )
 
@@ -86,45 +132,59 @@ def blast_annotate(predicted_proteins, flanking_fasta):
             if not line:
                 continue
             parts = line.split('\t')
-            qid, sid, pident, qcovs, evalue = parts
+            qid = parts[0]  # cds_N
+            sid = parts[1]  # ref_N
+            pident = float(parts[2])
+            qcovs = float(parts[3])
+            bitscore = float(parts[5])
+
             gene_idx = int(qid.split('_')[1])
-            pident = float(pident)
-            qcovs = float(qcovs)
+            ref_gene, ref_product = uid_to_gene.get(sid, (None, None))
 
-            # Accept hits with >=50% identity and >=70% coverage
-            if pident >= 50 and qcovs >= 70:
-                gene_name = sid  # flanking gene names are the FASTA headers
-                product = gene_products.get(gene_name, gene_name)
+            if ref_gene is None:
+                continue
 
-                # Keep best hit per gene
-                if gene_idx not in annotations or pident > annotations[gene_idx][2]:
-                    annotations[gene_idx] = (gene_name, product, pident)
+            # Accept hits with >=30% identity and >=50% coverage
+            if pident >= 30 and qcovs >= 50:
+                # Keep best hit by bitscore
+                if gene_idx not in annotations or bitscore > annotations[gene_idx][3]:
+                    annotations[gene_idx] = (ref_gene, ref_product, pident, bitscore)
 
     finally:
         os.unlink(prot_file)
 
-    return annotations
+    # Build result list
+    result_genes = []
+    for i, gene in enumerate(genes):
+        start = gene.begin - 1  # 0-based
+        end = gene.end
+        strand = gene.strand
+
+        # Fix CDS length
+        cds_len = end - start
+        if cds_len % 3 != 0:
+            excess = cds_len % 3
+            if strand == 1:
+                end -= excess
+            else:
+                start += excess
+
+        if end - start < 60:
+            continue
+
+        if i in annotations:
+            gene_name, product, pident, _ = annotations[i]
+        else:
+            gene_name = None
+            product = 'hypothetical protein'
+
+        result_genes.append((start, end, strand, gene_name, product))
+
+    return result_genes
 
 
-def create_genbank_record(locus_name, sequence, source_assembly, kx_origin):
-    """Create a Kaptive-compatible GenBank record for one locus."""
-
-    # Predict genes
-    genes = predict_genes(sequence)
-
-    # Collect predicted proteins for BLAST annotation
-    predicted_proteins = []
-    for gene in genes:
-        prot = gene.translate()
-        # Remove trailing stop if present
-        if prot and prot[-1] == '*':
-            prot = prot[:-1]
-        predicted_proteins.append((prot, gene.begin, gene.end, gene.strand))
-
-    # BLAST annotate against known genes
-    annotations = blast_annotate(predicted_proteins, FLANKING_GENES)
-
-    # Create SeqRecord
+def create_genbank_record(locus_name, sequence, source_assembly, gene_list):
+    """Create a Kaptive-compatible GenBank record."""
     record = SeqRecord(
         Seq(str(sequence)),
         id=f"{locus_name}_{source_assembly}",
@@ -142,7 +202,7 @@ def create_genbank_record(locus_name, sequence, source_assembly, kx_origin):
     ]
     record.annotations['source'] = 'Escherichia coli'
 
-    # Source feature (mandatory for Kaptive)
+    # Source feature
     source_qualifiers = OrderedDict()
     source_qualifiers['organism'] = ['Escherichia coli']
     source_qualifiers['mol_type'] = ['genomic DNA']
@@ -156,49 +216,25 @@ def create_genbank_record(locus_name, sequence, source_assembly, kx_origin):
     record.features.append(source_feature)
 
     # CDS features
-    gene_name_counts = {}  # Track gene name usage for uniqueness
+    gene_name_counts = {}
 
-    for i, gene in enumerate(genes):
-        # pyrodigal uses 1-based coordinates; BioPython uses 0-based
-        start = gene.begin - 1  # Convert to 0-based
-        end = gene.end
-        strand = gene.strand  # 1 or -1
-
-        # Check CDS length is multiple of 3
-        cds_len = end - start
-        if cds_len % 3 != 0:
-            # Trim to nearest multiple of 3
-            excess = cds_len % 3
-            if strand == 1:
-                end -= excess
-            else:
-                start += excess
-
-        # Skip if too short after trimming
-        if end - start < 60:
-            continue
-
-        # Gene number (1-based, zero-padded)
+    for i, (start, end, strand, gene_name, product) in enumerate(gene_list):
         gene_num = str(i + 1).zfill(5)
         locus_tag = f"{locus_name}_{gene_num}"
 
-        # Get annotation from BLAST
-        if i in annotations:
-            gene_name, product, _ = annotations[i]
-            # Ensure unique gene names
+        # Ensure unique gene names within this locus
+        display_gene = gene_name
+        if gene_name:
             if gene_name in gene_name_counts:
                 gene_name_counts[gene_name] += 1
-                gene_name = f"{gene_name}_{gene_name_counts[gene_name]}"
+                display_gene = f"{gene_name}_{gene_name_counts[gene_name]}"
             else:
                 gene_name_counts[gene_name] = 1
-        else:
-            gene_name = None
-            product = 'hypothetical protein'
 
         qualifiers = OrderedDict()
         qualifiers['locus_tag'] = [locus_tag]
-        if gene_name:
-            qualifiers['gene'] = [gene_name]
+        if display_gene:
+            qualifiers['gene'] = [display_gene]
         qualifiers['product'] = [product]
 
         cds_feature = SeqFeature(
@@ -212,61 +248,79 @@ def create_genbank_record(locus_name, sequence, source_assembly, kx_origin):
 
 
 def main():
-    print("Loading K-locus mapping...")
+    print("Loading Klebsiella K-locus reference proteins...")
+    ref_db, uid_to_gene = extract_kleb_reference_proteins()
+    print(f"  Built BLAST database with {len(uid_to_gene)} reference proteins")
+
     mapping = load_mapping()
 
-    print(f"Reading reference loci from {FASTA_FILE}...")
+    print(f"\nReading reference loci from {FASTA_FILE}...")
     records = list(SeqIO.parse(FASTA_FILE, 'fasta'))
     print(f"  Found {len(records)} loci")
 
     genbank_records = []
 
     for rec in records:
-        # Parse locus name from FASTA header: "K96 (K96/KX17) 46066bp from ERR4035267"
-        locus_name = rec.id  # e.g., "K96"
+        locus_name = rec.id
 
-        # Get metadata from mapping
         if locus_name in mapping:
             source_assembly = mapping[locus_name]['source_assembly']
-            kx_origin = mapping[locus_name]['kx_origin']
         else:
             source_assembly = 'unknown'
-            kx_origin = 'UNK'
 
-        print(f"  Annotating {locus_name} ({len(rec.seq)} bp)...")
+        print(f"  Annotating {locus_name} ({len(rec.seq)} bp)...", end='')
 
-        gbk_record = create_genbank_record(locus_name, rec.seq, source_assembly, kx_origin)
+        gene_list = predict_and_annotate(rec.seq, ref_db, uid_to_gene)
+
+        n_cds = len(gene_list)
+        n_annotated = sum(1 for g in gene_list if g[3] is not None)
+        print(f" {n_cds} CDS, {n_annotated} annotated ({100*n_annotated/n_cds:.0f}%)")
+
+        gbk_record = create_genbank_record(locus_name, rec.seq, source_assembly, gene_list)
         genbank_records.append(gbk_record)
 
-        # Count annotated vs hypothetical
-        n_cds = sum(1 for f in gbk_record.features if f.type == 'CDS')
-        n_annotated = sum(1 for f in gbk_record.features
-                         if f.type == 'CDS' and 'gene' in f.qualifiers)
-        print(f"    -> {n_cds} CDS predicted, {n_annotated} with known gene names")
+    # Clean up temp files
+    os.unlink(ref_db)
+    for ext in ['.phr', '.pin', '.psq', '.pdb', '.pot', '.ptf', '.pto']:
+        try:
+            os.unlink(ref_db + ext)
+        except FileNotFoundError:
+            pass
 
-    # Write GenBank file
     print(f"\nWriting GenBank file to {OUTPUT_GBK}...")
     with open(OUTPUT_GBK, 'w') as out:
         SeqIO.write(genbank_records, out, 'genbank')
 
-    print(f"Done! {len(genbank_records)} loci annotated.")
-
-    # Validate: check the output can be parsed back
+    # Validate
     print("\nValidation:")
+    import re
+    _LOCUS_REGEX = re.compile(r'(?<=locus:)\w+|(?<=locus: ).*')
+
     parsed = list(SeqIO.parse(OUTPUT_GBK, 'genbank'))
-    print(f"  Parsed back {len(parsed)} records from GenBank file")
+    all_ok = True
+    total_cds = 0
+    total_annotated = 0
 
     for rec in parsed:
         n_cds = sum(1 for f in rec.features if f.type == 'CDS')
-        has_source = any(f.type == 'source' for f in rec.features)
-        source_notes = []
-        for f in rec.features:
-            if f.type == 'source' and 'note' in f.qualifiers:
-                source_notes = f.qualifiers['note']
-        locus_match = any('locus:' in n or 'locus: ' in n for n in source_notes)
-        status = 'OK' if (has_source and locus_match and n_cds > 0) else 'ISSUE'
-        print(f"  [{status}] {rec.id}: {n_cds} CDS, source={'yes' if has_source else 'NO'}, "
-              f"locus_note={'yes' if locus_match else 'NO'}")
+        n_ann = sum(1 for f in rec.features if f.type == 'CDS' and 'gene' in f.qualifiers)
+        total_cds += n_cds
+        total_annotated += n_ann
+
+        source = [f for f in rec.features if f.type == 'source']
+        has_locus = False
+        if source and 'note' in source[0].qualifiers:
+            for note in source[0].qualifiers['note']:
+                if _LOCUS_REGEX.search(note):
+                    has_locus = True
+
+        if not has_locus or n_cds == 0:
+            print(f"  [FAIL] {rec.id}")
+            all_ok = False
+
+    print(f"  {len(parsed)} records parsed back")
+    print(f"  {total_cds} total CDS, {total_annotated} with gene names ({100*total_annotated/total_cds:.1f}%)")
+    print(f"  All checks passed: {all_ok}")
 
 
 if __name__ == '__main__':

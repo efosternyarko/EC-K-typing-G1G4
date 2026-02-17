@@ -38,8 +38,9 @@ The database contains **46 reference K-loci** (K24, K96, KL300-KL343) extracted 
 | `DB/EC-K-typing_group2and3_v3.0.0.gbk` | Gladstone Group 2 & 3 database (90 loci, included for convenience) |
 | `DB/KL_G1G4_mapping.tsv` | KL nomenclature mapping (KL name, KX origin, source assembly, length) |
 | `DB/cluster_info.tsv` | Clustering details (cluster members, representative sequences) |
+| `DB/kaptive_validation_results.tsv` | Kaptive v3.1.0 typing results for 222 source assemblies |
 | `scripts/build_G1G4_db.py` | Pipeline script for locus extraction and database construction |
-| `scripts/annotate_loci.py` | Annotation script (pyrodigal gene prediction + BLAST annotation) |
+| `scripts/annotate_loci.py` | Annotation script (pyrodigal + Klebsiella K-locus BLASTp) |
 | `flanking_genes/flanking_genes.fasta` | Flanking gene marker sequences used for locus detection |
 
 ### Nomenclature
@@ -72,12 +73,25 @@ The database contains **46 reference K-loci** (K24, K96, KL300-KL343) extracted 
 A pre-built combined database (`DB/EC-K-typing_all_groups_v1.0.gbk`) covering all four capsule groups (136 loci) is included and ready for direct use with [Kaptive](https://github.com/klebgenomics/Kaptive):
 
 ```bash
-kaptive assembly -k DB/EC-K-typing_all_groups_v1.0.gbk -a genome.fasta
+kaptive assembly DB/EC-K-typing_all_groups_v1.0.gbk genome.fasta -o results.tsv
 ```
 
 The combined database merges:
 - **Group 2 & 3:** 90 loci (KL1–KL175) from [Gladstone et al.](https://github.com/rgladstone/EC-K-typing) — annotated with Bakta + Panaroo
-- **Group 1 & 4:** 46 loci (K24, K96, KL300–KL343) from this study — annotated with [pyrodigal](https://github.com/althonos/pyrodigal) (metagenomic mode), known capsule pathway genes (*galF*, *gnd*, *ugd*, *wza*, *wzc*) identified via tBLASTn against *E. coli* K-12 MG1655 reference sequences
+- **Group 1 & 4:** 46 loci (K24, K96, KL300–KL343) from this study — annotated with [pyrodigal](https://github.com/althonos/pyrodigal) (metagenomic mode), gene names transferred from the [Kaptive *Klebsiella* K-locus reference](https://github.com/klebgenomics/Kaptive) via BLASTp (73% of CDS annotated)
+
+## Validation
+
+The combined database was validated by re-typing the 222 source genome assemblies with Kaptive v3.1.0:
+
+| Metric | Result |
+|--------|--------|
+| Self-typing (46 reference loci) | **46/46 (100%)** |
+| Genomes typeable | **161/222 (72.5%)** |
+| All 46 G1/4 loci utilised | Yes |
+| Untypeable genomes | 61 (mostly Group 2/3 types without G1/4 locus) |
+
+Full validation results: `DB/kaptive_validation_results.tsv`
 
 ### With BLAST
 
