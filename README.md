@@ -19,26 +19,51 @@ Groups 1 and 4 share the Wzy-dependent polymerisation pathway. Their capsule bio
 
 ## Database
 
-### Reference loci
+### Versions
 
-The database contains **46 reference K-loci** (K24, K96, KL300-KL343) extracted from bloodstream infection *E. coli* isolates:
+| Version | G1/G4 loci | All-groups loci | Source genomes | Notes |
+|---------|-----------|-----------------|----------------|-------|
+| v1.0 | 46 (KL300–KL343) | 136 | 222 (subset accessible) | Initial release |
+| **v2.0** | **125 (KL300–KL423)** | **183** | **1,112 (all no-hit BSI isolates)** | **Current recommended version** |
 
-- **Size range:** 33.4 - 46.1 kb
-- **Total sequence:** 1.77 Mb
+### Reference loci (v2.0)
+
+The v2.0 database contains **125 reference K-loci** (K24, K96, KL300–KL423) extracted from all 1,112 *E. coli* bloodstream infection isolates with no hit to the Group 2/3 database:
+
+- **Size range (full set):** 7.0 – 59.1 kb
+- **Total sequence (full set):** 4.14 Mb
+- **Filtered set (≥ 30 kb):** 93 loci, 3.69 Mb — used in the combined all-groups database
 - **Clustering threshold:** 95% nucleotide identity, 80% query coverage
-- **KX types covered:** 19 of 20 FastKaptive-assigned types
+- **KX types covered:** KX01, KX17, KX28, KX31, KX34, KX36, KX63, KX67, KX72, K24
 
 ### Files
+
+#### v2.0 (current)
+
+| File | Description |
+|------|-------------|
+| `DB/EC-K-typing_group1and4_v2.0.fasta` | All 125 reference locus sequences (FASTA) |
+| `DB/EC-K-typing_group1and4_v2.0.gbk` | Annotated reference loci (GenBank, Kaptive-compatible) |
+| `DB/EC-K-typing_group1and4_v2.0_filtered.fasta` | Filtered set of 93 loci ≥ 30 kb (FASTA) |
+| `DB/EC-K-typing_all_groups_v2.0.gbk` | **Combined database** — all 4 capsule groups (183 loci, Kaptive-ready) |
+| `DB/KL_G1G4_mapping.tsv` | KL nomenclature mapping for all 125 loci (KL name, KX origin, source assembly, length) |
+| `DB/KL_G1G4_mapping_filtered.tsv` | Mapping for the 93-locus filtered set |
+| `DB/cluster_info.tsv` | Clustering details (cluster members, representative sequences) |
+
+#### v1.0 (retained for reference)
 
 | File | Description |
 |------|-------------|
 | `DB/EC-K-typing_group1and4_v1.0.fasta` | Reference locus sequences (FASTA) |
 | `DB/EC-K-typing_group1and4_v1.0.gbk` | Annotated reference loci (GenBank, Kaptive-compatible) |
-| `DB/EC-K-typing_all_groups_v1.0.gbk` | **Combined database** — all 4 capsule groups (136 loci, Kaptive-ready) |
+| `DB/EC-K-typing_all_groups_v1.0.gbk` | Combined database — all 4 capsule groups (136 loci) |
+| `DB/kaptive_validation_results.tsv` | Kaptive v3.1.0 typing results for 222 v1.0 source assemblies |
+
+#### Other files
+
+| File | Description |
+|------|-------------|
 | `DB/EC-K-typing_group2and3_v3.0.0.gbk` | Gladstone Group 2 & 3 database (90 loci, included for convenience) |
-| `DB/KL_G1G4_mapping.tsv` | KL nomenclature mapping (KL name, KX origin, source assembly, length) |
-| `DB/cluster_info.tsv` | Clustering details (cluster members, representative sequences) |
-| `DB/kaptive_validation_results.tsv` | Kaptive v3.1.0 typing results for 222 source assemblies |
 | `scripts/build_G1G4_db.py` | Pipeline script for locus extraction and database construction |
 | `scripts/annotate_loci.py` | Annotation script (pyrodigal + Klebsiella K-locus BLASTp) |
 | `flanking_genes/flanking_genes.fasta` | Flanking gene marker sequences used for locus detection |
@@ -48,7 +73,7 @@ The database contains **46 reference K-loci** (K24, K96, KL300-KL343) extracted 
 | KL designation | Description |
 |----------------|-------------|
 | K24, K96 | Direct K-type calls (known capsule types) |
-| KL300-KL343 | Novel locus types identified in this study |
+| KL300–KL423 | Novel locus types identified in this study |
 
 ## Methods
 
@@ -62,18 +87,12 @@ The database contains **46 reference K-loci** (K24, K96, KL300-KL343) extracted 
 
 ### Source data
 
-The reference loci were derived from a subset of 6,673 *E. coli* bloodstream infection (BSI) isolates originally extracted from [EnteroBase](https://enterobase.warwick.ac.uk/):
+The reference loci were derived from 6,673 *E. coli* bloodstream infection (BSI) isolates originally extracted from [EnteroBase](https://enterobase.warwick.ac.uk/):
 
-1. **Group 2/3 screening:** All 6,673 BSI genomes were typed against the [Gladstone Group 2 & 3 database](https://github.com/rgladstone/EC-K-typing). **1,111 isolates** had no hit, indicating they likely carry Group 1 or Group 4 capsule loci.
-2. **FastKaptive typing:** The 1,111 no-hit isolates were typed with [FastKaptive](https://github.com/rmostowy/fastKaptive), which assigned KX-type designations across 15 distinct types (KX36: 382, KX34: 329, KX17: 195, KX01: 73, KX67: 41, KX31: 29, KX72: 27, and others).
-3. **Genome access:** Of the 1,111 isolates (stored in EnteroBase as ESC_* accessions), only **222 genomes** were accessible for locus extraction in this version:
-   - **57** with ENA run accessions (ERR*) identified from FastKaptive contig-level hits, downloaded from ENA
-   - **150** identified as Group 1/4 untypeable isolates from [Gladstone et al.](https://www.medrxiv.org/content/10.1101/2024.11.22.24317484v1) Supplementary Table 6, downloaded from ENA
-   - **15** genomes provided directly from EnteroBase
-
-   The remaining ~889 isolates were not included due to the lack of public ENA accession mappings for their EnteroBase identifiers. Future versions will incorporate these genomes.
-
-4. **Locus extraction and clustering:** The extraction pipeline (see above) was applied to all 222 genomes, yielding **46 distinct K-locus clusters** covering 19 of the 20 KX types identified by FastKaptive.
+1. **Group 2/3 screening:** All 6,673 BSI genomes were typed against the [Gladstone Group 2 & 3 database](https://github.com/rgladstone/EC-K-typing). **1,112 isolates** had no hit, indicating they likely carry Group 1 or Group 4 capsule loci.
+2. **FastKaptive typing:** The 1,112 no-hit isolates were typed with [FastKaptive](https://github.com/rmostowy/fastKaptive), which assigned KX-type designations across 15 distinct types (KX36: 382, KX34: 329, KX17: 195, KX01: 73, KX67: 41, KX31: 29, KX72: 27, and others).
+3. **Genome access:** All **1,112 genomes** were obtained for locus extraction in v2.0, resolving the EnteroBase accession mappings that limited v1.0 to 222 isolates.
+4. **Locus extraction and clustering:** The extraction pipeline (see above) was applied to all 1,112 genomes, yielding **125 distinct K-locus clusters** (KL300–KL423, plus K24 and K96) covering 10 KX types. A filtered set of **93 loci ≥ 30 kb** is provided for use with Kaptive, excluding partial or fragmented extractions.
 
 ### Annotation
 
@@ -88,19 +107,21 @@ GenBank records are formatted for [Kaptive](https://github.com/klebgenomics/Kapt
 
 ### With Kaptive
 
-A pre-built combined database (`DB/EC-K-typing_all_groups_v1.0.gbk`) covering all four capsule groups (136 loci) is included and ready for direct use with [Kaptive](https://github.com/klebgenomics/Kaptive):
+A pre-built combined database (`DB/EC-K-typing_all_groups_v2.0.gbk`) covering all four capsule groups (183 loci) is included and ready for direct use with [Kaptive](https://github.com/klebgenomics/Kaptive):
 
 ```bash
-kaptive assembly DB/EC-K-typing_all_groups_v1.0.gbk genome.fasta -o results.tsv
+kaptive assembly DB/EC-K-typing_all_groups_v2.0.gbk genome.fasta -o results.tsv
 ```
 
 The combined database merges:
 - **Group 2 & 3:** 90 loci (KL1–KL175) from [Gladstone et al.](https://github.com/rgladstone/EC-K-typing) — annotated with Bakta + Panaroo
-- **Group 1 & 4:** 46 loci (K24, K96, KL300–KL343) from this study — annotated with [pyrodigal](https://github.com/althonos/pyrodigal) (metagenomic mode), gene names transferred from the [Kaptive *Klebsiella* K-locus reference](https://github.com/klebgenomics/Kaptive) via BLASTp (73% of CDS annotated)
+- **Group 1 & 4:** 93 loci (K24, K96, KL300–KL423, filtered ≥ 30 kb) from this study — annotated with [pyrodigal](https://github.com/althonos/pyrodigal) (metagenomic mode), gene names transferred from the [Kaptive *Klebsiella* K-locus reference](https://github.com/klebgenomics/Kaptive) via BLASTp (73% of CDS annotated)
 
 ## Validation
 
-The combined database was validated by re-typing the 222 source genome assemblies with Kaptive v3.1.0:
+### v1.0 validation
+
+The v1.0 combined database was validated by re-typing the 222 v1.0 source genome assemblies with Kaptive v3.1.0:
 
 | Metric | Result |
 |--------|--------|
@@ -111,15 +132,17 @@ The combined database was validated by re-typing the 222 source genome assemblie
 
 Full validation results: `DB/kaptive_validation_results.tsv`
 
+Validation of the v2.0 database is ongoing.
+
 ### With BLAST
 
 For direct BLAST-based typing:
 
 ```bash
-makeblastdb -in DB/EC-K-typing_group1and4_v1.0.fasta -dbtype nucl
+makeblastdb -in DB/EC-K-typing_group1and4_v2.0_filtered.fasta -dbtype nucl
 
 blastn -query genome.fasta \
-  -db DB/EC-K-typing_group1and4_v1.0.fasta \
+  -db DB/EC-K-typing_group1and4_v2.0_filtered.fasta \
   -outfmt '6 qseqid sseqid pident qcovs length' \
   -max_target_seqs 5
 ```
@@ -130,7 +153,6 @@ The following improvements are planned for future versions, drawing in part on a
 
 ### Expanded genome coverage
 
-- Incorporate the remaining ~889 BSI isolates not yet accessible (pending EnteroBase accession resolution)
 - Mine [AllTheBacteria](https://doi.org/10.1101/2024.03.08.584059) (~300-500K *E. coli* genomes) using [LexicMap](https://www.nature.com/articles/s41587-025-02812-8) or direct BLAST screening for *galF*/*gnd* flanking genes to discover novel G1/G4 K-locus types
 
 ### Systematic gene naming
@@ -155,7 +177,7 @@ Adopt a positional gene naming strategy for locus-specific genes (as used by kTY
 | [kTYPr](https://github.com/SushiLab/kTYPr) | *E. coli* Group 2 & 3 (85 loci, HMM-based) | [Schwengers et al. 2025](https://www.biorxiv.org/content/10.1101/2025.08.07.669119v1) |
 | [Kaptive](https://github.com/klebgenomics/Kaptive) | *Klebsiella* and *E. coli* K/O typing | [Lam et al. 2022](https://doi.org/10.1099/mgen.0.000800) |
 | [FastKaptive](https://github.com/rmostowy/fastKaptive) | Fast K-locus pre-screening | Mostowy et al. |
-| **This database** | *E. coli* Group 1 & 4 (46 loci) | — |
+| **This database** | *E. coli* Group 1 & 4 (125 loci, v2.0) | — |
 
 ## Citation
 
