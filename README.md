@@ -132,7 +132,20 @@ The v1.0 combined database was validated by re-typing the 222 v1.0 source genome
 
 Full validation results: `DB/kaptive_validation_results.tsv`
 
-Validation of the v2.0 database is ongoing.
+### v2.0 validation
+
+The v2.0 database was validated by running Kaptive v3.1.0 on all 565 assemblies from which a locus was successfully extracted:
+
+| Metric | Result |
+|--------|--------|
+| Self-typing (93 filtered loci) | **70/93 (75.3%)** |
+| Self-typing (125 full set) | 70/125 (56.0%) |
+| Assemblies typeable | **258/565 (45.7%)** |
+| Loci utilised (filtered set) | 70/93 |
+
+The 23 loci that do not self-type are predominantly KX01 loci that score slightly below KL302 (the longest KX01 representative at 41 kb). Reliable KL-level discrimination within a KX type requires systematic positional gene naming (planned for v3.0).
+
+Full validation results: `DB/kaptive_validation_results_v2.tsv`
 
 ### With BLAST
 
