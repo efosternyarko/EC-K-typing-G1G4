@@ -4,6 +4,8 @@ A reference database of *Escherichia coli* capsule (K-antigen) loci for **Group 
 
 This database complements the [EC-K-typing](https://github.com/rgladstone/EC-K-typing) Group 2 & 3 database by Rebecca Gladstone, enabling comprehensive capsule typing across all four *E. coli* capsule groups.
 
+> **Pre-release status:** This database is under active development and uses a **0.x versioning scheme** until it reaches production quality. The current release is **v0.2**. Versions will be numbered 0.1, 0.2, 0.3, etc. until the database passes full self-typing validation and systematic gene naming is implemented, at which point it will be released as **v1.0**. File names within the repository retain internal version numbers (v1.0, v2.0) and will be reconciled at the v1.0 release.
+
 ## Background
 
 *E. coli* capsular polysaccharides are classified into four groups based on their biosynthetic pathways:
@@ -21,10 +23,11 @@ Groups 1 and 4 share the Wzy-dependent polymerisation pathway. Their capsule bio
 
 ### Versions
 
-| Version | G1/G4 loci | All-groups loci | Source genomes | Notes |
-|---------|-----------|-----------------|----------------|-------|
-| v1.0 | 46 (KL300–KL343) | 136 | 222 (subset accessible) | Initial release |
-| **v2.0** | **125 (KL300–KL423)** | **183** | **1,112 (all no-hit BSI isolates)** | **Current recommended version** |
+| Version | G1/G4 loci | All-groups loci | Source genomes | Self-typing | Notes |
+|---------|-----------|-----------------|----------------|-------------|-------|
+| v0.1 | 46 (KL300–KL343) | 136 | 222 (subset accessible) | 46/46 (100%) | Initial release |
+| **v0.2** | **125 (KL300–KL423)** | **183** | **1,112 (all BSI no-hit isolates)** | **70/93 (75.3%)** | **Current release** |
+| v0.3 | TBD | TBD | + AllTheBacteria | Target: 100% | Planned — systematic gene naming |
 
 ### Reference loci (v2.0)
 
@@ -83,7 +86,7 @@ The v2.0 database contains **125 reference K-loci** (K24, K96, KL300–KL423) ex
 2. **Locus boundary definition:** The *cps* region between *galF* and *gnd* (including *wza-wzb-wzc* upstream) with 500 bp flanking sequence
 3. **Fragmented assembly handling:** For genomes where *galF* and *gnd* are on different contigs, sequences are extracted from both contigs and concatenated with an N-spacer
 4. **Clustering:** All-vs-all BLAST at 95% identity and 80% query coverage, greedy clustering by sequence length
-5. **Representative selection:** Longest sequence per cluster
+5. **Representative selection:** Longest sequence per cluster (v0.1); manually replaced with median-length alternatives for oversized loci in v0.2 to prevent scoring bias in Kaptive
 
 ### Source data
 
@@ -160,27 +163,40 @@ blastn -query genome.fasta \
   -max_target_seqs 5
 ```
 
-## Planned improvements
+## Roadmap
 
-The following improvements are planned for future versions, drawing in part on approaches from [kTYPr](https://github.com/SushiLab/kTYPr) (Schwengers et al., 2025):
+### v0.3 (next release)
 
-### Expanded genome coverage
+The primary goal of v0.3 is to achieve reliable KL-level typing across all loci. The key bottleneck identified in v0.2 validation is that G1/G4 loci share many conserved flanking genes (*wza*, *wzb*, *wzc*, *galF*, *gnd*), which dominate Kaptive's scoring and prevent discrimination of loci within the same KX type. Fixing this requires systematic gene naming so that each locus has a unique, distinguishable gene set.
 
-- Mine [AllTheBacteria](https://doi.org/10.1101/2024.03.08.584059) (~300-500K *E. coli* genomes) using [LexicMap](https://www.nature.com/articles/s41587-025-02812-8) or direct BLAST screening for *galF*/*gnd* flanking genes to discover novel G1/G4 K-locus types
+#### Systematic gene naming (critical for v1.0)
 
-### Systematic gene naming
+Adopt a positional gene naming strategy for locus-specific genes, as used by [kTYPr](https://github.com/SushiLab/kTYPr) (Schwengers et al., 2025):
 
-Adopt a positional gene naming strategy for locus-specific genes (as used by kTYPr):
-- **Conserved genes:** functional names (e.g., *wza*, *wzb*, *wzc*, *wzx*, *wzy*, *galF*, *gnd*)
-- **Locus-specific genes:** positional codes (e.g., *KL300_7*, *KL300_8*)
+- **Conserved genes:** retain functional names (e.g., *wza*, *wzb*, *wzc*, *wzx*, *wzy*, *galF*, *gnd*, *ugd*)
+- **Locus-specific genes:** positional codes tied to the locus (e.g., *KL339_5*, *KL339_6*) — ensures Kaptive can distinguish loci by their variable biosynthetic region
 - **Shared variable genes:** compound names reflecting shared usage across types (e.g., *KL300_KL305_7*)
-- Protein families defined by clustering at 90% identity/coverage, with one HMM profile per family for robust detection
+- Protein families defined by clustering at 90% identity/coverage
 
-### Enhanced scoring and reporting
+**Why this is needed:** in v0.2 validation, loci within the same KX type (e.g., KX01) cannot be reliably distinguished because unnamed variable-region CDS are invisible to Kaptive's gene-based scoring. The 23 loci that fail self-typing all have this problem. Positional naming gives each locus a unique gene signature.
+
+#### Expanded genome coverage
+
+- Mine [AllTheBacteria](https://doi.org/10.1101/2024.03.08.584059) (~300–500K *E. coli* genomes) using [LexicMap](https://www.nature.com/articles/s41587-025-02812-8) or direct BLAST screening for *galF*/*gnd* flanking genes to discover novel G1/G4 K-locus types beyond the BSI isolate set
+
+#### Enhanced scoring and reporting
 
 - **Multi-metric scoring** per K-type assignment (as in kTYPr): number of reference genes found, accumulated bitscore, fractional bitscore, and locus completeness
-- **Conserved locus integrity check:** separate scoring for conserved flanking/export genes (*wza*, *wzc*, *galF*, *gnd*) vs. variable biosynthetic genes
+- **Conserved locus integrity check:** separate scoring for conserved flanking/export genes vs. variable biosynthetic genes
 - **Locus comparison visualisation:** [clinker](https://github.com/gamcil/clinker)-based HTML visualisation for pairwise comparison of K-locus architectures
+
+### v1.0 (public release)
+
+v1.0 will be released when:
+- Self-typing reaches **100%** for all loci in the filtered set
+- Systematic positional gene naming is fully implemented
+- AllTheBacteria expansion is complete
+- The database has been used in a peer-reviewed publication
 
 ## Related work
 
@@ -190,7 +206,7 @@ Adopt a positional gene naming strategy for locus-specific genes (as used by kTY
 | [kTYPr](https://github.com/SushiLab/kTYPr) | *E. coli* Group 2 & 3 (85 loci, HMM-based) | [Schwengers et al. 2025](https://www.biorxiv.org/content/10.1101/2025.08.07.669119v1) |
 | [Kaptive](https://github.com/klebgenomics/Kaptive) | *Klebsiella* and *E. coli* K/O typing | [Lam et al. 2022](https://doi.org/10.1099/mgen.0.000800) |
 | [FastKaptive](https://github.com/rmostowy/fastKaptive) | Fast K-locus pre-screening | Mostowy et al. |
-| **This database** | *E. coli* Group 1 & 4 (125 loci, v2.0) | — |
+| **This database** | *E. coli* Group 1 & 4 (125 loci, v0.2) | — |
 
 ## Citation
 
