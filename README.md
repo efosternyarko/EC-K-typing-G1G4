@@ -5,6 +5,8 @@ A reference database of *Escherichia coli* capsule (K-antigen) loci for **Group 
 This database complements the [EC-K-typing](https://github.com/rgladstone/EC-K-typing) Group 2 & 3 database by Rebecca Gladstone, enabling comprehensive capsule typing across all four *E. coli* capsule groups.
 
 > **Pre-release status:** This database is under active development and uses a **0.x versioning scheme** until it reaches production quality. The current release is **v0.3**. Versions will be numbered 0.1, 0.2, 0.3, etc. until the database passes full self-typing validation and systematic gene naming is implemented, at which point it will be released as **v1.0**. File names within the repository retain internal version numbers (v1.0, v2.0, v3.0) and will be reconciled at the v1.0 release.
+>
+> **Normalised scoring:** A post-processing script (`scripts/type_normalized.py`) re-ranks Kaptive's raw scores by `AS / total_expected_gene_bp`, eliminating bitscore accumulation bias from large reference loci. This raises self-typing of the 93 filtered loci from **70/93 (75.3%)** to **88/93 (94.6%)** and typeability to **100%** of isolates.
 
 ## Background
 
@@ -27,8 +29,7 @@ Groups 1 and 4 share the Wzy-dependent polymerisation pathway. Their capsule bio
 |---------|-----------|-----------------|----------------|-------------|-------|
 | v0.1 | 46 (KL300–KL343) | 136 | 222 (subset accessible) | 46/46 (100%) | Initial release |
 | v0.2 | 125 (KL300–KL423) | 183 | 1,112 (all BSI no-hit isolates) | 70/93 (75.3%) | |
-| **v0.3** | **93 filtered (positional names)** | **183** | **1,112 BSI** | **70/93 (75.3%)** | **Current release — systematic positional gene naming implemented** |
-| v0.4 | TBD | TBD | 1,112 BSI | Target: ≥90/93 | Planned — representative swapping for oversized loci |
+| **v0.3** | **93 filtered (positional names)** | **183** | **1,112 BSI** | **70/93 (75.3%) standard; 88/93 (94.6%) normalised** | **Current release — positional gene naming + normalised scoring script** |
 
 ### Reference loci (v2.0)
 
@@ -48,8 +49,12 @@ The v2.0 database contains **125 reference K-loci** (K24, K96, KL300–KL423) ex
 |------|-------------|
 | `DB/EC-K-typing_group1and4_v3.0.gbk` | **93 filtered loci with systematic positional gene names (GenBank, Kaptive-compatible)** |
 | `DB/EC-K-typing_all_groups_v3.0.gbk` | **Combined database** — all 4 capsule groups (183 loci, Kaptive-ready) |
-| `DB/kaptive_validation_results_v3.tsv` | Kaptive v3.1.0 typing results for 565 v3.0 source assemblies |
-| `DB/kaptive_validation_summary_v3.tsv` | Per-assembly summary with expected vs observed KL (v3.0) |
+| `DB/kaptive_validation_results_v3.tsv` | Kaptive v3.1.0 typing results for 565 v3.0 source assemblies (standard scoring) |
+| `DB/kaptive_validation_summary_v3.tsv` | Per-assembly summary with expected vs observed KL (v3.0, standard scoring) |
+| `DB/kaptive_scores_v3norm.tsv` | Full locus × assembly score matrix from `kaptive --scores` (183 loci × 565 assemblies) |
+| `DB/kaptive_validation_results_v3norm.tsv` | Normalised typing results (AS / total\_expected\_gene\_bp) |
+| `DB/kaptive_validation_summary_v3norm.tsv` | Per-assembly comparison table (normalised scoring) |
+| `scripts/type_normalized.py` | **Normalised typing script** — re-ranks Kaptive scores by `AS / total_expected_gene_bp` |
 
 #### v2.0 (retained for reference)
 
@@ -81,6 +86,8 @@ The v2.0 database contains **125 reference K-loci** (K24, K96, KL300–KL423) ex
 | `scripts/build_G1G4_db.py` | Pipeline script for locus extraction and database construction |
 | `scripts/annotate_loci.py` | Annotation script (pyrodigal + Klebsiella K-locus BLASTp) |
 | `scripts/name_loci_positional.py` | Positional gene naming script (v3.0) |
+| `scripts/type_normalized.py` | Normalised scoring script — re-ranks Kaptive scores by `AS / total_expected_gene_bp` |
+| `scripts/swap_reps_v04.py` | Representative swapping script (v0.4 experiment — kept for reference, not used) |
 | `flanking_genes/flanking_genes.fasta` | Flanking gene marker sequences used for locus detection |
 
 ### Nomenclature
@@ -143,6 +150,20 @@ The combined database merges:
 - **Group 2 & 3:** 90 loci (KL1–KL175) from [Gladstone et al.](https://github.com/rgladstone/EC-K-typing) — annotated with Bakta + Panaroo
 - **Group 1 & 4:** 93 loci (K24, K96, KL300–KL423, filtered ≥ 30 kb) from this study — annotated with [pyrodigal](https://github.com/althonos/pyrodigal) (metagenomic mode) + systematic positional gene naming (v3.0)
 
+### With normalised scoring (recommended)
+
+For improved accuracy on Group 1 & 4 loci, use the normalised scoring script, which re-ranks each assembly's loci by `AS / total_expected_gene_bp` — converting raw bitscore into alignment score per expected reference base:
+
+```bash
+# Run Kaptive and normalise scores in one step:
+python scripts/type_normalized.py --threads 8
+
+# Or re-use a pre-computed scores matrix (fast):
+python scripts/type_normalized.py --skip-kaptive --suffix v3norm
+```
+
+This raises self-typing of the 93 filtered loci from 70/93 (75.3%) to **88/93 (94.6%)** and typeability to **100%** of assemblies. See `DB/kaptive_validation_results_v3norm.tsv` for the pre-computed results on all 565 v3.0 source assemblies.
+
 ## Validation
 
 ### v1.0 validation
@@ -169,9 +190,26 @@ The v3.0 database (positional gene naming applied) was validated identically to 
 | Assemblies typeable | 258/565 (45.7%) |
 | Loci utilised (filtered set) | 70/93 |
 
-Self-typing is **unchanged** from v2.0. Positional gene naming did not improve Kaptive's discrimination because Kaptive scores by cumulative BLAST bitscore across all reference genes — gene names in the GenBank qualifiers do not affect scoring. The root cause of the 23 failures is **bitscore accumulation bias from oversized representatives**: KL302 has 40 CDS (41 kb) and KL305 has 50 CDS (51 kb); these loci accumulate more total bitscore than smaller within-KX01 references (30–38 CDS) even when all query genes match at 100% identity. Fixing this requires swapping oversized representatives to size-matched alternatives (planned for v0.4).
+Self-typing is **unchanged** from v2.0. Positional gene naming did not improve Kaptive's discrimination because Kaptive scores by cumulative BLAST bitscore across all reference genes — gene names in the GenBank qualifiers do not affect scoring. The root cause of the 23 failures is **bitscore accumulation bias from oversized representatives**: KL302 has 40 CDS (37.8 kb total CDS length) and KL304 has 44 CDS (46.5 kb), accumulating more total bitscore than smaller within-KX01/KX34 references (28–35 kb) even when all query genes match at 100% identity.
 
 Full validation results: `DB/kaptive_validation_results_v3.tsv`
+
+### Normalised scoring (v3norm)
+
+`scripts/type_normalized.py` post-processes the full Kaptive scores matrix by re-ranking each assembly's loci by `AS / total_expected_gene_bp` (alignment score per expected reference base). This converts raw bitscore accumulation into a per-base identity metric that is size-independent:
+
+| Metric | Standard Kaptive | Normalised scoring |
+|--------|------------------|--------------------|
+| Self-typing (93 filtered loci) | 70/93 (75.3%) | **88/93 (94.6%)** |
+| Self-typing (125 full set) | 70/125 (56.0%) | 88/125 (70.4%) |
+| Assemblies typeable | 258/565 (45.7%) | **565/565 (100.0%)** |
+| Loci utilised (filtered set) | 70/93 | 88/93 |
+
+**Normalisation fixes 20 of the 23 failures** (KL300, KL301, KL303, KL306, KL307 still fail — all KX01 loci that genuinely score lower per base than KL302 in their source genomes, likely reflecting biological similarity within this KX type).
+
+The near-tie tiebreaker — among loci scoring within 0.5% of the best normalised score, prefer the locus with more genes found — resolves one additional ambiguous case (KL337 vs KL389, 0.17% AS_norm difference, 41 vs 29 genes found).
+
+Full results: `DB/kaptive_validation_results_v3norm.tsv` · `DB/kaptive_validation_summary_v3norm.tsv`
 
 ### v2.0 validation
 
@@ -205,36 +243,27 @@ blastn -query genome.fasta \
 
 ### v0.3 (completed)
 
-Implemented systematic positional gene naming across all 93 filtered loci (see `scripts/name_loci_positional.py`):
+Implemented systematic positional gene naming across all 93 filtered loci and score normalisation post-processing:
 
+**Positional naming** (`scripts/name_loci_positional.py`):
 - **Conserved genes:** retain functional Klebsiella-derived names (*wza*, *wzb*, *wzc*, *wzx*, *wzy*, *galF*, *gnd*, *ugd*, glycosyltransferases)
-- **Variable-region genes:** clustered at 90% identity/coverage across all loci; shared families receive a single positional name (`KL{N}_{pos}`) named from the lowest-numbered locus that contributes a member; singleton families get a name tied to their locus
+- **Variable-region genes:** clustered at 90% identity/coverage across all loci; shared families receive a single positional name (`KL{N}_{pos}`) named from the lowest-numbered locus that contributes a member
 - **Result:** 3,298 CDS; 64% functional names; 36% positional names; 67 multi-locus shared protein families
 
-**Finding:** self-typing unchanged at 70/93 (75.3%). Positional naming does not affect Kaptive's scoring because Kaptive accumulates raw BLAST bitscore — gene qualifier names in GenBank records play no role. The 23 persistent failures are caused by bitscore accumulation bias: KL302 (40 CDS) and KL305 (50 CDS) are oversized representatives that out-score same-KX-type loci with 30–38 CDS regardless of per-gene identity.
+**Finding:** positional naming did not change standard Kaptive self-typing (70/93, 75.3%). Gene qualifier names in GenBank records do not affect Kaptive's raw bitscore accumulation.
 
-### v0.4 (attempted — not released)
+**Score normalisation** (`scripts/type_normalized.py`):
+- Re-ranks Kaptive's per-locus alignment scores by `AS / total_expected_gene_bp` — alignment score per expected reference base
+- Eliminates bitscore accumulation bias from large reference loci (KL302: 37.8 kb CDS; KL304: 46.5 kb CDS)
+- Near-tie tiebreaker: among loci within 0.5% of top normalised score, prefer the one with more genes found
+- **Result: 88/93 (94.6%) — fixes 20 of 23 failures; typeability 100%**
+- 5 remaining failures: KL300, KL301, KL303, KL306, KL307 → all KX01 loci that genuinely score lower per base than KL302
 
-Representative swapping was attempted for KL302 and KL305, the two most dominant loci:
-
-| Locus | Old representative | Old CDS | New representative | New CDS |
-|-------|-------------------|---------|-------------------|---------|
-| KL302 | ESC_GB6443AA_AS | 40 | ESC_CC1376AA_AS (KX01) | 28 |
-| KL305 | ESC_BA8240AA_AS | 50 | ESC_TA7291AA_AS (KX34) | 37 |
-
-**Result: 64/93 (68.8%) — worse than v3.0.** The swap fixed 6 loci that were being dominated by KL302 (KL326, KL337, KL364, KL365, KL367, KL368) but broke 12 others that were correctly self-typing in v3.0 (KL302 itself typed as KL309; many others shifted to being dominated by KL300 or KL304 instead). Net: −6 loci.
-
-**Conclusion — whack-a-mole:** bitscore accumulation bias is systemic. Every KX type has a "most CDS" reference that accumulates the highest score in its neighbours' genomes. Shrinking one dominant locus shifts dominance to the next-largest. The 23 failures cannot be fixed one locus at a time.
+**Note on representative swapping (tested, not released):** Swapping KL302 and KL305 to smaller representatives was attempted (see `scripts/swap_reps_v04.py`) but yielded 64/93 (68.8%) — worse than v3.0. Bitscore accumulation bias is systemic; shrinking one dominant locus shifts dominance to the next-largest. Score normalisation is the correct fix.
 
 ### v0.4 (next release)
 
-True resolution requires addressing the systemic scoring problem. Two viable approaches:
-
-#### Option A: Score normalisation (preferred)
-
-Add a Kaptive post-processing step that normalises each locus score by the number of expected genes (or locus length), converting raw bitscore sum → fractional bitscore per gene. This prevents large references from winning by sheer gene count. This would likely fix all 23 remaining failures without any database changes.
-
-*Implementation: post-processing of the Kaptive TSV results file — no changes to Kaptive itself needed.*
+Remaining 5 failures are KX01 loci (KL300, KL301, KL303, KL306, KL307) that all score lower per base than KL302 in their source genomes. These may reflect true biological ambiguity within the KX01 clade, or could be resolved by:
 
 #### Option B: Variable-region-only scoring
 
@@ -259,7 +288,7 @@ v1.0 will be released when:
 | [kTYPr](https://github.com/SushiLab/kTYPr) | *E. coli* Group 2 & 3 (85 loci, HMM-based) | [Schwengers et al. 2025](https://www.biorxiv.org/content/10.1101/2025.08.07.669119v1) |
 | [Kaptive](https://github.com/klebgenomics/Kaptive) | *Klebsiella* and *E. coli* K/O typing | [Lam et al. 2022](https://doi.org/10.1099/mgen.0.000800) |
 | [FastKaptive](https://github.com/rmostowy/fastKaptive) | Fast K-locus pre-screening | Mostowy et al. |
-| **This database** | *E. coli* Group 1 & 4 (93 filtered loci, v0.3) | — |
+| **This database** | *E. coli* Group 1 & 4 (93 filtered loci, v0.3; 88/93 with normalised scoring) | — |
 
 ## Citation
 
