@@ -4,7 +4,7 @@ A reference database of *Escherichia coli* capsule (K-antigen) loci for **Group 
 
 This database complements the [EC-K-typing](https://github.com/rgladstone/EC-K-typing) Group 2 & 3 database by Rebecca Gladstone, enabling comprehensive capsule typing across all four *E. coli* capsule groups.
 
-> **Pre-release status:** This database is under active development and uses a **0.x versioning scheme** until it reaches production quality. The current release is **v0.2**. Versions will be numbered 0.1, 0.2, 0.3, etc. until the database passes full self-typing validation and systematic gene naming is implemented, at which point it will be released as **v1.0**. File names within the repository retain internal version numbers (v1.0, v2.0) and will be reconciled at the v1.0 release.
+> **Pre-release status:** This database is under active development and uses a **0.x versioning scheme** until it reaches production quality. The current release is **v0.3**. Versions will be numbered 0.1, 0.2, 0.3, etc. until the database passes full self-typing validation and systematic gene naming is implemented, at which point it will be released as **v1.0**. File names within the repository retain internal version numbers (v1.0, v2.0, v3.0) and will be reconciled at the v1.0 release.
 
 ## Background
 
@@ -26,8 +26,9 @@ Groups 1 and 4 share the Wzy-dependent polymerisation pathway. Their capsule bio
 | Version | G1/G4 loci | All-groups loci | Source genomes | Self-typing | Notes |
 |---------|-----------|-----------------|----------------|-------------|-------|
 | v0.1 | 46 (KL300–KL343) | 136 | 222 (subset accessible) | 46/46 (100%) | Initial release |
-| **v0.2** | **125 (KL300–KL423)** | **183** | **1,112 (all BSI no-hit isolates)** | **70/93 (75.3%)** | **Current release** |
-| v0.3 | TBD | TBD | + AllTheBacteria | Target: 100% | Planned — systematic gene naming |
+| v0.2 | 125 (KL300–KL423) | 183 | 1,112 (all BSI no-hit isolates) | 70/93 (75.3%) | |
+| **v0.3** | **93 filtered (positional names)** | **183** | **1,112 BSI** | **70/93 (75.3%)** | **Current release — systematic positional gene naming implemented** |
+| v0.4 | TBD | TBD | 1,112 BSI | Target: ≥90/93 | Planned — representative swapping for oversized loci |
 
 ### Reference loci (v2.0)
 
@@ -41,17 +42,27 @@ The v2.0 database contains **125 reference K-loci** (K24, K96, KL300–KL423) ex
 
 ### Files
 
-#### v2.0 (current)
+#### v3.0 (current)
+
+| File | Description |
+|------|-------------|
+| `DB/EC-K-typing_group1and4_v3.0.gbk` | **93 filtered loci with systematic positional gene names (GenBank, Kaptive-compatible)** |
+| `DB/EC-K-typing_all_groups_v3.0.gbk` | **Combined database** — all 4 capsule groups (183 loci, Kaptive-ready) |
+| `DB/kaptive_validation_results_v3.tsv` | Kaptive v3.1.0 typing results for 565 v3.0 source assemblies |
+| `DB/kaptive_validation_summary_v3.tsv` | Per-assembly summary with expected vs observed KL (v3.0) |
+
+#### v2.0 (retained for reference)
 
 | File | Description |
 |------|-------------|
 | `DB/EC-K-typing_group1and4_v2.0.fasta` | All 125 reference locus sequences (FASTA) |
 | `DB/EC-K-typing_group1and4_v2.0.gbk` | Annotated reference loci (GenBank, Kaptive-compatible) |
 | `DB/EC-K-typing_group1and4_v2.0_filtered.fasta` | Filtered set of 93 loci ≥ 30 kb (FASTA) |
-| `DB/EC-K-typing_all_groups_v2.0.gbk` | **Combined database** — all 4 capsule groups (183 loci, Kaptive-ready) |
+| `DB/EC-K-typing_all_groups_v2.0.gbk` | Combined database — all 4 capsule groups (183 loci, Kaptive-ready) |
 | `DB/KL_G1G4_mapping.tsv` | KL nomenclature mapping for all 125 loci (KL name, KX origin, source assembly, length) |
 | `DB/KL_G1G4_mapping_filtered.tsv` | Mapping for the 93-locus filtered set |
 | `DB/cluster_info.tsv` | Clustering details (cluster members, representative sequences) |
+| `DB/kaptive_validation_results_v2.tsv` | Kaptive v3.1.0 typing results for 565 v2.0 source assemblies |
 
 #### v1.0 (retained for reference)
 
@@ -69,6 +80,7 @@ The v2.0 database contains **125 reference K-loci** (K24, K96, KL300–KL423) ex
 | `DB/EC-K-typing_group2and3_v3.0.0.gbk` | Gladstone Group 2 & 3 database (90 loci, included for convenience) |
 | `scripts/build_G1G4_db.py` | Pipeline script for locus extraction and database construction |
 | `scripts/annotate_loci.py` | Annotation script (pyrodigal + Klebsiella K-locus BLASTp) |
+| `scripts/name_loci_positional.py` | Positional gene naming script (v3.0) |
 | `flanking_genes/flanking_genes.fasta` | Flanking gene marker sequences used for locus detection |
 
 ### Nomenclature
@@ -99,10 +111,21 @@ The reference loci were derived from 6,673 *E. coli* bloodstream infection (BSI)
 
 ### Annotation
 
+#### v2.0 annotation
+
 Gene prediction and annotation follows a two-stage approach:
 
 1. **Gene prediction:** [pyrodigal](https://github.com/althonos/pyrodigal) in metagenomic mode identifies open reading frames across each locus
-2. **Gene name transfer:** Predicted proteins are searched against the [Kaptive *Klebsiella* K-locus reference database](https://github.com/klebgenomics/Kaptive) via BLASTp (>=30% identity, >=50% coverage). Matching genes receive functional names from the *Klebsiella* reference (e.g., *wza*, *wzb*, *wzc*, *wzx*, *wzy*, glycosyltransferases). 73% of predicted CDS received gene name annotations.
+2. **Gene name transfer:** Predicted proteins are searched against the [Kaptive *Klebsiella* K-locus reference database](https://github.com/klebgenomics/Kaptive) via BLASTp (>=30% identity, >=50% coverage). Matching genes receive functional names from the *Klebsiella* reference (e.g., *wza*, *wzb*, *wzc*, *wzx*, *wzy*, glycosyltransferases). 73% of predicted CDS received gene name annotations. Unnamed CDS receive their `locus_tag` as gene name (e.g., `KL302_00005`).
+
+#### v3.0 positional naming
+
+In v3.0, all predicted proteins across the 93 filtered loci are clustered by all-vs-all BLASTp (≥90% identity, ≥90% query and subject coverage), and family names are assigned deterministically:
+
+- **Functional name:** if any cluster member has a Klebsiella-derived name (e.g., *wza*, *gmd*), the most common such name is propagated to the whole family
+- **Positional name:** otherwise the family is named `KL{N}_{pos}`, where N is the KL number of the lowest-numbered locus that contains a member, and pos is its ordinal position in that locus — identical across every locus that shares the protein family
+
+Result: 3,298 CDS total; 2,094 with functional names (64%); 1,204 with positional names (36%); 67 multi-locus protein families with a shared name. Within-locus duplicate names receive `_2`, `_3` suffixes.
 
 GenBank records are formatted for [Kaptive](https://github.com/klebgenomics/Kaptive) compatibility, with each locus identified by a `source` feature containing `/note="K locus: KLxxx"`.
 
@@ -110,15 +133,15 @@ GenBank records are formatted for [Kaptive](https://github.com/klebgenomics/Kapt
 
 ### With Kaptive
 
-A pre-built combined database (`DB/EC-K-typing_all_groups_v2.0.gbk`) covering all four capsule groups (183 loci) is included and ready for direct use with [Kaptive](https://github.com/klebgenomics/Kaptive):
+A pre-built combined database (`DB/EC-K-typing_all_groups_v3.0.gbk`) covering all four capsule groups (183 loci) is included and ready for direct use with [Kaptive](https://github.com/klebgenomics/Kaptive):
 
 ```bash
-kaptive assembly DB/EC-K-typing_all_groups_v2.0.gbk genome.fasta -o results.tsv
+kaptive assembly DB/EC-K-typing_all_groups_v3.0.gbk genome.fasta -o results.tsv
 ```
 
 The combined database merges:
 - **Group 2 & 3:** 90 loci (KL1–KL175) from [Gladstone et al.](https://github.com/rgladstone/EC-K-typing) — annotated with Bakta + Panaroo
-- **Group 1 & 4:** 93 loci (K24, K96, KL300–KL423, filtered ≥ 30 kb) from this study — annotated with [pyrodigal](https://github.com/althonos/pyrodigal) (metagenomic mode), gene names transferred from the [Kaptive *Klebsiella* K-locus reference](https://github.com/klebgenomics/Kaptive) via BLASTp (73% of CDS annotated)
+- **Group 1 & 4:** 93 loci (K24, K96, KL300–KL423, filtered ≥ 30 kb) from this study — annotated with [pyrodigal](https://github.com/althonos/pyrodigal) (metagenomic mode) + systematic positional gene naming (v3.0)
 
 ## Validation
 
@@ -135,6 +158,21 @@ The v1.0 combined database was validated by re-typing the 222 v1.0 source genome
 
 Full validation results: `DB/kaptive_validation_results.tsv`
 
+### v3.0 validation
+
+The v3.0 database (positional gene naming applied) was validated identically to v2.0:
+
+| Metric | Result |
+|--------|--------|
+| Self-typing (93 filtered loci) | **70/93 (75.3%)** |
+| Self-typing (125 full set) | 70/125 (56.0%) |
+| Assemblies typeable | 258/565 (45.7%) |
+| Loci utilised (filtered set) | 70/93 |
+
+Self-typing is **unchanged** from v2.0. Positional gene naming did not improve Kaptive's discrimination because Kaptive scores by cumulative BLAST bitscore across all reference genes — gene names in the GenBank qualifiers do not affect scoring. The root cause of the 23 failures is **bitscore accumulation bias from oversized representatives**: KL302 has 40 CDS (41 kb) and KL305 has 50 CDS (51 kb); these loci accumulate more total bitscore than smaller within-KX01 references (30–38 CDS) even when all query genes match at 100% identity. Fixing this requires swapping oversized representatives to size-matched alternatives (planned for v0.4).
+
+Full validation results: `DB/kaptive_validation_results_v3.tsv`
+
 ### v2.0 validation
 
 The v2.0 database was validated by running Kaptive v3.1.0 on all 565 assemblies from which a locus was successfully extracted:
@@ -146,7 +184,7 @@ The v2.0 database was validated by running Kaptive v3.1.0 on all 565 assemblies 
 | Assemblies typeable | **258/565 (45.7%)** |
 | Loci utilised (filtered set) | 70/93 |
 
-The 23 loci that do not self-type are predominantly KX01 loci that score slightly below KL302 (the longest KX01 representative at 41 kb). Reliable KL-level discrimination within a KX type requires systematic positional gene naming (planned for v3.0).
+The 23 loci that do not self-type are predominantly KX01 loci that score below KL302 (40 CDS, 41 kb). See v3.0 validation for root-cause analysis.
 
 Full validation results: `DB/kaptive_validation_results_v2.tsv`
 
@@ -165,36 +203,45 @@ blastn -query genome.fasta \
 
 ## Roadmap
 
-### v0.3 (next release)
+### v0.3 (completed)
 
-The primary goal of v0.3 is to achieve reliable KL-level typing across all loci. The key bottleneck identified in v0.2 validation is that G1/G4 loci share many conserved flanking genes (*wza*, *wzb*, *wzc*, *galF*, *gnd*), which dominate Kaptive's scoring and prevent discrimination of loci within the same KX type. Fixing this requires systematic gene naming so that each locus has a unique, distinguishable gene set.
+Implemented systematic positional gene naming across all 93 filtered loci (see `scripts/name_loci_positional.py`):
 
-#### Systematic gene naming (critical for v1.0)
+- **Conserved genes:** retain functional Klebsiella-derived names (*wza*, *wzb*, *wzc*, *wzx*, *wzy*, *galF*, *gnd*, *ugd*, glycosyltransferases)
+- **Variable-region genes:** clustered at 90% identity/coverage across all loci; shared families receive a single positional name (`KL{N}_{pos}`) named from the lowest-numbered locus that contributes a member; singleton families get a name tied to their locus
+- **Result:** 3,298 CDS; 64% functional names; 36% positional names; 67 multi-locus shared protein families
 
-Adopt a positional gene naming strategy for locus-specific genes, as used by [kTYPr](https://github.com/SushiLab/kTYPr) (Schwengers et al., 2025):
+**Finding:** self-typing unchanged at 70/93 (75.3%). Positional naming does not affect Kaptive's scoring because Kaptive accumulates raw BLAST bitscore — gene qualifier names in GenBank records play no role. The 23 persistent failures are caused by bitscore accumulation bias: KL302 (40 CDS) and KL305 (50 CDS) are oversized representatives that out-score same-KX-type loci with 30–38 CDS regardless of per-gene identity.
 
-- **Conserved genes:** retain functional names (e.g., *wza*, *wzb*, *wzc*, *wzx*, *wzy*, *galF*, *gnd*, *ugd*)
-- **Locus-specific genes:** positional codes tied to the locus (e.g., *KL339_5*, *KL339_6*) — ensures Kaptive can distinguish loci by their variable biosynthetic region
-- **Shared variable genes:** compound names reflecting shared usage across types (e.g., *KL300_KL305_7*)
-- Protein families defined by clustering at 90% identity/coverage
+### v0.4 (next release)
 
-**Why this is needed:** in v0.2 validation, loci within the same KX type (e.g., KX01) cannot be reliably distinguished because unnamed variable-region CDS are invisible to Kaptive's gene-based scoring. The 23 loci that fail self-typing all have this problem. Positional naming gives each locus a unique gene signature.
+The primary goal is to fix bitscore accumulation bias by replacing oversized representatives with size-matched alternatives, following the same approach used in v0.2 for KL300 and KL302.
+
+#### Representative swapping
+
+Priority targets identified from v3.0 validation failures:
+
+| Dominant locus | CDS count | Size | Failing loci |
+|---------------|-----------|------|--------------|
+| KL302 | 40 | 41 kb | KL337, KL360, KL366, KL371, KL372, KL375, KL376, KL384, KL386, KL387, KL388, KL389, KL391, KL393, KL394, KL397(?), KL398, KL400(?), KL401, KL402(?), KL403, KL404, KL406, KL408, KL409(?), KL411, KL414(?), KL415, KL417, KL418, KL421, KL422 |
+| KL305 | 50 | 51 kb | KL326 |
+| KL300 | — | — | KL306, KL364, KL395, KL400, KL402, KL408, KL409, KL414, KL418, KL421, KL422 |
+| KL304 | — | — | KL318, KL421 |
+
+For each, select a cluster member whose locus length is closest to the cluster median, swap the representative, re-annotate, and re-run validation.
 
 #### Expanded genome coverage
 
 - Mine [AllTheBacteria](https://doi.org/10.1101/2024.03.08.584059) (~300–500K *E. coli* genomes) using [LexicMap](https://www.nature.com/articles/s41587-025-02812-8) or direct BLAST screening for *galF*/*gnd* flanking genes to discover novel G1/G4 K-locus types beyond the BSI isolate set
 
-#### Enhanced scoring and reporting
+#### Locus visualisation
 
-- **Multi-metric scoring** per K-type assignment (as in kTYPr): number of reference genes found, accumulated bitscore, fractional bitscore, and locus completeness
-- **Conserved locus integrity check:** separate scoring for conserved flanking/export genes vs. variable biosynthetic genes
-- **Locus comparison visualisation:** [clinker](https://github.com/gamcil/clinker)-based HTML visualisation for pairwise comparison of K-locus architectures
+- [clinker](https://github.com/gamcil/clinker)-based HTML visualisation for pairwise comparison of K-locus architectures, particularly within failing KX types
 
 ### v1.0 (public release)
 
 v1.0 will be released when:
 - Self-typing reaches **100%** for all loci in the filtered set
-- Systematic positional gene naming is fully implemented
 - AllTheBacteria expansion is complete
 - The database has been used in a peer-reviewed publication
 
@@ -206,7 +253,7 @@ v1.0 will be released when:
 | [kTYPr](https://github.com/SushiLab/kTYPr) | *E. coli* Group 2 & 3 (85 loci, HMM-based) | [Schwengers et al. 2025](https://www.biorxiv.org/content/10.1101/2025.08.07.669119v1) |
 | [Kaptive](https://github.com/klebgenomics/Kaptive) | *Klebsiella* and *E. coli* K/O typing | [Lam et al. 2022](https://doi.org/10.1099/mgen.0.000800) |
 | [FastKaptive](https://github.com/rmostowy/fastKaptive) | Fast K-locus pre-screening | Mostowy et al. |
-| **This database** | *E. coli* Group 1 & 4 (125 loci, v0.2) | — |
+| **This database** | *E. coli* Group 1 & 4 (93 filtered loci, v0.3) | — |
 
 ## Citation
 

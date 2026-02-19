@@ -20,6 +20,7 @@ Usage
 """
 
 import argparse
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -27,10 +28,10 @@ from pathlib import Path
 import pandas as pd
 
 # ---------------------------------------------------------------------------
-# Paths
+# Paths (defaults; overridable via --db / --suffix)
 # ---------------------------------------------------------------------------
 REPO_DIR          = Path(__file__).resolve().parent.parent
-DB                = REPO_DIR / "DB" / "EC-K-typing_all_groups_v2.0.gbk"
+_DEFAULT_DB       = REPO_DIR / "DB" / "EC-K-typing_all_groups_v2.0.gbk"
 MAPPING_FILE      = REPO_DIR / "DB" / "KL_G1G4_mapping.tsv"
 FILTERED_MAPPING  = REPO_DIR / "DB" / "KL_G1G4_mapping_filtered.tsv"
 EXTRACTION_SUMMARY = Path(
@@ -39,8 +40,6 @@ EXTRACTION_SUMMARY = Path(
 GENOMES_DIR       = Path(
     "/Users/LSHEF4/Dropbox/work_2025/e_coli_db/db_build_v2/nohits_genomes"
 )
-RESULTS_TSV       = REPO_DIR / "DB" / "kaptive_validation_results_v2.tsv"
-SUMMARY_TSV       = REPO_DIR / "DB" / "kaptive_validation_summary_v2.tsv"
 
 
 # ---------------------------------------------------------------------------
@@ -146,13 +145,11 @@ def print_summary(df: pd.DataFrame) -> None:
     # 3. Locus utilisation
     utilised = set(reps_filtered[reps_filtered["correct_type"] == True]["expected_KL"])
     not_util = set(reps_filtered["expected_KL"]) - utilised
-    print(f"\n3. Locus utilisation (filtered 93-locus set)")
-    print(f"   Correctly self-typed:  {len(utilised)}/93")
+    n_filt   = len(set(reps_filtered["expected_KL"]))
+    print(f"\n3. Locus utilisation (filtered {n_filt}-locus set)")
+    print(f"   Correctly self-typed:  {len(utilised)}/{n_filt}")
     if not_util:
         print(f"   Not self-typed ({len(not_util)}):  {', '.join(sorted(not_util))}")
-
-    print(f"\nFull Kaptive output:  {RESULTS_TSV}")
-    print(f"Per-assembly summary: {SUMMARY_TSV}")
 
 
 # ---------------------------------------------------------------------------
@@ -169,7 +166,34 @@ def main():
         "--skip-kaptive", action="store_true",
         help="Skip running kaptive and parse existing results file"
     )
+    parser.add_argument(
+        "--db", type=Path, default=None,
+        help="Kaptive database to use (default: EC-K-typing_all_groups_v2.0.gbk)"
+    )
+    parser.add_argument(
+        "--suffix", default=None,
+        help="Suffix for output files (default: inferred from --db filename, else 'v2')"
+    )
     args = parser.parse_args()
+
+    # Resolve DB path and output suffix
+    db = args.db if args.db else _DEFAULT_DB
+    if args.suffix:
+        suffix = args.suffix
+    elif args.db:
+        # Infer from filename: EC-K-typing_all_groups_v3.0.gbk → v3
+        m = re.search(r'_(v\d+)', db.stem)
+        suffix = m.group(1) if m else 'custom'
+    else:
+        suffix = 'v2'
+
+    results_tsv = REPO_DIR / "DB" / f"kaptive_validation_results_{suffix}.tsv"
+    summary_tsv = REPO_DIR / "DB" / f"kaptive_validation_summary_{suffix}.tsv"
+
+    # Patch module-level names so print_summary can reference them
+    global RESULTS_TSV, SUMMARY_TSV
+    RESULTS_TSV = results_tsv
+    SUMMARY_TSV = summary_tsv
 
     # Load mapping tables
     mapping          = pd.read_csv(MAPPING_FILE, sep="\t")
@@ -205,20 +229,20 @@ def main():
 
     # Run Kaptive (or skip if --skip-kaptive)
     if not args.skip_kaptive:
-        if not DB.exists():
-            print(f"ERROR: database not found: {DB}", file=sys.stderr)
+        if not db.exists():
+            print(f"ERROR: database not found: {db}", file=sys.stderr)
             sys.exit(1)
-        run_kaptive(DB, genome_files, RESULTS_TSV, args.threads)
+        run_kaptive(db, genome_files, results_tsv, args.threads)
     else:
-        if not RESULTS_TSV.exists():
-            print(f"ERROR: --skip-kaptive set but results file not found: {RESULTS_TSV}",
+        if not results_tsv.exists():
+            print(f"ERROR: --skip-kaptive set but results file not found: {results_tsv}",
                   file=sys.stderr)
             sys.exit(1)
-        print(f"\n[kaptive] Skipping run, reading existing: {RESULTS_TSV}")
+        print(f"\n[kaptive] Skipping run, reading existing: {results_tsv}")
 
     # Parse and summarise
-    df = parse_results(RESULTS_TSV, expected_kl, filtered_kls)
-    df.to_csv(SUMMARY_TSV, sep="\t", index=False)
+    df = parse_results(results_tsv, expected_kl, filtered_kls)
+    df.to_csv(summary_tsv, sep="\t", index=False)
 
     print_summary(df)
 
