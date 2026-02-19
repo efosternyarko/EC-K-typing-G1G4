@@ -213,30 +213,36 @@ Implemented systematic positional gene naming across all 93 filtered loci (see `
 
 **Finding:** self-typing unchanged at 70/93 (75.3%). Positional naming does not affect Kaptive's scoring because Kaptive accumulates raw BLAST bitscore — gene qualifier names in GenBank records play no role. The 23 persistent failures are caused by bitscore accumulation bias: KL302 (40 CDS) and KL305 (50 CDS) are oversized representatives that out-score same-KX-type loci with 30–38 CDS regardless of per-gene identity.
 
+### v0.4 (attempted — not released)
+
+Representative swapping was attempted for KL302 and KL305, the two most dominant loci:
+
+| Locus | Old representative | Old CDS | New representative | New CDS |
+|-------|-------------------|---------|-------------------|---------|
+| KL302 | ESC_GB6443AA_AS | 40 | ESC_CC1376AA_AS (KX01) | 28 |
+| KL305 | ESC_BA8240AA_AS | 50 | ESC_TA7291AA_AS (KX34) | 37 |
+
+**Result: 64/93 (68.8%) — worse than v3.0.** The swap fixed 6 loci that were being dominated by KL302 (KL326, KL337, KL364, KL365, KL367, KL368) but broke 12 others that were correctly self-typing in v3.0 (KL302 itself typed as KL309; many others shifted to being dominated by KL300 or KL304 instead). Net: −6 loci.
+
+**Conclusion — whack-a-mole:** bitscore accumulation bias is systemic. Every KX type has a "most CDS" reference that accumulates the highest score in its neighbours' genomes. Shrinking one dominant locus shifts dominance to the next-largest. The 23 failures cannot be fixed one locus at a time.
+
 ### v0.4 (next release)
 
-The primary goal is to fix bitscore accumulation bias by replacing oversized representatives with size-matched alternatives, following the same approach used in v0.2 for KL300 and KL302.
+True resolution requires addressing the systemic scoring problem. Two viable approaches:
 
-#### Representative swapping
+#### Option A: Score normalisation (preferred)
 
-Priority targets identified from v3.0 validation failures:
+Add a Kaptive post-processing step that normalises each locus score by the number of expected genes (or locus length), converting raw bitscore sum → fractional bitscore per gene. This prevents large references from winning by sheer gene count. This would likely fix all 23 remaining failures without any database changes.
 
-| Dominant locus | CDS count | Size | Failing loci |
-|---------------|-----------|------|--------------|
-| KL302 | 40 | 41 kb | KL337, KL360, KL366, KL371, KL372, KL375, KL376, KL384, KL386, KL387, KL388, KL389, KL391, KL393, KL394, KL397(?), KL398, KL400(?), KL401, KL402(?), KL403, KL404, KL406, KL408, KL409(?), KL411, KL414(?), KL415, KL417, KL418, KL421, KL422 |
-| KL305 | 50 | 51 kb | KL326 |
-| KL300 | — | — | KL306, KL364, KL395, KL400, KL402, KL408, KL409, KL414, KL418, KL421, KL422 |
-| KL304 | — | — | KL318, KL421 |
+*Implementation: post-processing of the Kaptive TSV results file — no changes to Kaptive itself needed.*
 
-For each, select a cluster member whose locus length is closest to the cluster median, swap the representative, re-annotate, and re-run validation.
+#### Option B: Variable-region-only scoring
+
+Remove conserved flanking/export genes (wza, wzb, wzc, galF, gnd, ugd) from the GenBank CDS features used by Kaptive, retaining only the variable biosynthetic region. Since these conserved genes are present at ~100% identity in all loci of the same KX type, they contribute equal bitscore to all references; removing them eliminates the shared background and leaves only the discriminating variable genes.
 
 #### Expanded genome coverage
 
 - Mine [AllTheBacteria](https://doi.org/10.1101/2024.03.08.584059) (~300–500K *E. coli* genomes) using [LexicMap](https://www.nature.com/articles/s41587-025-02812-8) or direct BLAST screening for *galF*/*gnd* flanking genes to discover novel G1/G4 K-locus types beyond the BSI isolate set
-
-#### Locus visualisation
-
-- [clinker](https://github.com/gamcil/clinker)-based HTML visualisation for pairwise comparison of K-locus architectures, particularly within failing KX types
 
 ### v1.0 (public release)
 

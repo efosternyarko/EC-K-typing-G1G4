@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Systematic positional gene naming for G1/G4 K-locus references (v0.3).
+Systematic positional gene naming for G1/G4 K-locus references.
 
-Takes the annotated v2.0 GenBank, clusters all CDS proteins at 90% identity /
+Takes an annotated G1/G4 GenBank, clusters all CDS proteins at 90% identity /
 90% query+subject coverage, then assigns systematic gene names:
 
   - Conserved / functionally-annotated genes: keep the existing functional name
@@ -16,14 +16,18 @@ loci by their unique genes.
 
 Usage
 -----
-    python scripts/name_loci_positional.py
+    python scripts/name_loci_positional.py [--suffix v3|v4]
+
+    --suffix v3  (default): input=v2.0 base, output=v3.0
+    --suffix v4:            input=v4.0_base, output=v4.0
 
 Outputs
 -------
-    DB/EC-K-typing_group1and4_v3.0.gbk   -- 93 loci with positional names
-    DB/EC-K-typing_all_groups_v3.0.gbk   -- 183-locus combined database
+    DB/EC-K-typing_group1and4_{suffix}.gbk   -- loci with positional names
+    DB/EC-K-typing_all_groups_{suffix}.gbk   -- combined database
 """
 
+import argparse
 import os
 import re
 import subprocess
@@ -37,14 +41,16 @@ from Bio.SeqFeature import FeatureLocation, SeqFeature
 from Bio.SeqRecord import SeqRecord
 
 # ---------------------------------------------------------------------------
-# Paths
+# Paths (resolved after arg parsing in main)
 # ---------------------------------------------------------------------------
-REPO_DIR    = Path(__file__).resolve().parent.parent
-DB_DIR      = REPO_DIR / "DB"
-INPUT_GBK   = DB_DIR / "EC-K-typing_group1and4_v2.0.gbk"
-OUTPUT_GBK  = DB_DIR / "EC-K-typing_group1and4_v3.0.gbk"
-G23_GBK     = DB_DIR / "EC-K-typing_group2and3_v3.0.0.gbk"
-MERGED_GBK  = DB_DIR / "EC-K-typing_all_groups_v3.0.gbk"
+REPO_DIR = Path(__file__).resolve().parent.parent
+DB_DIR   = REPO_DIR / "DB"
+G23_GBK  = DB_DIR / "EC-K-typing_group2and3_v3.0.0.gbk"
+
+# Module-level placeholders; set in main()
+INPUT_GBK  = DB_DIR / "EC-K-typing_group1and4_v2.0.gbk"
+OUTPUT_GBK = DB_DIR / "EC-K-typing_group1and4_v3.0.gbk"
+MERGED_GBK = DB_DIR / "EC-K-typing_all_groups_v3.0.gbk"
 
 # ---------------------------------------------------------------------------
 # Parameters
@@ -357,8 +363,35 @@ def rewrite_records(records, locus_cds, member_to_rep, family_name):
 # ---------------------------------------------------------------------------
 
 def main():
+    global INPUT_GBK, OUTPUT_GBK, MERGED_GBK
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--suffix", default="v3",
+        help="Version suffix: 'v3' (default, input=v2.0) or 'v4' (input=v4.0_base)"
+    )
+    args = parser.parse_args()
+    suffix = args.suffix
+
+    # Resolve IO paths from suffix
+    # Canonical mapping: cli suffix → (input base, output suffix, version label)
+    _MAP = {
+        "v3": ("EC-K-typing_group1and4_v2.0.gbk",      "v3.0", "v0.3"),
+        "v4": ("EC-K-typing_group1and4_v4.0_base.gbk", "v4.0", "v0.4"),
+    }
+    if suffix in _MAP:
+        in_name, out_sfx, ver_label = _MAP[suffix]
+        INPUT_GBK = DB_DIR / in_name
+    else:
+        INPUT_GBK = DB_DIR / f"EC-K-typing_group1and4_{suffix}_base.gbk"
+        out_sfx   = suffix
+        ver_label = suffix
+
+    OUTPUT_GBK = DB_DIR / f"EC-K-typing_group1and4_{out_sfx}.gbk"
+    MERGED_GBK = DB_DIR / f"EC-K-typing_all_groups_{out_sfx}.gbk"
+
     print('=' * 70)
-    print('Systematic Positional Gene Naming  —  v0.3')
+    print(f'Systematic Positional Gene Naming  —  {ver_label}')
     print('=' * 70)
 
     # ── Step 1: load ────────────────────────────────────────────────────────
@@ -471,13 +504,13 @@ def main():
     print(f'  Positional names: {pos_total}  ({100*pos_total/total_cds_out:.1f}%)')
     print(f'  Protein families: {n_fam}  (multi-locus positional: {len(shared)})')
     print(f'\n  Output files:')
-    print(f'    G1/G4 v3.0    : {OUTPUT_GBK}')
+    print(f'    G1/G4 {suffix}    : {OUTPUT_GBK}')
     if G23_GBK.exists():
-        print(f'    All-groups v3.0: {MERGED_GBK}')
+        print(f'    All-groups {suffix}: {MERGED_GBK}')
     print(f'\nNext step:')
     print(f'  python scripts/validate_db_v2.py \\')
     print(f'    --db {MERGED_GBK} \\')
-    print(f'    --suffix v3')
+    print(f'    --suffix {suffix}')
 
 
 if __name__ == '__main__':
