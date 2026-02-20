@@ -29,7 +29,8 @@ Groups 1 and 4 share the Wzy-dependent polymerisation pathway. Their capsule bio
 |---------|-----------|-----------------|----------------|-------------|-------|
 | v0.1 | 46 (KL300–KL343) | 136 | 222 (subset accessible) | 46/46 (100%) | Initial release |
 | v0.2 | 125 (KL300–KL423) | 183 | 1,112 (all BSI no-hit isolates) | 70/93 (75.3%) | |
-| **v0.3** | **93 filtered (positional names)** | **183** | **1,112 BSI** | **70/93 (75.3%) standard; 88/93 (94.6%) normalised** | **Current release — positional gene naming + normalised scoring script** |
+| v0.3 | 93 filtered (positional names) | 183 | 1,112 BSI | 70/93 (75.3%) standard; 88/93 (94.6%) normalised | Positional gene naming + normalised scoring script |
+| **v0.3.1** | **93 filtered** | **183** | **1,112 BSI + 592 NNS** | **pending re-validation** | **KL388 (+6.6 kb) and KL391 (+10.5 kb) replaced with longer NNS representatives from Malawi and South Africa; fixes KL391 typing (previously typed as KL300 Untypeable)** |
 
 ### Reference loci (v2.0)
 
@@ -43,7 +44,15 @@ The v2.0 database contains **125 reference K-loci** (K24, K96, KL300–KL423) ex
 
 ### Files
 
-#### v3.0 (current)
+#### v3.1 (current)
+
+| File | Description |
+|------|-------------|
+| `DB/EC-K-typing_group1and4_v3.1.gbk` | **G1/G4 database with updated KL388 (+6.6 kb, Mlw) and KL391 (+10.5 kb, Barnards) representatives** |
+| `DB/EC-K-typing_all_groups_v3.1.gbk` | **Combined all-groups database (183 loci) with updated reps** |
+| `DB/nns_rep_update_summary.tsv` | Annotation summary for the two updated representatives |
+
+#### v3.0
 
 | File | Description |
 |------|-------------|
