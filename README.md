@@ -30,7 +30,7 @@ Groups 1 and 4 share the Wzy-dependent polymerisation pathway. Their capsule bio
 | v0.1 | 46 (KL300–KL343) | 136 | 222 (subset accessible) | 46/46 (100%) | Initial release |
 | v0.2 | 125 (KL300–KL423) | 183 | 1,112 (all BSI no-hit isolates) | 70/93 (75.3%) | |
 | v0.3 | 93 filtered (positional names) | 183 | 1,112 BSI | 70/93 (75.3%) standard; 88/93 (94.6%) normalised | Positional gene naming + normalised scoring script |
-| **v0.3.1** | **93 filtered** | **183** | **1,112 BSI + 592 NNS** | **pending re-validation** | **KL388 (+6.6 kb) and KL391 (+10.5 kb) replaced with longer NNS representatives from Malawi and South Africa; fixes KL391 typing (previously typed as KL300 Untypeable)** |
+| **v0.3.1** | **93 filtered** | **183** | **1,112 BSI + 592 NNS** | **592/592 (100%) NNS typeable** | **KL388 (+6.6 kb) and KL391 (+10.5 kb) replaced with longer NNS representatives from Malawi and South Africa; KL391 now correctly typed by standard Kaptive scoring (previously KL300 Untypeable)** |
 
 ### Reference loci (v0.2)
 
@@ -51,6 +51,10 @@ The v0.2 database contains **125 reference K-loci** (K24, K96, KL300–KL423) ex
 | `DB/EC-K-typing_group1and4_v0.3.1.gbk` | **G1/G4 database with updated KL388 (+6.6 kb, Mlw) and KL391 (+10.5 kb, Barnards) representatives** |
 | `DB/EC-K-typing_all_groups_v0.3.1.gbk` | **Combined all-groups database (183 loci) with updated reps — use this for typing** |
 | `DB/nns_rep_update_summary.tsv` | Annotation summary for the two updated representatives |
+| `DB/nns_kaptive_results_v0.3.1.tsv` | Standard Kaptive typing output (592 NNS assemblies, v0.3.1 DB) |
+| `DB/nns_kaptive_scores_v0.3.1.tsv` | Full locus × assembly score matrix (183 loci × 592 assemblies, v0.3.1 DB) |
+| `DB/nns_kaptive_results_v0.3.1_norm.tsv` | Normalised typing results with collection labels (v0.3.1 DB) |
+| `DB/nns_kaptive_summary_v0.3.1_norm.tsv` | Per-collection summary table (v0.3.1 DB) |
 
 #### v0.3
 
@@ -310,6 +314,8 @@ Replaced two representatives with longer, more complete sequences extracted from
 - **KL391:** 30,360 bp (BSI) → 40,871 bp (+10.5 kb; South Africa/Barnards, ERR4920077); 36 CDS, 97% annotated
 
 **Key fix:** KL391 assemblies previously mistyped as KL300 (Untypeable) now correctly type as KL391 (Typeable) with standard Kaptive scoring.
+
+**NNS re-validation (v0.3.1):** All 592/592 NNS assemblies remain typeable with normalised scoring. ERR4920077 and ERR4920086 (Barnards, South Africa) now type as KL391 with 100% gene coverage (NormAS 2.00 and 1.88 respectively) — both previously typed as KL391 via normalised scoring on v0.3 and now also correctly typed by standard Kaptive. NNS validation files: `DB/nns_kaptive_results_v0.3.1_norm.tsv`, `DB/nns_kaptive_summary_v0.3.1_norm.tsv`.
 
 ### v0.4 (next release)
 
