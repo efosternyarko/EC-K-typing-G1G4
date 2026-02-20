@@ -1,0 +1,7 @@
+locus	accession	hit_id	description	pident	qcov	n_hsps
+KL306	CP147038	gi|2719092462|gb|CP147038.1|	Escherichia coli strain 21F61 chromosome, complete genome	100.0	100.0	6
+KL306	CP099041	gi|2485184535|gb|CP099041.1|	Escherichia coli strain RHB44-C17 chromosome, complete genome	98.01	100.0	4
+KL306	CP099051	gi|2485174383|gb|CP099051.1|	Escherichia coli strain RHB44-C13 chromosome, complete genome	98.01	100.0	4
+KL306	CP071263	gi|2246663487|gb|CP071263.1|	Escherichia coli strain MEI003 chromosome, complete genome	97.98	100.0	4
+KL306	OY754453	gi|2604806659|emb|OY754453.1|	Escherichia coli isolate F95 genome assembly, chromosome: 1	97.98	99.8	7
+KL306	CP133106	gi|2569605493|gb|CP133106.1|	Escherichia coli strain 8523 chromosome, complete genome	98.01	99.5	4

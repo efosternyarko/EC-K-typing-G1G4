@@ -1,0 +1,600 @@
+locus	accession	hit_id	description	pident	qcov	n_hsps
+KL300	CP135488	gi|2587883941|gb|CP135488.1|	Escherichia coli strain isolateD chromosome, complete genome	100.0	99.8	11
+KL300	CP076305	gi|2049912730|gb|CP076305.1|	Escherichia coli strain Survcare253 chromosome, complete genome	100.0	99.8	12
+KL300	CP116981	gi|2441343101|gb|CP116981.1|	Escherichia coli strain E6474 chromosome, complete genome	100.0	99.8	10
+KL300	CP080075	gi|2241505265|gb|CP080075.1|	Escherichia coli strain 19SZHZ663Rt chromosome, complete genome	100.0	99.8	7
+KL300	CP034745	gi|1548973884|gb|CP034745.1|	Escherichia coli strain L100 chromosome, complete genome	100.0	99.8	43
+KL300	CP034727	gi|1548978374|gb|CP034727.1|	Escherichia coli strain L41-1 chromosome, complete genome	100.0	99.8	43
+KL300	CP062889	gi|1933673538|gb|CP062889.1|	Escherichia coli O100:H21 strain Res13-Lact-ER07-18 chromosome, complete genome	100.0	99.8	11
+KL300	CP138399	gi|2621922867|gb|CP138399.1|	Escherichia coli strain 64EVA chromosome, complete genome	100.0	99.6	29
+KL300	CP163042	gi|2781853017|gb|CP163042.1|	Escherichia coli strain W150 chromosome, complete genome	100.0	99.3	10
+KL300	CP086391	gi|2136545915|gb|CP086391.1|	Escherichia coli strain 1585m1 chromosome, complete genome	100.0	99.1	12
+KL300	CP156718	gi|2736394566|gb|CP156718.1|	Escherichia coli strain EC596 chromosome, complete genome	100.0	98.0	18
+KL300	CP092707	gi|2204291916|gb|CP092707.1|	Escherichia coli strain S-P-N-065.01 chromosome	100.0	95.5	14
+KL300	CP135680	gi|2589013986|gb|CP135680.1|	Escherichia coli strain TUM3755 chromosome, complete genome	100.0	93.1	15
+KL300	CP115173	gi|2422119860|gb|CP115173.1|	Escherichia coli strain EC_E9BF_1_E_CuN_CeN chromosome	100.0	93.1	32
+KL300	CP057194	gi|1881463013|gb|CP057194.1|	Escherichia coli strain RHB33-C12 chromosome, complete genome	100.0	93.1	22
+KL300	CP195164	gi|3012420827|gb|CP195164.1|	Escherichia coli strain G47-1 chromosome, complete genome	100.0	93.0	21
+KL300	OZ039259	gi|2852291915|emb|OZ039259.1|	Escherichia coli isolate 30348_2#214 genome assembly, chromosome: 1	100.0	93.0	15
+KL300	CP147050	gi|2719101484|gb|CP147050.1|	Escherichia coli strain 1008S19 chromosome, complete genome	100.0	93.0	77
+KL300	CP055934	gi|1883296556|gb|CP055934.1|	Escherichia coli strain RHBSTW-00093 chromosome	100.0	92.6	44
+KL300	CP117960	gi|2446175573|gb|CP117960.1|	Escherichia coli strain B-3008 chromosome, complete genome	100.0	92.6	28
+KL300	CP000946	gi|169752989|gb|CP000946.1|	Escherichia coli ATCC 8739, complete genome	100.0	92.6	30
+KL300	CP022959	gi|1481703759|gb|CP022959.1|	Escherichia coli ATCC 8739 chromosome, complete genome	100.0	92.6	30
+KL300	CP033020	gi|2325983105|gb|CP033020.1|	Escherichia coli ATCC 8739 chromosome, complete genome	100.0	92.6	30
+KL300	CP147025	gi|2697521894|gb|CP147025.1|	Escherichia coli strain KCTC 2571 chromosome, complete genome	100.0	92.6	30
+KL300	CP071263	gi|2246663487|gb|CP071263.1|	Escherichia coli strain MEI003 chromosome, complete genome	100.0	92.3	10
+KL300	CP047658	gi|1799064059|gb|CP047658.1|	Escherichia coli strain LD39-1 chromosome, complete genome	100.0	92.2	18
+KL300	LR134231	gi|1539617232|emb|LR134231.1|	Escherichia coli strain NCTC9087 genome assembly, chromosome: 1	100.0	92.1	15
+KL300	CP099041	gi|2485184535|gb|CP099041.1|	Escherichia coli strain RHB44-C17 chromosome, complete genome	99.89	92.0	6
+KL300	CP099051	gi|2485174383|gb|CP099051.1|	Escherichia coli strain RHB44-C13 chromosome, complete genome	99.89	92.0	6
+KL300	CP056355	gi|1880542551|gb|CP056355.1|	Escherichia coli strain RHBSTW-00673 chromosome, complete genome	100.0	91.8	51
+KL300	CP164048	gi|2842018298|gb|CP164048.1|	Escherichia coli strain OXEC-94 chromosome, complete genome	100.0	91.8	59
+KL300	CP056604	gi|1880298123|gb|CP056604.1|	Escherichia coli strain RHBSTW-00321 chromosome, complete genome	100.0	91.8	11
+KL300	CP166722	gi|3005641875|gb|CP166722.1|	Escherichia coli strain CEA106S chromosome, complete genome	100.0	91.6	43
+KL300	CP155523	gi|2733049454|gb|CP155523.1|	Escherichia coli strain WWCOL-315 chromosome, complete genome	100.0	91.5	13
+KL300	CP115351	gi|2571647867|gb|CP115351.1|	Escherichia coli strain CUVET21-37 chromosome, complete genome	100.0	91.5	13
+KL300	CP082100	gi|2550411218|gb|CP082100.1|	Escherichia coli strain MS15047 chromosome, complete genome	100.0	91.4	30
+KL300	OZ038660	gi|2852407738|emb|OZ038660.1|	Escherichia coli isolate 30348_2#190 genome assembly, chromosome: 1	99.89	91.4	14
+KL300	AP040249	gi|2975844981|dbj|AP040249.1|	Escherichia coli B1-56 DNA, complete genome	100.0	91.0	12
+KL300	CP126343	gi|2513831752|gb|CP126343.1|	Escherichia coli strain DAX4 chromosome, complete genome	100.0	91.0	34
+KL300	CP063956	gi|2006270597|gb|CP063956.1|	Escherichia coli strain P3 chromosome	100.0	91.0	28
+KL300	OZ040195	gi|2852409872|emb|OZ040195.1|	Escherichia coli isolate 30821_1#376 genome assembly, chromosome: 1	100.0	90.9	7
+KL300	CP062863	gi|1933669264|gb|CP062863.1|	Escherichia coli strain Res13-Lact-PEB14-36 chromosome, complete genome	100.0	90.9	39
+KL300	CP062908	gi|1933706009|gb|CP062908.1|	Escherichia coli strain Res13-Lact-EB12-05 chromosome, complete genome	100.0	90.9	40
+KL300	AP027445	gi|2463338904|dbj|AP027445.1|	Escherichia coli EC291 DNA, complete genome	100.0	90.8	80
+KL300	AP021894	gi|1807834377|dbj|AP021894.1|	Escherichia coli 2018-10-1CC DNA, complete genome >gi|2617035220|dbj|AP027716.1|	100.0	90.7	70
+KL300	LS483296	gi|1403733617|emb|LS483296.1|	Escherichia coli strain NCTC9966 genome assembly, chromosome: 1	100.0	90.6	56
+KL300	LR134220	gi|1539572809|emb|LR134220.1|	Escherichia coli strain NCTC11121 genome assembly, chromosome: 1	100.0	90.6	54
+KL300	CP170329	gi|3093069806|gb|CP170329.1|	Escherichia coli strain CAAH3Y chromosome	100.0	90.5	13
+KL300	AP027759	gi|2617057921|dbj|AP027759.1|	Escherichia coli 2017-02-1CC DNA, complete genome	100.0	90.5	43
+KL300	CP119740	gi|2463038636|gb|CP119740.1|	Escherichia coli strain E94 chromosome, complete genome	100.0	90.5	17
+KL300	CP119734	gi|2463033256|gb|CP119734.1|	Escherichia coli strain E92 chromosome, complete genome	100.0	90.5	17
+KL300	CP100883	gi|2788217779|gb|CP100883.1|	Escherichia coli strain ET896 chromosome, complete genome	100.0	90.4	28
+KL300	CP139846	gi|2636190031|gb|CP139846.1|	Escherichia coli strain Nord58 chromosome, complete genome	100.0	90.4	19
+KL300	OY754364	gi|2604826250|emb|OY754364.1|	Escherichia coli isolate F404 genome assembly, chromosome: 1	100.0	90.3	28
+KL300	CP057276	gi|1881386081|gb|CP057276.1|	Escherichia coli strain RHB31-C01 chromosome, complete genome	100.0	90.3	35
+KL300	CP119400	gi|2459419769|gb|CP119400.1|	Escherichia coli strain MRE162 substr. NOR chromosome, complete genome	100.0	90.3	30
+KL300	CP119404	gi|2459428866|gb|CP119404.1|	Escherichia coli strain MRE162 substr. UK chromosome, complete genome	100.0	90.3	29
+KL300	CP119402	gi|2459424248|gb|CP119402.1|	Escherichia coli strain MRE162 substr. FRA chromosome, complete genome	100.0	90.3	29
+KL300	LR134152	gi|1539390012|emb|LR134152.1|	Escherichia coli strain NCTC9104 genome assembly, chromosome: 1	100.0	90.2	19
+KL300	CP098996	gi|2485293444|gb|CP098996.1|	Escherichia coli strain RHB46-C05 chromosome, complete genome	100.0	90.2	26
+KL300	CP057368	gi|1881538724|gb|CP057368.1|	Escherichia coli strain RHB28-C19 chromosome, complete genome	100.0	90.2	66
+KL300	CP057247	gi|1881336722|gb|CP057247.1|	Escherichia coli strain RHB31-C22 chromosome, complete genome	100.0	90.1	29
+KL300	CP100895	gi|2788203419|gb|CP100895.1|	Escherichia coli strain ET846 chromosome, complete genome	100.0	90.1	54
+KL300	AP042480	gi|3029588381|dbj|AP042480.1|	Escherichia coli O109:H16 OkiPb01676 DNA, complete genome	100.0	90.0	25
+KL300	AP042548	gi|3029661099|dbj|AP042548.1|	Escherichia coli O109:H16 OkiPb01690 DNA, complete genome	100.0	90.0	25
+KL300	CP035882	gi|2053241891|gb|CP035882.1|	Escherichia coli strain WS0115A chromosome, complete genome	100.0	90.0	23
+KL300	CP148405	gi|2702990253|gb|CP148405.1|	Escherichia coli strain Z1323CEC0018 chromosome, complete genome	100.0	90.0	25
+KL300	OZ038585	gi|2852407668|emb|OZ038585.1|	Escherichia coli isolate 30348_2#68 genome assembly, chromosome: 1	100.0	89.9	26
+KL300	CP184671	gi|2937995338|gb|CP184671.1|	Escherichia coli HB101 chromosome, complete genome	100.0	89.9	32
+KL300	CP049201	gi|1817229088|gb|CP049201.1|	Escherichia coli strain PapRG-04-4 chromosome, complete genome	98.79	89.9	7
+KL300	CP190204	gi|2973778379|gb|CP190204.1|	Escherichia coli isolate 2025CK-00090 chromosome, complete genome	100.0	89.8	36
+KL300	CP073949	gi|2283265626|gb|CP073949.1|	Escherichia coli strain MB50 chromosome, complete genome	100.0	89.8	40
+KL300	CP116169	gi|2430451307|gb|CP116169.1|	Escherichia coli strain DETEC-P1056 chromosome, complete genome	100.0	89.8	11
+KL300	OZ121069	gi|2845902718|emb|OZ121069.1|	Escherichia coli isolate 364_BP0073 genome assembly, chromosome: c	100.0	89.7	17
+KL300	AP027946	gi|2486499109|dbj|AP027946.1|	Escherichia coli VE-F10 DNA, complete genome	100.0	89.7	22
+KL300	CP147059	gi|2719147411|gb|CP147059.1|	Escherichia coli strain JKHS016 chromosome, complete genome	100.0	89.7	20
+KL300	LR134075	gi|1539222100|emb|LR134075.1|	Escherichia coli strain NCTC9084 genome assembly, chromosome: 1	100.0	89.7	20
+KL300	CP163700	gi|2842624563|gb|CP163700.1|	Escherichia coli strain OXEC-34 chromosome, complete genome	100.0	89.7	49
+KL300	CP099132	gi|2484980700|gb|CP099132.1|	Escherichia coli strain RHB31-E3-C04 chromosome, complete genome	100.0	89.7	45
+KL300	CP159700	gi|2754572356|gb|CP159700.1|	Escherichia coli strain Z142-1 chromosome, complete genome	100.0	89.6	41
+KL300	CP043750	gi|1741119415|gb|CP043750.1|	Escherichia coli strain CVM N62675 chromosome, complete genome	100.0	89.6	87
+KL300	CP171864	gi|2842125564|gb|CP171864.1|	Escherichia coli strain YZ22PE106 chromosome, complete genome	100.0	89.6	37
+KL300	CP171869	gi|2842125559|gb|CP171869.1|	Escherichia coli strain YZ22PE68 chromosome, complete genome	100.0	89.6	37
+KL300	CP171874	gi|2842125553|gb|CP171874.1|	Escherichia coli strain YZ22PE67 chromosome, complete genome	100.0	89.6	38
+KL300	CP067245	gi|2019635010|gb|CP067245.1|	Escherichia coli strain OW1E2 chromosome, complete genome	100.0	89.6	19
+KL300	CP180694	gi|2913249521|gb|CP180694.1|	Escherichia coli strain CUPS04 chromosome, complete genome	100.0	89.5	55
+KL300	CP063711	gi|1928688893|gb|CP063711.1|	Escherichia coli strain 18TN10VL01-EC chromosome, complete genome	100.0	89.5	23
+KL300	CP080133	gi|2074960648|gb|CP080133.1|	Escherichia coli strain PK8277 chromosome, complete genome	100.0	89.5	65
+KL300	LR134247	gi|1539674388|emb|LR134247.1|	Escherichia coli strain NCTC9040 genome assembly, chromosome: 1	100.0	89.5	57
+KL300	CP145714	gi|2688429608|gb|CP145714.1|	Escherichia coli strain S1-CAM-01-A chromosome, complete genome	100.0	89.5	59
+KL300	CP138427	gi|2621922878|gb|CP138427.1|	Escherichia coli strain 21EVA chromosome, complete genome	99.21	89.5	26
+KL300	CP120557	gi|2473302809|gb|CP120557.1|	Escherichia coli strain B771 chromosome, complete genome	100.0	89.4	27
+KL300	AP027595	gi|2616915205|dbj|AP027595.1|	Escherichia coli LR-64-2 DNA, complete genome	100.0	89.4	13
+KL300	AP022107	gi|1877447353|dbj|AP022107.1|	Escherichia coli DNA, complete genome, strain: WP5-S17-ESBL-11	100.0	89.4	20
+KL300	CP057380	gi|1881552237|gb|CP057380.1|	Escherichia coli strain RHB28-C11 chromosome, complete genome	100.0	89.4	29
+KL300	AP027754	gi|2617053159|dbj|AP027754.1|	Escherichia coli 2017.02.04CC DNA, complete genome	100.0	89.4	64
+KL300	OZ039294	gi|2852408014|emb|OZ039294.1|	Escherichia coli isolate 30602_1#139 genome assembly, chromosome: 1	100.0	89.3	27
+KL300	CP142570	gi|2651035112|gb|CP142570.1|	Escherichia coli strain ExPEC_A251 chromosome, complete genome	100.0	89.3	10
+KL300	CP029212	gi|1388198898|gb|CP029212.1|	Escherichia coli strain H8Ecoli chromosome	100.0	89.3	10
+KL300	CP002291	gi|383101383|gb|CP002291.1|	Escherichia coli P12b, complete genome	100.0	89.3	55
+KL300	CP042350	gi|1727591146|gb|CP042350.1|	Escherichia coli strain RM10410 chromosome, complete genome	100.0	89.2	25
+KL300	LM995905	gi|675819342|emb|LM995905.1|	Escherichia coli genome assembly FHI30, scaffold scaffold-27_contig-0.0_1_123817	99.72	89.2	8
+KL300	CP027445	gi|1370526449|gb|CP027445.1|	Escherichia coli strain 2013C-3492 chromosome, complete genome	99.79	89.1	30
+KL300	CP027459	gi|1370526463|gb|CP027459.1|	Escherichia coli strain 90-3040 chromosome, complete genome	99.79	89.1	31
+KL300	CP027675	gi|1370526525|gb|CP027675.1|	Escherichia coli strain 88-3510 chromosome, complete genome	99.79	89.1	31
+KL300	CP091384	gi|2186146071|gb|CP091384.1|	Escherichia coli strain 542099 chromosome, complete genome	100.0	89.0	12
+KL300	CP112988	gi|3101627385|gb|CP112988.1|	Escherichia coli strain E-93 chromosome, complete genome	100.0	89.0	10
+KL300	FN649414	gi|309700213|emb|FN649414.1|	Escherichia coli ETEC H10407, complete genome >gi|817146391|gb|CP007594.1| Esche	100.0	88.9	38
+KL300	CP164724	gi|2840090767|gb|CP164724.1|	Escherichia coli strain OXEC-370 chromosome, complete genome	100.0	88.9	10
+KL300	CP149810	gi|2707067951|gb|CP149810.1|	Escherichia coli strain EP91B chromosome, complete genome	100.0	88.8	59
+KL300	CP049101	gi|1815816764|gb|CP049101.1|	Escherichia coli strain EC28 chromosome, complete genome	97.32	88.8	9
+KL300	CP139887	gi|2636452651|gb|CP139887.1|	Escherichia coli strain ECO21 chromosome, complete genome	97.1	88.8	8
+KL300	CP139891	gi|2636448017|gb|CP139891.1|	Escherichia coli strain ECO20 chromosome, complete genome	97.1	88.8	8
+KL300	OZ040655	gi|2852409805|emb|OZ040655.1|	Escherichia coli isolate 30602_1#69 genome assembly, chromosome: 1	97.07	88.8	8
+KL300	OY781188	gi|2621784730|emb|OY781188.1|	MAG: Escherichia coli isolate 635f6460-ac08-4894-a485-285631bb1818 genome assemb	97.05	88.8	8
+KL300	CP061764	gi|1910309030|gb|CP061764.1|	Escherichia coli O19:H7 strain 730V1 chromosome, complete genome	100.0	88.5	48
+KL300	CP067307	gi|2019679934|gb|CP067307.1|	Escherichia coli strain ABW_A19 chromosome, complete genome	100.0	88.2	11
+KL300	CP035819	gi|2053238934|gb|CP035819.1|	Escherichia coli strain WS3294A chromosome, complete genome	100.0	88.2	12
+KL300	CP125887	gi|2576283594|gb|CP125887.1|	Escherichia coli strain ECGC74 chromosome, complete genome	100.0	88.2	16
+KL300	CP060919	gi|2207725155|gb|CP060919.1|	Escherichia coli strain EC15 chromosome, complete genome	100.0	88.1	20
+KL300	CP060933	gi|2207739156|gb|CP060933.1|	Escherichia coli strain EC12 chromosome, complete genome	100.0	88.1	19
+KL300	CP060914	gi|2207720210|gb|CP060914.1|	Escherichia coli strain EC18 chromosome, complete genome	100.0	88.1	20
+KL300	AP027619	gi|2616929194|dbj|AP027619.1|	Escherichia coli PSJ-07 DNA, complete genome	100.0	88.1	43
+KL300	CP061758	gi|1910299536|gb|CP061758.1|	Escherichia coli O68:H12 strain 97.3 chromosome, complete genome	100.0	88.1	27
+KL300	CP067265	gi|2019657933|gb|CP067265.1|	Escherichia coli strain ABW_S38 chromosome, complete genome	100.0	88.1	26
+KL300	CP067311	gi|2019687751|gb|CP067311.1|	Escherichia coli strain 027_SK3 chromosome, complete genome	100.0	88.1	26
+KL300	CP067274	gi|2019664766|gb|CP067274.1|	Escherichia coli strain ABW_S22 chromosome, complete genome	100.0	88.1	25
+KL300	CP195953	gi|3029934473|gb|CP195953.1|	Escherichia coli strain E2 chromosome, complete genome	100.0	88.1	21
+KL300	CP147130	gi|2719175504|gb|CP147130.1|	Escherichia coli strain KFu015 chromosome, complete genome	100.0	88.1	29
+KL300	CP091163	gi|2190282014|gb|CP091163.1|	Escherichia coli strain NEC11 chromosome	100.0	88.0	6
+KL300	CP165243	gi|2882395411|gb|CP165243.1|	Escherichia coli strain OXEC-493 chromosome, complete genome	100.0	88.0	46
+KL300	CP075737	gi|2279735362|gb|CP075737.1|	Escherichia coli strain CPF6 chromosome, complete genome	100.0	88.0	27
+KL300	CP076293	gi|2049941294|gb|CP076293.1|	Escherichia coli strain Y18J chromosome, complete genome	100.0	88.0	28
+KL300	CP128581	gi|2529887250|gb|CP128581.1|	Escherichia coli strain VG888-46E9 chromosome, complete genome	100.0	88.0	90
+KL300	CP057154	gi|1881245088|gb|CP057154.1|	Escherichia coli strain RHB35-C09 chromosome, complete genome	100.0	88.0	34
+KL300	CP055786	gi|1878520793|gb|CP055786.1|	Escherichia coli strain RHB04-C20 chromosome, complete genome	100.0	88.0	36
+KL300	CP055796	gi|1878513429|gb|CP055796.1|	Escherichia coli strain RHB04-C10 chromosome, complete genome	100.0	88.0	36
+KL300	CP088131	gi|2207940922|gb|CP088131.1|	Escherichia coli strain 81 chromosome, complete genome	100.0	88.0	67
+KL300	CP172816	gi|2846424890|gb|CP172816.1|	Escherichia coli strain BS-01 chromosome, complete genome	100.0	88.0	16
+KL300	CP055941	gi|1883301399|gb|CP055941.1|	Escherichia coli strain RHB40-C12 chromosome	100.0	88.0	32
+KL300	OZ038837	gi|2852407903|emb|OZ038837.1|	Escherichia coli isolate 30134_6#346 genome assembly, chromosome: 1	100.0	88.0	82
+KL300	CP119719	gi|2893204836|gb|CP119719.1|	Escherichia coli strain IZSBS22 chromosome, complete genome	100.0	88.0	9
+KL300	CP046716	gi|1822158592|gb|CP046716.1|	Escherichia coli strain T16R chromosome, complete genome >gi|2656715292|gb|CP142	100.0	88.0	43
+KL300	CP100879	gi|2788198885|gb|CP100879.1|	Escherichia coli strain ET915 chromosome, complete genome	100.0	88.0	44
+KL300	CP040927	gi|1728392904|gb|CP040927.1|	Escherichia coli strain YY76-1 chromosome, complete genome	100.0	88.0	45
+KL300	CP065611	gi|1943077081|gb|CP065611.1|	Escherichia coli strain FDAARGOS_945 chromosome, complete genome	99.79	88.0	11
+KL300	CP164294	gi|2840627904|gb|CP164294.1|	Escherichia coli strain OXEC-198 chromosome, complete genome	100.0	87.9	12
+KL300	CP060950	gi|2207753193|gb|CP060950.1|	Escherichia coli strain EC9 chromosome, complete genome	100.0	87.8	15
+KL300	CP060946	gi|2207748560|gb|CP060946.1|	Escherichia coli O157:H7 str. EC10 chromosome, complete genome	100.0	87.8	13
+KL300	CP019259	gi|1339524352|gb|CP019259.1|	Escherichia coli strain 13C1065T chromosome, complete genome	100.0	87.8	54
+KL300	CP118601	gi|2450726933|gb|CP118601.1|	Escherichia coli strain NB4833 chromosome, complete genome	100.0	87.8	13
+KL300	CP120910	gi|3002893038|gb|CP120910.1|	Escherichia coli strain PD007 chromosome, complete genome	100.0	87.8	26
+KL300	CP138397	gi|2621922875|gb|CP138397.1|	Escherichia coli strain 81EVA chromosome, complete genome	100.0	87.8	15
+KL300	CP123272	gi|2495998126|gb|CP123272.1|	Escherichia coli strain 4A_CSF1O9 chromosome	100.0	87.8	23
+KL300	CP195978	gi|3029992005|gb|CP195978.1|	Escherichia coli strain I4 chromosome, complete genome	100.0	87.8	17
+KL300	CP184743	gi|2938157619|gb|CP184743.1|	Escherichia coli strain LTE0 chromosome, complete genome	100.0	87.8	22
+KL300	CP152465	gi|2728378971|gb|CP152465.1|	Escherichia coli strain Sel(0 hit star) chromosome, complete genome	100.0	87.8	24
+KL300	CP084896	gi|2704693730|gb|CP084896.2|	Escherichia coli strain g62 chromosome, complete genome	100.0	87.8	21
+KL300	CP107553	gi|2993217666|gb|CP107553.1|	Escherichia coli strain MG1655_insertion chromosome, complete genome	100.0	87.8	22
+KL300	CP177211	gi|2890443944|gb|CP177211.1|	Escherichia coli strain ECMA0723 chromosome, complete genome	100.0	87.8	24
+KL300	CP139904	gi|2636437428|gb|CP139904.1|	Escherichia coli strain THN257 chromosome, complete genome	100.0	87.8	27
+KL300	CP139661	gi|2634066205|gb|CP139661.1|	Escherichia coli strain TP10-2 chromosome, complete genome	100.0	87.8	21
+KL300	CP122317	gi|2512348451|gb|CP122317.1|	Escherichia coli strain HT-948 chromosome, complete genome	100.0	87.8	23
+KL300	CP110859	gi|2331102478|gb|CP110859.1|	Escherichia coli strain TSW4848-W1 chromosome, complete genome	100.0	87.8	25
+KL300	CP084205	gi|2249576272|gb|CP084205.1|	Escherichia coli strain EC2648-R1 chromosome, complete genome	100.0	87.8	27
+KL300	CP110828	gi|2329444999|gb|CP110828.1|	Mutant Escherichia coli strain eRWnaive1X, complete genome	100.0	87.8	23
+KL300	CP184741	gi|2938153390|gb|CP184741.1|	Escherichia coli strain LTE800 chromosome, complete genome	100.0	87.8	22
+KL300	CP128218	gi|2522586107|gb|CP128218.1|	Escherichia coli strain TG1 chromosome, complete genome	100.0	87.8	22
+KL300	CP139673	gi|2634075393|gb|CP139673.1|	Escherichia coli strain TP6-2 chromosome, complete genome	100.0	87.8	21
+KL300	CP177216	gi|2890464394|gb|CP177216.1|	Escherichia coli strain ECDA0423 chromosome, complete genome	100.0	87.8	24
+KL300	CP097882	gi|2315208586|gb|CP097882.1|	Escherichia coli str. K-12 substr. MG1655 strain K-12 chromosome, complete genom	100.0	87.8	22
+KL300	CP196935	gi|3057207426|gb|CP196935.1|	Escherichia coli strain TG1 chromosome, complete genome	100.0	87.8	24
+KL300	CP084899	gi|2702837763|gb|CP084899.2|	Escherichia coli strain W3110-P chromosome, complete genome	100.0	87.8	21
+KL300	CP193896	gi|2993172466|gb|CP193896.1|	Escherichia coli strain BW25113 chromosome, complete genome	100.0	87.8	24
+KL300	CP049110	gi|2482518326|gb|CP049110.1|	Escherichia coli strain WF5-5-T1 chromosome, complete genome	100.0	87.8	27
+KL300	CP189566	gi|3062073780|gb|CP189566.1|	Escherichia coli strain EPI300 chromosome, complete genome	100.0	87.8	26
+KL300	CP193717	gi|2992961476|gb|CP193717.1|	Escherichia coli strain DSM 498 chromosome, complete genome	100.0	87.8	23
+KL300	CP110816	gi|2329403222|gb|CP110816.1|	Escherichia coli strain THB42-F5 chromosome, complete genome	100.0	87.8	27
+KL300	AP036058	gi|2799134901|dbj|AP036058.1|	Escherichia coli FS1576 DNA, complete genome	100.0	87.8	26
+KL300	CP141789	gi|2647963456|gb|CP141789.1|	Escherichia coli strain K194T1-1017 chromosome, complete genome	100.0	87.8	27
+KL300	CP097883	gi|2315208587|gb|CP097883.1|	Escherichia coli str. K-12 substr. MG1655 strain K-12 chromosome, complete genom	100.0	87.8	22
+KL300	CP084895	gi|2704693810|gb|CP084895.2|	Escherichia coli strain g74 chromosome, complete genome	100.0	87.8	21
+KL300	CP157352	gi|2739511218|gb|CP157352.1|	Mutant Escherichia coli isolate MG1655::laclq-mcherry-km-nal chromosome, complet	100.0	87.8	22
+KL300	CP114891	gi|2417856046|gb|CP114891.1|	Escherichia coli strain CM2 chromosome, complete genome	100.0	87.8	25
+KL300	CP148119	gi|2703320542|gb|CP148119.1|	Mutant Escherichia coli isolate FELIX_MS510, complete genome	100.0	87.8	22
+KL300	CP136398	gi|2592552536|gb|CP136398.1|	Escherichia coli strain DCM200-113 chromosome, complete genome	100.0	87.8	23
+KL300	CP169633	gi|2806300943|gb|CP169633.1|	Escherichia coli strain L-form0 chromosome, complete genome	100.0	87.8	22
+KL300	CP129523	gi|2892784381|gb|CP129523.1|	Escherichia coli strain YJX chromosome, complete genome	100.0	87.8	24
+KL300	CP137718	gi|2618317100|gb|CP137718.1|	Mutant Escherichia coli isolate FELIX_MS772, complete genome	100.0	87.8	22
+KL300	CP104330	gi|2304748417|gb|CP104330.1|	Escherichia coli strain THB42-F3 chromosome, complete genome	100.0	87.8	27
+KL300	CP097881	gi|2315208585|gb|CP097881.1|	Escherichia coli str. K-12 substr. MG1655 strain K-12 chromosome, complete genom	100.0	87.8	22
+KL300	CP084894	gi|2704694856|gb|CP084894.2|	Escherichia coli strain g83 chromosome, complete genome	100.0	87.8	21
+KL300	CP110814	gi|2329414643|gb|CP110814.1|	Escherichia coli strain THB42-F4 chromosome, complete genome	100.0	87.8	27
+KL300	CP169634	gi|2806296729|gb|CP169634.1|	Escherichia coli str. K-12 substr. MG1655 strain K-12 chromosome, complete genom	100.0	87.8	22
+KL300	CP152468	gi|2728378974|gb|CP152468.1|	Escherichia coli strain Sel(hit) chromosome, complete genome	100.0	87.8	24
+KL300	CP122315	gi|2512344223|gb|CP122315.1|	Escherichia coli strain HT-947 chromosome, complete genome	100.0	87.8	22
+KL300	CP167195	gi|2792114151|gb|CP167195.1|	Escherichia coli strain C600 chromosome, complete genome	100.0	87.8	25
+KL300	CP177212	gi|2890439847|gb|CP177212.1|	Escherichia coli strain ECMA0223 chromosome, complete genome	100.0	87.8	24
+KL300	CP110999	gi|2333196832|gb|CP110999.1|	Escherichia coli strain J53-p133 chromosome, complete genome	100.0	87.8	21
+KL300	CP160823	gi|3042968222|gb|CP160823.1|	Escherichia coli strain MG-phbCAB-3-5 chromosome, complete genome	100.0	87.8	22
+KL300	CP184745	gi|2938161856|gb|CP184745.1|	Escherichia coli strain K-12 MG1655 chromosome, complete genome	100.0	87.8	22
+KL300	CP152466	gi|2728378968|gb|CP152466.1|	Escherichia coli strain Sel(eng_pnp-mut) chromosome, complete genome	100.0	87.8	24
+KL300	CP152467	gi|2728378969|gb|CP152467.1|	Escherichia coli strain Sel(aux star) chromosome, complete genome	100.0	87.8	24
+KL300	CP178206	gi|2892716067|gb|CP178206.1|	Escherichia coli strain K-12 chromosome, complete genome	100.0	87.8	23
+KL300	CP084207	gi|2249581889|gb|CP084207.1|	Escherichia coli strain EC2648-R1-1 chromosome, complete genome	100.0	87.8	27
+KL300	CP157088	gi|2737396220|gb|CP157088.1|	Escherichia coli isolate FELIX_MS490 chromosome, complete genome	100.0	87.8	22
+KL300	CP104326	gi|2304738477|gb|CP104326.1|	Escherichia coli strain THB42-F1 chromosome, complete genome	100.0	87.8	25
+KL300	CP084897	gi|2704693668|gb|CP084897.2|	Escherichia coli strain gb37 chromosome, complete genome	100.0	87.8	21
+KL300	CP110826	gi|2329437029|gb|CP110826.1|	Mutant Escherichia coli strain eRWdiff1X, complete genome	100.0	87.8	23
+KL300	CP114896	gi|2482491408|gb|CP114896.1|	Escherichia coli strain CM93 chromosome, complete genome	100.0	87.8	25
+KL300	CP132223	gi|2620080152|gb|CP132223.1|	Escherichia coli strain Jtgc-02-2-Tmex chromosome, complete genome	100.0	87.8	25
+KL300	CP084898	gi|2702860507|gb|CP084898.2|	Escherichia coli strain gw25 chromosome, complete genome	100.0	87.8	21
+KL300	CP114892	gi|2417856031|gb|CP114892.1|	Escherichia coli strain CM5 chromosome, complete genome	100.0	87.8	25
+KL300	CP152469	gi|2728378970|gb|CP152469.1|	Escherichia coli strain Sel(aux) chromosome, complete genome	100.0	87.8	24
+KL300	CP132594	gi|2566177108|gb|CP132594.1|	Escherichia coli strain SIJ488 chromosome, complete genome	100.0	87.8	23
+KL300	CP141787	gi|2647943718|gb|CP141787.1|	Escherichia coli strain K194T1-1018 chromosome, complete genome	100.0	87.8	27
+KL300	CP132288	gi|2563057028|gb|CP132288.1|	Escherichia coli strain JM101 chromosome	100.0	87.8	22
+KL300	CP184740	gi|2938149197|gb|CP184740.1|	Escherichia coli strain LTE950 chromosome, complete genome	100.0	87.8	22
+KL300	CP165600	gi|2926125048|gb|CP165600.1|	Escherichia coli str. K-12 substr. W3110 chromosome, complete genome	100.0	87.8	31
+KL300	CP195070	gi|3061088466|gb|CP195070.1|	Escherichia coli strain J53 chromosome, complete genome	100.0	87.8	21
+KL300	CP114894	gi|2482491406|gb|CP114894.1|	Escherichia coli strain CM19 chromosome, complete genome	100.0	87.8	26
+KL300	CP047600	gi|1972816566|gb|CP047600.1|	Escherichia coli O84:H7 strain Trh52 chromosome, complete genome	98.92	87.8	8
+KL300	CP069710	gi|1986188818|gb|CP069710.1|	Escherichia coli strain EA2 chromosome, complete genome	100.0	87.7	23
+KL300	CP178707	gi|3068153711|gb|CP178707.1|	Escherichia coli strain VTB97584v chromosome, complete genome	100.0	87.7	48
+KL300	CP028752	gi|2204703964|gb|CP028752.1|	Escherichia coli strain A23 chromosome, complete genome	100.0	87.7	88
+KL300	CP100958	gi|2788489758|gb|CP100958.1|	Escherichia coli strain ET450 chromosome, complete genome	100.0	87.7	41
+KL300	CP100996	gi|2788508298|gb|CP100996.1|	Escherichia coli strain ET151 chromosome, complete genome	100.0	87.7	39
+KL300	CP042606	gi|1723311658|gb|CP042606.1|	Escherichia coli strain NCYU-29-19 chromosome, complete genome	100.0	87.7	74
+KL300	OZ038789	gi|2852407861|emb|OZ038789.1|	Escherichia coli isolate 30348_1#269 genome assembly, chromosome: 1	100.0	87.7	64
+KL300	OY754389	gi|2604846490|emb|OY754389.1|	Escherichia coli isolate F637 genome assembly, chromosome: 1	100.0	87.7	80
+KL300	OY754416	gi|2604870625|emb|OY754416.1|	Escherichia coli isolate F1267 genome assembly, chromosome: 1	100.0	87.7	81
+KL300	CP100947	gi|2788426212|gb|CP100947.1|	Escherichia coli strain ET490 chromosome, complete genome	100.0	87.7	65
+KL300	CP091156	gi|2190245148|gb|CP091156.1|	Escherichia coli strain NEC2 chromosome	99.96	87.7	5
+KL300	CP039298	gi|1621763078|gb|CP039298.1|	Escherichia coli strain PigCaeca_1 chromosome, complete genome	100.0	87.6	54
+KL300	CP100927	gi|2788466336|gb|CP100927.1|	Escherichia coli strain ET729 chromosome, complete genome	100.0	87.6	37
+KL300	AP027599	gi|2616919673|dbj|AP027599.1|	Escherichia coli LR-71-1 DNA, complete genome	100.0	87.6	46
+KL300	CP182255	gi|2917220529|gb|CP182255.1|	Escherichia coli strain EC8 chromosome, complete genome	100.0	87.6	11
+KL300	CP060109	gi|2177850600|gb|CP060109.1|	Escherichia coli strain STEC173 chromosome, complete genome	100.0	87.6	17
+KL300	CP010160	gi|1114178669|gb|CP010160.1|	Escherichia coli strain H1, complete genome	100.0	87.6	49
+KL300	CP168035	gi|2794233668|gb|CP168035.1|	Escherichia coli strain EC23HZZ201 chromosome, complete genome	100.0	87.6	56
+KL300	CP025967	gi|1806076466|gb|CP025967.1|	Escherichia coli strain 2407 a chromosome, complete genome	100.0	87.6	9
+KL300	CP057171	gi|1881274795|gb|CP057171.1|	Escherichia coli strain RHB34-C14 chromosome, complete genome	100.0	87.6	28
+KL300	CP025840	gi|1538997286|gb|CP025840.1|	Escherichia coli strain 214-4 chromosome, complete genome	100.0	87.5	13
+KL300	CP159641	gi|2754509692|gb|CP159641.1|	Escherichia coli strain Z226-6 chromosome, complete genome	100.0	87.5	63
+KL300	CP159644	gi|2754496444|gb|CP159644.1|	Escherichia coli strain Z226-5 chromosome, complete genome	100.0	87.5	63
+KL300	CP195143	gi|3010874326|gb|CP195143.1|	Escherichia coli strain A10 chromosome, complete genome	100.0	87.5	37
+KL300	CP104681	gi|2308873874|gb|CP104681.1|	Escherichia coli strain 2022CK-00450 chromosome, complete genome	100.0	87.5	83
+KL300	CP147109	gi|2719166262|gb|CP147109.1|	Escherichia coli strain KMi029 chromosome, complete genome	100.0	87.5	74
+KL300	AP027506	gi|2616835565|dbj|AP027506.1|	Escherichia coli LR-27 DNA, complete genome	100.0	87.4	31
+KL300	CP100876	gi|2788183566|gb|CP100876.1|	Escherichia coli strain ET979 chromosome, complete genome	100.0	87.4	55
+KL300	CP100930	gi|2788457492|gb|CP100930.1|	Escherichia coli strain ET670 chromosome, complete genome	100.0	87.4	67
+KL300	LT883142	gi|1293094148|emb|LT883142.1|	Escherichia coli isolate 6666666.257727.embl genome assembly, chromosome: IV	99.25	87.4	11
+KL300	AP027537	gi|2616874443|dbj|AP027537.1|	Escherichia coli LR-46 DNA, complete genome	99.22	87.4	13
+KL300	AP025546	gi|2509303765|dbj|AP025546.1|	Escherichia coli LR-06 DNA, complete genome	100.0	87.3	45
+KL300	CP136018	gi|2990028589|gb|CP136018.1|	Escherichia coli strain GDSC2239PM chromosome, complete genome	100.0	87.3	39
+KL300	CP141840	gi|2647998122|gb|CP141840.1|	Escherichia coli strain LA3 chromosome, complete genome	100.0	87.3	20
+KL300	CP100914	gi|2788421613|gb|CP100914.1|	Escherichia coli strain ET761 chromosome, complete genome	100.0	87.3	21
+KL300	CP057163	gi|1881261000|gb|CP057163.1|	Escherichia coli strain RHB34-C18 chromosome, complete genome	100.0	87.3	24
+KL300	CP126598	gi|2739363494|gb|CP126598.1|	Escherichia coli strain Ec1120 chromosome, complete genome	100.0	87.3	79
+KL300	CP081711	gi|2094801640|gb|CP081711.1|	Escherichia coli strain AH21 chromosome, complete genome	100.0	87.2	32
+KL300	CP060748	gi|1898309416|gb|CP060748.1|	Escherichia coli strain EC96 chromosome, complete genome	100.0	87.2	42
+KL300	CP181690	gi|2970160935|gb|CP181690.1|	Escherichia coli strain A31560 chromosome, complete genome	100.0	87.2	60
+KL300	CP139808	gi|2636175087|gb|CP139808.1|	Escherichia coli strain FLI21 chromosome, complete genome	100.0	87.2	60
+KL300	CP128440	gi|2529125201|gb|CP128440.1|	Escherichia coli strain 32 chromosome	99.52	87.2	9
+KL300	AP040898	gi|2991388585|dbj|AP040898.1|	Escherichia coli c1-17 DNA, complete genome >gi|2971523634|gb|CP189959.1| Escher	100.0	87.1	21
+KL300	CP070403	gi|1993538837|gb|CP070403.1|	Escherichia coli strain CFSAN083827 chromosome, complete genome	100.0	87.0	14
+KL300	CP117010	gi|2441443242|gb|CP117010.1|	Escherichia coli strain MLI110 chromosome, complete genome	100.0	87.0	20
+KL300	CP062855	gi|1933664257|gb|CP062855.1|	Escherichia coli O20:H12 strain Res13-Lact-PEB17-18 chromosome, complete genome	100.0	87.0	9
+KL300	CP074001	gi|2283321451|gb|CP074001.1|	Escherichia coli strain PM4 chromosome, complete genome	100.0	86.9	54
+KL300	CP122758	gi|2505342293|gb|CP122758.1|	Escherichia coli strain ETEC1739 chromosome, complete genome	100.0	86.9	65
+KL300	CP122886	gi|2505254431|gb|CP122886.1|	Escherichia coli strain ETEC1715 chromosome, complete genome	100.0	86.9	63
+KL300	CP122792	gi|2505322094|gb|CP122792.1|	Escherichia coli strain ETEC1735 chromosome, complete genome	100.0	86.9	66
+KL300	CP122810	gi|2505312850|gb|CP122810.1|	Escherichia coli strain ETEC1733 chromosome, complete genome	100.0	86.9	65
+KL300	CP073994	gi|2283312355|gb|CP073994.1|	Escherichia coli strain MB1 chromosome, complete genome	100.0	86.9	21
+KL300	AP027818	gi|2617111174|dbj|AP027818.1|	Escherichia coli 2017.15.02CC DNA, complete genome	100.0	86.9	48
+KL300	CP099275	gi|2484660137|gb|CP099275.1|	Escherichia coli strain RHB05-SO-C07 chromosome, complete genome	98.19	86.7	15
+KL300	OZ039513	gi|2852409530|emb|OZ039513.1|	Escherichia coli isolate 30348_2#143 genome assembly, chromosome: 1	100.0	86.5	43
+KL300	CP056565	gi|1880258092|gb|CP056565.1|	Escherichia coli strain RHBSTW-00386 chromosome, complete genome	100.0	86.5	8
+KL300	CP099040	gi|2485203535|gb|CP099040.1|	Escherichia coli strain RHB44-SE-C07 chromosome, complete genome	98.02	86.4	6
+KL300	LR778153	gi|1862867203|emb|LR778153.1|	Escherichia coli isolate SC480 genome assembly, chromosome: omosome1	98.01	86.4	6
+KL300	CP050044	gi|1885841925|gb|CP050044.1|	Escherichia coli strain 74-2 chromosome, complete genome	100.0	86.3	14
+KL300	CP157102	gi|2737286232|gb|CP157102.1|	Escherichia coli strain UTME-11 chromosome, complete genome	99.13	86.3	6
+KL300	CP010200	gi|1114273203|gb|CP010200.1|	Escherichia coli strain M10, complete genome	98.01	86.3	6
+KL300	CP122859	gi|2505273119|gb|CP122859.1|	Escherichia coli strain ETEC1720 chromosome, complete genome	100.0	85.4	61
+KL300	CP122844	gi|2505282449|gb|CP122844.1|	Escherichia coli strain ETEC1722 chromosome, complete genome	100.0	85.4	61
+KL300	CP184723	gi|2938137867|gb|CP184723.1|	Escherichia coli strain MM2025_2 chromosome, complete genome	100.0	84.9	62
+KL300	CP029122	gi|1384473323|gb|CP029122.1|	Escherichia coli strain AR434 chromosome, complete genome	100.0	84.4	10
+KL300	CP041422	gi|1802619387|gb|CP041422.1|	Escherichia coli strain STEC409 chromosome, complete genome	100.0	83.3	40
+KL300	CP122690	gi|2505402845|gb|CP122690.1|	Escherichia coli strain ETEC4065 chromosome, complete genome	100.0	83.3	35
+KL300	CP122655	gi|2505502762|gb|CP122655.1|	Escherichia coli strain ETEC4074 chromosome, complete genome	100.0	83.3	38
+KL300	CP122727	gi|2505367039|gb|CP122727.1|	Escherichia coli strain ETEC1746 chromosome, complete genome	100.0	83.3	37
+KL300	CP122695	gi|2505395889|gb|CP122695.1|	Escherichia coli strain ETEC4064 chromosome, complete genome	100.0	83.3	38
+KL300	CP057831	gi|1882234645|gb|CP057831.1|	Escherichia coli strain RHB13-C17 chromosome, complete genome	100.0	83.2	32
+KL300	LR134239	gi|1539655508|emb|LR134239.1|	Escherichia coli strain NCTC9100 genome assembly, chromosome: 1	100.0	83.0	15
+KL300	CP102679	gi|2289088148|gb|CP102679.1|	Escherichia coli strain XH989 chromosome, complete genome	100.0	80.3	16
+KL300	CP102675	gi|2289082857|gb|CP102675.1|	Escherichia coli strain XH987 chromosome, complete genome	100.0	80.3	16
+KL300	AP023427	gi|1900240530|dbj|AP023427.1|	Escherichia coli HUE1 DNA, complete genome	100.0	75.0	67
+KL300	CP034589	gi|1543012977|gb|CP034589.1|	Escherichia coli strain L37 chromosome, complete genome	100.0	75.0	68
+KL300	CP034734	gi|1548969555|gb|CP034734.1|	Escherichia coli strain L53 chromosome, complete genome	100.0	75.0	71
+KL303	CP090456	gi|2177072386|gb|CP090456.1|	Escherichia coli strain B379 chromosome, complete genome	99.74	93.5	42
+KL303	OY754364	gi|2604826250|emb|OY754364.1|	Escherichia coli isolate F404 genome assembly, chromosome: 1	99.22	93.1	28
+KL303	CP053720	gi|1847035720|gb|CP053720.1|	Escherichia coli strain CP131_Sichuan chromosome, complete genome	100.0	92.7	43
+KL303	CP101705	gi|2279286567|gb|CP101705.1|	Escherichia coli strain 035152 chromosome, complete genome	98.1	91.1	25
+KL303	CP138416	gi|2621922884|gb|CP138416.1|	Escherichia coli strain 39EVA chromosome, complete genome	98.87	90.8	20
+KL303	LS998785	gi|1563768987|emb|LS998785.1|	Escherichia coli isolate EC-TO75 genome assembly, chromosome: 1	98.02	90.4	20
+KL303	CP087578	gi|2155715794|gb|CP087578.1|	Escherichia coli strain OSUCMP42NDM chromosome, complete genome	98.18	89.7	27
+KL303	CP195389	gi|3032858261|gb|CP195389.1|	Escherichia coli strain 23AR0885 chromosome, complete genome	97.82	89.7	25
+KL303	AP021895	gi|1807838838|dbj|AP021895.1|	Escherichia coli 2018-11-3CC DNA, complete genome >gi|2617039803|dbj|AP027721.1|	98.58	89.3	19
+KL303	CP159455	gi|2901319379|gb|CP159455.1|	Escherichia coli strain S6aCHROMc chromosome, complete genome	98.18	89.3	20
+KL303	OZ038789	gi|2852407861|emb|OZ038789.1|	Escherichia coli isolate 30348_1#269 genome assembly, chromosome: 1	98.3	89.2	26
+KL303	CP059953	gi|1888641009|gb|CP059953.1|	Escherichia coli strain 98.1 chromosome	98.23	88.6	27
+KL303	CP057185	gi|1881439932|gb|CP057185.1|	Escherichia coli strain RHB34-C02 chromosome, complete genome	98.22	88.6	30
+KL303	AP026783	gi|2302524159|dbj|AP026783.1|	Escherichia coli IPCEC31 DNA, complete genome	98.21	88.1	26
+KL303	CP022664	gi|1440301846|gb|CP022664.1|	Escherichia coli strain FORC 064 chromosome, complete genome	97.82	87.7	35
+KL303	CP163700	gi|2842624563|gb|CP163700.1|	Escherichia coli strain OXEC-34 chromosome, complete genome	98.32	87.6	33
+KL303	CP074764	gi|2928114222|gb|CP074764.1|	Escherichia coli strain B1_2 chromosome, complete genome	98.55	86.6	34
+KL303	CP186521	gi|2953381362|gb|CP186521.1|	Escherichia coli strain 624 chromosome	97.88	86.5	30
+KL303	CP184964	gi|2946664974|gb|CP184964.1|	Escherichia coli strain 739 chromosome	97.88	86.5	30
+KL303	CP184933	gi|2946643681|gb|CP184933.1|	Escherichia coli strain 587 chromosome	97.88	86.5	30
+KL303	CP184961	gi|2946661016|gb|CP184961.1|	Escherichia coli strain 700 chromosome	97.88	86.5	30
+KL303	CP184943	gi|2946652078|gb|CP184943.1|	Escherichia coli strain R7 chromosome	97.88	86.5	30
+KL303	CP049845	gi|2075616966|gb|CP049845.1|	Escherichia coli strain UPEC-245U/190328 chromosome, complete genome	97.82	86.4	21
+KL303	CP037943	gi|1595159133|gb|CP037943.1|	Escherichia coli strain CFSAN027343 chromosome, complete genome	98.55	86.3	30
+KL303	CP074721	gi|2949113437|gb|CP074721.1|	Escherichia coli strain TW08637 chromosome, complete genome	98.55	86.3	30
+KL303	CP074766	gi|2928119791|gb|CP074766.1|	Escherichia coli strain 99_0849 chromosome, complete genome	98.55	86.3	30
+KL303	CP074921	gi|2929171533|gb|CP074921.1|	Escherichia coli strain 07_3986 chromosome, complete genome	98.55	86.3	31
+KL303	CP074954	gi|2929209723|gb|CP074954.1|	Escherichia coli strain 03_3469 chromosome, complete genome	98.55	86.3	28
+KL303	CP074845	gi|2929079882|gb|CP074845.1|	Escherichia coli strain 7_12_30A chromosome, complete genome	98.55	86.3	30
+KL303	AP027165	gi|2427768707|dbj|AP027165.1|	Escherichia coli O26:H11 H19 DNA, complete genome	98.55	86.3	30
+KL303	CP074890	gi|2929122916|gb|CP074890.1|	Escherichia coli strain 2009C_3996 chromosome, complete genome	98.55	86.3	30
+KL303	CP169003	gi|2800861803|gb|CP169003.1|	Escherichia coli strain UTAK-23 chromosome, complete genome	98.55	86.3	30
+KL303	CP168981	gi|2800851270|gb|CP168981.1|	Escherichia coli strain UTAK-12 chromosome, complete genome	98.55	86.3	30
+KL303	CP074924	gi|2929144184|gb|CP074924.1|	Escherichia coli strain 07_3722 chromosome, complete genome	98.55	86.3	30
+KL303	CP075006	gi|2929288833|gb|CP075006.1|	Escherichia coli strain 6629 chromosome, complete genome	98.55	86.3	28
+KL303	AP027162	gi|2427762893|dbj|AP027162.1|	Escherichia coli O26:H11 EH031 DNA, complete genome	98.55	86.3	34
+KL303	CP074879	gi|2929283112|gb|CP074879.1|	Escherichia coli strain 2010C_5028 chromosome, complete genome	98.55	86.3	30
+KL303	CP012693	gi|1062469497|gb|CP012693.1|	Escherichia coli strain FORC_028 chromosome, complete genome	98.55	86.3	33
+KL303	AP027170	gi|2427774380|dbj|AP027170.1|	Escherichia coli O26:H11 20.1 DNA, complete genome	98.55	86.3	30
+KL303	AP027191	gi|2427803647|dbj|AP027191.1|	Escherichia coli O26:H11 10153 DNA, complete genome	98.55	86.3	30
+KL303	CP074963	gi|2929266443|gb|CP074963.1|	Escherichia coli strain 00_3305 chromosome, complete genome	98.55	86.3	30
+KL303	AP027176	gi|2427780192|dbj|AP027176.1|	Escherichia coli O26:H11 EH2252 DNA, complete genome	98.55	86.3	35
+KL303	CP074717	gi|2949084069|gb|CP074717.1|	Escherichia coli strain War chromosome, complete genome	98.55	86.3	28
+KL303	AP027185	gi|2427792144|dbj|AP027185.1|	Escherichia coli O26:H11 NIID080884 DNA, complete genome	98.55	86.3	33
+KL303	CP074839	gi|2929047612|gb|CP074839.1|	Escherichia coli strain 7_14_47A chromosome, complete genome	98.55	86.3	28
+KL303	CP074791	gi|2928180094|gb|CP074791.1|	Escherichia coli strain 94_0962 chromosome, complete genome	98.55	86.3	30
+KL303	AP010953	gi|257751862|dbj|AP010953.1|	Escherichia coli O26:H11 str. 11368 DNA, complete genome	98.55	86.3	30
+KL303	AP027197	gi|2427809725|dbj|AP027197.1|	Escherichia coli O26:H11 02E060 DNA, complete genome	98.55	86.3	30
+KL303	CP074730	gi|2949135548|gb|CP074730.1|	Escherichia coli strain SJ2D chromosome, complete genome	98.55	86.3	28
+KL303	CP028126	gi|1388251837|gb|CP028126.1|	Escherichia coli O26 str. RM10386 chromosome, complete genome	98.55	86.3	28
+KL303	CP074982	gi|2929226326|gb|CP074982.1|	Escherichia coli strain 12689 chromosome, complete genome	98.55	86.3	28
+KL303	CP027572	gi|1370526497|gb|CP027572.1|	Escherichia coli strain 2013C-3996 chromosome	98.55	86.3	28
+KL303	AP027188	gi|2427797858|dbj|AP027188.1|	Escherichia coli O26:H11 PV0838 DNA, complete genome	98.55	86.3	30
+KL303	AP027181	gi|2427786247|dbj|AP027181.1|	Escherichia coli O26:H11 98E11 DNA, complete genome	98.55	86.3	30
+KL303	CP074826	gi|2928196605|gb|CP074826.1|	Escherichia coli strain 7_26_9A chromosome, complete genome	98.55	86.3	28
+KL303	CP027352	gi|1370526400|gb|CP027352.1|	Escherichia coli strain 2012C-4606 chromosome, complete genome	98.55	86.3	28
+KL303	CP027390	gi|1370526439|gb|CP027390.1|	Escherichia coli strain 2015C-4944 chromosome, complete genome	98.55	86.3	28
+KL303	CP074811	gi|2928162137|gb|CP074811.1|	Escherichia coli strain 7_56_38A chromosome, complete genome	98.55	86.3	30
+KL303	CP028116	gi|1388234350|gb|CP028116.1|	Escherichia coli O26 str. RM8426 chromosome, complete genome	98.55	86.3	28
+KL303	CP074904	gi|2929160534|gb|CP074904.1|	Escherichia coli strain 08_4358 chromosome, complete genome	98.55	86.3	30
+KL303	AP042605	gi|3029724010|dbj|AP042605.1|	Escherichia coli O26:H11 OkiPb01702 DNA, complete genome	98.55	86.3	37
+KL303	CP074736	gi|2949143142|gb|CP074736.1|	Escherichia coli strain SJ2 chromosome, complete genome	98.55	86.3	28
+KL303	CP074971	gi|2929238394|gb|CP074971.1|	Escherichia coli strain 13081 chromosome, complete genome	98.55	86.3	28
+KL303	CP074991	gi|2929260906|gb|CP074991.1|	Escherichia coli strain 10159 chromosome, complete genome	98.55	86.3	30
+KL303	CP101292	gi|2273681811|gb|CP101292.1|	Escherichia coli strain 2003-3014 chromosome, complete genome	98.55	86.3	30
+KL303	CP027361	gi|1370526411|gb|CP027361.1|	Escherichia coli strain 2014C-4639 chromosome, complete genome	98.55	86.3	28
+KL303	AP018808	gi|1435226024|dbj|AP018808.1|	Escherichia coli E2865 DNA, complete genome	98.55	86.3	31
+KL303	CP074885	gi|2929112032|gb|CP074885.1|	Escherichia coli strain 2010C_3902 chromosome, complete genome	98.55	86.3	31
+KL303	CP042982	gi|1796941917|gb|CP042982.1|	Escherichia coli strain NCCP 14540 chromosome, complete genome	98.18	86.3	33
+KL303	CP183123	gi|2923001737|gb|CP183123.1|	Escherichia coli strain 613 chromosome, complete genome	98.82	86.2	29
+KL303	CP074939	gi|2929187586|gb|CP074939.1|	Escherichia coli strain 06_3235 chromosome, complete genome	98.55	86.2	30
+KL303	CP027387	gi|1370526436|gb|CP027387.1|	Escherichia coli strain 2014C-3057 chromosome, complete genome	98.55	86.2	28
+KL303	CP074961	gi|2929243906|gb|CP074961.1|	Escherichia coli strain 01_3327 chromosome, complete genome	98.55	86.2	30
+KL303	CP074958	gi|2929220713|gb|CP074958.1|	Escherichia coli strain 03_3013 chromosome, complete genome	98.55	86.2	30
+KL303	CP074998	gi|2929294370|gb|CP074998.1|	Escherichia coli strain 6883 chromosome, complete genome	98.55	86.2	33
+KL303	CP074777	gi|2928138268|gb|CP074777.1|	Escherichia coli strain 96_1414P chromosome, complete genome	98.55	86.2	27
+KL303	CP074781	gi|2928155682|gb|CP074781.1|	Escherichia coli strain 96_1414B chromosome, complete genome	98.55	86.2	27
+KL303	CP075003	gi|2929277572|gb|CP075003.1|	Escherichia coli strain 6817 chromosome, complete genome	98.55	86.2	33
+KL303	CP074900	gi|2929193116|gb|CP074900.1|	Escherichia coli strain 10_253 chromosome, complete genome	98.55	86.2	33
+KL303	CP027599	gi|1370526529|gb|CP027599.1|	Escherichia coli strain 97-3250 chromosome, complete genome	98.55	86.2	33
+KL303	CP074804	gi|2928168029|gb|CP074804.1|	Escherichia coli strain 88_1577 chromosome, complete genome	98.55	86.2	34
+KL303	CP074785	gi|2928144311|gb|CP074785.1|	Escherichia coli strain 95_0274 chromosome, complete genome	98.55	86.2	37
+KL303	CP031922	gi|1632143909|gb|CP031922.1|	Escherichia coli O26:H11 strain FWSEC0001 chromosome, complete genome	98.55	86.2	30
+KL303	CP169018	gi|2800931561|gb|CP169018.1|	Escherichia coli strain UTAK-15 chromosome, complete genome	98.55	86.2	30
+KL303	CP074951	gi|2929215180|gb|CP074951.1|	Escherichia coli strain 03_3503 chromosome, complete genome	98.55	86.2	33
+KL303	CP074987	gi|2929255370|gb|CP074987.1|	Escherichia coli strain 10205 chromosome, complete genome	98.55	86.2	33
+KL303	CP074853	gi|2929063530|gb|CP074853.1|	Escherichia coli strain 7_11_88A chromosome, complete genome	98.55	86.2	33
+KL303	CP074946	gi|2929204261|gb|CP074946.1|	Escherichia coli strain 05_3471 chromosome, complete genome	98.55	86.2	27
+KL303	CP074773	gi|2928131623|gb|CP074773.1|	Escherichia coli strain 97_3250 chromosome, complete genome	98.55	86.2	33
+KL303	OY754853	gi|2670459091|emb|OY754853.1|	Escherichia coli isolate Reference genome assembly, chromosome: GPT21-004_1	98.55	86.2	33
+KL303	CP074994	gi|2929271949|gb|CP074994.1|	Escherichia coli strain 8479 chromosome, complete genome	98.55	86.2	30
+KL303	CP074800	gi|2928174218|gb|CP074800.1|	Escherichia coli strain 93_0495 chromosome, complete genome	98.55	86.2	30
+KL303	CP074742	gi|2949151763|gb|CP074742.1|	Escherichia coli strain RM6927 chromosome, complete genome	98.55	86.2	30
+KL303	CP058682	gi|1905317382|gb|CP058682.2|	Escherichia coli strain MBT-5 chromosome, complete genome	98.55	86.2	30
+KL303	CP110097	gi|2324424508|gb|CP110097.1|	Escherichia coli strain TR_AVFP-1 chromosome	98.55	86.2	32
+KL303	CP054940	gi|1858823968|gb|CP054940.1|	Escherichia coli strain MS6192 chromosome, complete genome	97.82	86.2	20
+KL303	CP047405	gi|1851838501|gb|CP047405.1|	Escherichia coli strain MS6193 chromosome, complete genome	97.82	86.2	20
+KL303	CP148374	gi|2702942721|gb|CP148374.1|	Escherichia coli strain Z1323HEC0108 chromosome, complete genome	98.18	86.1	28
+KL303	CP060057	gi|1896165105|gb|CP060057.1|	Escherichia coli strain G8 chromosome, complete genome	99.46	86.0	40
+KL303	CP060083	gi|1896133112|gb|CP060083.1|	Escherichia coli strain G1/2 chromosome, complete genome	99.46	86.0	40
+KL303	OY754453	gi|2604806659|emb|OY754453.1|	Escherichia coli isolate F95 genome assembly, chromosome: 1	98.0	86.0	34
+KL303	CP054191	gi|2179945321|gb|CP054191.1|	Escherichia coli strain TH9F11 chromosome, complete genome	97.82	85.9	31
+KL303	CP170294	gi|3092994414|gb|CP170294.1|	Escherichia coli strain BKRHXR chromosome	98.18	85.7	25
+KL303	CP019903	gi|1150906967|gb|CP019903.1|	Escherichia coli strain MDR_56, complete genome	98.72	85.5	38
+KL303	CP076646	gi|2055704357|gb|CP076646.1|	Escherichia coli strain GD33 chromosome, complete genome	97.83	85.5	24
+KL303	AP027704	gi|2617021229|dbj|AP027704.1|	Escherichia coli PSS-13 DNA, complete genome	98.66	85.4	30
+KL303	CP122666	gi|2505487416|gb|CP122666.1|	Escherichia coli strain ETEC4072 chromosome, complete genome	97.82	85.4	36
+KL303	CP170316	gi|3093026047|gb|CP170316.1|	Escherichia coli strain BKRIFN chromosome	98.18	85.3	21
+KL303	CP060061	gi|1896158117|gb|CP060061.1|	Escherichia coli strain G6/7 chromosome, complete genome	99.46	85.2	39
+KL303	CP074830	gi|2928202706|gb|CP074830.1|	Escherichia coli strain 7_15_5C chromosome, complete genome	98.55	85.2	31
+KL303	CP074932	gi|2929177085|gb|CP074932.1|	Escherichia coli strain 07_3337 chromosome, complete genome	98.55	85.2	31
+KL303	CP074726	gi|2949127250|gb|CP074726.1|	Escherichia coli strain SJ3 chromosome, complete genome	98.55	85.2	31
+KL303	CP074942	gi|2929199000|gb|CP074942.1|	Escherichia coli strain 06_3044 chromosome, complete genome	98.55	85.2	32
+KL303	CP074815	gi|2928150234|gb|CP074815.1|	Escherichia coli strain 7_33_80A chromosome, complete genome	98.55	85.2	31
+KL303	CP074750	gi|2949171412|gb|CP074750.1|	Escherichia coli strain N5D43 chromosome, complete genome	98.55	85.2	31
+KL303	CP074835	gi|2928208131|gb|CP074835.1|	Escherichia coli strain 7_14_50A chromosome, complete genome	98.55	85.2	31
+KL303	CP074856	gi|2929058308|gb|CP074856.1|	Escherichia coli strain 2013C_3997_C1 chromosome, complete genome	98.55	85.2	31
+KL303	CP074936	gi|2929182364|gb|CP074936.1|	Escherichia coli strain 06_3288 chromosome, complete genome	98.55	85.2	31
+KL303	CP074898	gi|2929138986|gb|CP074898.1|	Escherichia coli strain 2009C_3612 chromosome, complete genome	98.55	85.2	32
+KL303	CP074977	gi|2929231757|gb|CP074977.1|	Escherichia coli strain 12690 chromosome, complete genome	98.55	85.2	31
+KL303	CP027331	gi|1370526380|gb|CP027331.1|	Escherichia coli strain 2013C-3277 chromosome, complete genome	98.55	85.2	31
+KL303	CP074824	gi|2928185814|gb|CP074824.1|	Escherichia coli strain 7_29_23A chromosome, complete genome	98.55	85.2	31
+KL303	CP074868	gi|2929090769|gb|CP074868.1|	Escherichia coli strain 2013C_3277 chromosome, complete genome	98.55	85.2	31
+KL303	CP074909	gi|2929155354|gb|CP074909.1|	Escherichia coli strain 08_3449 chromosome, complete genome	98.55	85.2	31
+KL303	CP074911	gi|2929133829|gb|CP074911.1|	Escherichia coli strain 08_3418 chromosome, complete genome	98.55	85.2	31
+KL303	CP169026	gi|2800952837|gb|CP169026.1|	Escherichia coli strain UTME-2 chromosome, complete genome	98.55	85.2	31
+KL303	CP074769	gi|2928126126|gb|CP074769.1|	Escherichia coli strain 99_0288 chromosome, complete genome	98.55	85.2	31
+KL303	CP074715	gi|2949060993|gb|CP074715.1|	Escherichia coli strain C4_120_1 chromosome, complete genome	98.55	85.2	31
+KL303	CP074849	gi|2929096150|gb|CP074849.1|	Escherichia coli strain 7_12_15B chromosome, complete genome	98.55	85.2	31
+KL303	CP074874	gi|2929106802|gb|CP074874.1|	Escherichia coli strain 2011C_4037 chromosome, complete genome	98.55	85.2	31
+KL303	CP037941	gi|1595166403|gb|CP037941.1|	Escherichia coli strain CFSAN027350 chromosome, complete genome	98.55	85.2	32
+KL303	CP196743	gi|3070909525|gb|CP196743.1|	Escherichia coli strain FXCREC004 chromosome, complete genome	97.82	85.2	28
+KL303	OY754382	gi|2604841553|emb|OY754382.1|	Escherichia coli isolate F138 genome assembly, chromosome: 1	99.21	85.1	32
+KL303	CP122904	gi|2505243665|gb|CP122904.1|	Escherichia coli strain ETEC1706 chromosome, complete genome	97.82	85.1	32
+KL303	CP122620	gi|2505568449|gb|CP122620.1|	Escherichia coli strain ETEC4090 chromosome, complete genome	97.82	85.1	37
+KL303	CP122660	gi|2505494266|gb|CP122660.1|	Escherichia coli strain ETEC4073 chromosome, complete genome	97.82	85.1	31
+KL303	CP099087	gi|2485073333|gb|CP099087.1|	Escherichia coli strain RHB43-C14 chromosome, complete genome	97.82	85.1	24
+KL303	AP025205	gi|2160993223|dbj|AP025205.2|	Escherichia coli 2017.04.03CC DNA, complete genome	97.82	85.1	27
+KL303	CP122880	gi|2505258260|gb|CP122880.1|	Escherichia coli strain ETEC1716 chromosome, complete genome	97.82	85.1	31
+KL303	CP034106	gi|1996305948|gb|CP034106.1|	Escherichia coli strain RCAD0514 chromosome, complete genome	99.7	84.8	28
+KL303	CP160468	gi|2770987780|gb|CP160468.1|	Escherichia coli strain PEC1009 chromosome, complete genome	98.18	84.8	22
+KL303	CP080223	gi|2075199787|gb|CP080223.1|	Escherichia coli O141:H4 strain P13-6 chromosome, complete genome	97.82	84.8	26
+KL303	AP021892	gi|1807825551|dbj|AP021892.1|	Escherichia coli 2018-01-1CC DNA, complete genome >gi|2617149767|dbj|AP027869.1|	99.24	84.6	29
+KL303	CP122499	gi|2514065376|gb|CP122499.1|	Escherichia coli strain W409 chromosome, complete genome	99.21	84.3	25
+KL303	CP172181	gi|2844181570|gb|CP172181.1|	Escherichia coli strain GF153 chromosome, complete genome	98.82	84.3	30
+KL303	CP171864	gi|2842125564|gb|CP171864.1|	Escherichia coli strain YZ22PE106 chromosome, complete genome	98.41	84.3	34
+KL303	CP171869	gi|2842125559|gb|CP171869.1|	Escherichia coli strain YZ22PE68 chromosome, complete genome	98.41	84.3	34
+KL303	CP171874	gi|2842125553|gb|CP171874.1|	Escherichia coli strain YZ22PE67 chromosome, complete genome	98.41	84.3	34
+KL303	CP043744	gi|1741110094|gb|CP043744.1|	Escherichia coli strain CVM N16EC0879 chromosome, complete genome	99.21	84.2	39
+KL303	OZ040347	gi|2852409025|emb|OZ040347.1|	Escherichia coli isolate 30602_1#96 genome assembly, chromosome: 1	98.79	84.2	35
+KL303	OZ249097	gi|2961004929|emb|OZ249097.1|	Escherichia coli strain PE53 genome assembly, chromosome: 1	98.18	84.2	34
+KL303	CP059947	gi|1888636253|gb|CP059947.1|	Escherichia coli strain 268.2 chromosome, complete genome	99.21	84.1	35
+KL303	CP184981	gi|2946669906|gb|CP184981.1|	Escherichia coli strain 753 chromosome	97.45	84.1	26
+KL303	CP060899	gi|2207706134|gb|CP060899.1|	Escherichia coli strain EC21 chromosome, complete genome	100.0	84.0	29
+KL303	CP101732	gi|2279386802|gb|CP101732.1|	Escherichia coli strain BY9F33 chromosome	99.22	84.0	26
+KL303	CP048025	gi|1804092833|gb|CP048025.1|	Escherichia coli strain GZEC065 chromosome, complete genome	98.55	84.0	34
+KL303	CP182277	gi|2917259443|gb|CP182277.1|	Escherichia coli strain C13 chromosome, complete genome	98.53	84.0	28
+KL303	CP032892	gi|1492338981|gb|CP032892.1|	Escherichia coli strain SCEC020022 chromosome, complete genome	98.34	84.0	35
+KL303	CP173544	gi|2853767061|gb|CP173544.1|	Escherichia coli strain 98206 chromosome, complete genome	97.82	84.0	26
+KL303	AP022482	gi|1915255161|dbj|AP022482.1|	Escherichia coli STN0717-20 DNA, complete genome	99.86	83.9	22
+KL303	OY762930	gi|2621703975|emb|OY762930.1|	MAG: Escherichia coli isolate 79f62194-1f9e-48a9-9f7e-5890de0ea046 genome assemb	98.55	83.9	32
+KL303	CP184262	gi|2930194508|gb|CP184262.1|	Escherichia coli strain H32 chromosome, complete genome	98.32	83.9	32
+KL303	CP122507	gi|2514072817|gb|CP122507.1|	Escherichia coli strain W444 chromosome, complete genome	99.21	83.7	42
+KL303	CP020509	gi|1373555255|gb|CP020509.1|	Escherichia coli strain 165 chromosome, complete genome	99.21	83.5	39
+KL303	CP024821	gi|1279156550|gb|CP024821.1|	Escherichia coli strain CREC-591 chromosome, complete genome	99.21	83.5	42
+KL303	CP086220	gi|2225205799|gb|CP086220.1|	Escherichia coli strain 779 chromosome, complete genome	99.21	83.5	41
+KL303	CP045190	gi|1782715945|gb|CP045190.1|	Escherichia coli strain NT1F31 chromosome, complete genome	99.21	83.4	37
+KL303	OZ038791	gi|2852407863|emb|OZ038791.1|	Escherichia coli isolate 30348_1#273 genome assembly, chromosome: 1	98.18	83.4	28
+KL303	OZ039705	gi|2852408230|emb|OZ039705.1|	Escherichia coli isolate 30348_1#308 genome assembly, chromosome: 1	97.92	83.3	29
+KL303	CP018948	gi|1151133037|gb|CP018948.1|	Escherichia coli strain Ecol_224, complete genome	97.82	83.3	20
+KL303	CP015912	gi|1042327338|gb|CP015912.1|	Escherichia coli strain 210205630, complete genome	98.18	83.1	37
+KL303	AP027411	gi|2463298838|dbj|AP027411.1|	Escherichia coli EC521 DNA, complete genome	97.82	83.0	17
+KL303	CP056551	gi|1880489951|gb|CP056551.1|	Escherichia coli strain RHBSTW-00423 chromosome, complete genome	98.47	82.9	29
+KL303	CP110978	gi|2333285068|gb|CP110978.1|	Escherichia coli strain XYEH3934 chromosome, complete genome	97.82	82.8	26
+KL303	CP101921	gi|2281278669|gb|CP101921.1|	Escherichia coli strain QA-1986 83 chromosome, complete genome	98.55	82.7	16
+KL303	CP057978	gi|1882537600|gb|CP057978.1|	Escherichia coli strain RHB07-C03 chromosome, complete genome	98.55	82.6	27
+KL303	CP061914	gi|1911266696|gb|CP061914.1|	Escherichia coli strain SMBL chromosome, complete genome	98.18	82.5	32
+KL303	AP022036	gi|1877374787|dbj|AP022036.1|	Escherichia coli DNA, complete genome, strain: WP3-S18-ESBL-09	98.55	82.4	13
+KL303	CP074005	gi|2283325993|gb|CP074005.1|	Escherichia coli strain PI12 chromosome, complete genome	100.0	82.1	31
+KL303	CP083419	gi|2096304904|gb|CP083419.1|	Escherichia coli strain SPCR2020 chromosome, complete genome	99.41	82.1	30
+KL303	AP027612	gi|2616924642|dbj|AP027612.1|	Escherichia coli LR-72 DNA, complete genome	99.22	82.1	25
+KL303	CP124994	gi|2505904705|gb|CP124994.1|	Escherichia coli strain KSE-D14 chromosome, complete genome	98.18	82.1	27
+KL303	CP060969	gi|2207767524|gb|CP060969.1|	Escherichia coli strain EC5 chromosome, complete genome	97.99	82.1	29
+KL303	CP019280	gi|1339534175|gb|CP019280.1|	Escherichia coli strain 13P484A chromosome, complete genome	97.98	82.1	22
+KL303	CP091659	gi|2205080687|gb|CP091659.1|	Escherichia coli strain KFu024 chromosome, complete genome	97.97	82.1	22
+KL303	AP021944	gi|1877297208|dbj|AP021944.1|	Escherichia coli DNA, complete genome, strain: WP2-S18-ESBL-07	98.55	81.9	19
+KL303	CP085060	gi|2119869928|gb|CP085060.1|	Escherichia coli strain P30_L1_05.20 chromosome, complete genome	98.31	81.8	27
+KL303	CP068795	gi|1969627559|gb|CP068795.1|	Escherichia coli strain RIVM_C011532 chromosome, complete genome	98.18	81.8	24
+KL303	CP098848	gi|3093249029|gb|CP098848.1|	Escherichia coli strain CUVET21-424 chromosome, complete genome	98.18	81.8	26
+KL303	CP054169	gi|2180073568|gb|CP054169.1|	Escherichia coli strain STO_Bone1B chromosome, complete genome	98.11	81.8	36
+KL303	CP026929	gi|1850831943|gb|CP026929.2|	Escherichia coli strain CFS3246 chromosome, complete genome	98.09	81.8	29
+KL303	CP157234	gi|2738658764|gb|CP157234.1|	Escherichia coli strain 2024CK-00474 chromosome, complete genome	97.99	81.8	29
+KL303	CP194903	gi|3003617496|gb|CP194903.1|	Escherichia coli strain FAHZZU6724 isolate sputum chromosome, complete genome	97.99	81.8	25
+KL303	CP157327	gi|2738762915|gb|CP157327.1|	Escherichia coli strain 2024CK-00475 chromosome, complete genome	97.99	81.8	28
+KL303	CP158353	gi|2745871871|gb|CP158353.1|	Escherichia coli strain 914033 chromosome, complete genome	97.97	81.8	23
+KL303	CP103704	gi|2294719393|gb|CP103704.1|	Escherichia coli strain ST361 chromosome, complete genome	97.97	81.8	23
+KL303	CP095088	gi|2221867579|gb|CP095088.1|	Escherichia coli isolate w264 chromosome, complete genome	97.97	81.8	21
+KL303	CP147125	gi|2719170869|gb|CP147125.1|	Escherichia coli strain KMi012 chromosome, complete genome	97.97	81.8	20
+KL303	CP061244	gi|2177790373|gb|CP061244.1|	Escherichia coli strain STEC411 plasmid pSTEC411_1, complete sequence	97.51	81.8	12
+KL303	CP173493	gi|2853714184|gb|CP173493.1|	Escherichia coli strain 98218 chromosome, complete genome	99.22	81.7	23
+KL303	CP019071	gi|1320763042|gb|CP019071.1|	Escherichia coli strain CRE1493 chromosome, complete genome	98.36	81.6	28
+KL303	AP026529	gi|2276669205|dbj|AP026529.1|	Escherichia coli TUM2805 DNA, complete genome >gi|2530692239|gb|CP128950.1| Esch	98.32	81.6	29
+KL303	CP124970	gi|2505886219|gb|CP124970.1|	Escherichia coli strain KSE-D40 chromosome, complete genome	98.32	81.6	28
+KL303	CP023870	gi|1266940032|gb|CP023870.1|	Escherichia coli strain FDAARGOS_434 chromosome, complete genome	98.32	81.6	28
+KL303	CP148063	gi|2745839388|gb|CP148063.1|	Escherichia coli strain TA_NDM-5 chromosome, complete genome	97.88	81.6	24
+KL303	AP022030	gi|1877365683|dbj|AP022030.1|	Escherichia coli DNA, complete genome, strain: WP3-S18-ESBL-07	98.04	81.5	21
+KL303	CP023377	gi|1243341739|gb|CP023377.1|	Escherichia coli strain 127 chromosome, complete genome	97.97	81.5	18
+KL303	CP091161	gi|2190268965|gb|CP091161.1|	Escherichia coli strain NEC8 chromosome	99.06	81.4	15
+KL303	LR890288	gi|1927384578|emb|LR890288.1|	Escherichia coli isolate MSB1_1A-sc-2280383 genome assembly, chromosome: 1	98.47	81.4	24
+KL303	CP073946	gi|2283261029|gb|CP073946.1|	Escherichia coli strain MB51 chromosome, complete genome	98.43	81.4	32
+KL303	CP128594	gi|2529882747|gb|CP128594.1|	Escherichia coli strain VG1046-3E9 chromosome, complete genome	98.18	81.4	28
+KL303	CP090282	gi|2175233330|gb|CP090282.1|	Escherichia coli strain E-T306 chromosome, complete genome	97.96	81.4	18
+KL303	CP057634	gi|1882009516|gb|CP057634.1|	Escherichia coli strain RHB20-C13 chromosome, complete genome	97.96	81.4	21
+KL303	CP170311	gi|3093005196|gb|CP170311.1|	Escherichia coli strain CAA282 chromosome	97.96	81.4	18
+KL303	CP057638	gi|1882018901|gb|CP057638.1|	Escherichia coli strain RHB20-C04 chromosome, complete genome	97.96	81.4	21
+KL303	CP123237	gi|2495980748|gb|CP123237.1|	Escherichia coli strain 4588 chromosome, complete genome	97.91	81.4	21
+KL303	CP134910	gi|2582060239|gb|CP134910.1|	Escherichia coli strain 5269 chromosome, complete genome	97.89	81.4	21
+KL303	CP196708	gi|3039724941|gb|CP196708.1|	Escherichia coli strain EC77 chromosome, complete genome	98.55	81.3	16
+KL303	AP027206	gi|2512282652|dbj|AP027206.1|	Escherichia coli JNE082640 DNA, complete genome	98.0	80.8	24
+KL303	CP016628	gi|1108591457|gb|CP016628.1|	Escherichia coli strain FORC_041 chromosome, complete genome	97.99	80.8	24
+KL303	CP027484	gi|1370526403|gb|CP027484.1|	Escherichia coli strain 2013C-4390 chromosome, complete genome	98.55	80.6	39
+KL303	LM995705	gi|675819142|emb|LM995705.1|	Escherichia coli genome assembly FHI27, scaffold scaffold-27_contig-0.0_1_488507	97.62	80.5	5
+KL303	CP195980	gi|3030005202|gb|CP195980.1|	Escherichia coli strain J2 chromosome, complete genome	99.21	80.4	29
+KL303	LM996697	gi|675820134|emb|LM996697.1|	Escherichia coli genome assembly FHI79, scaffold scaffold-25_contig-4.0_1_285458	97.63	80.4	5
+KL303	LM995830	gi|675819267|emb|LM995830.1|	Escherichia coli genome assembly FHI20, scaffold scaffold-22_contig-5.0_1_383698	97.56	80.4	5
+KL303	CP015240	gi|1028475309|gb|CP015240.1|	Escherichia coli strain 2011C-3911 chromosome, complete genome	97.92	80.3	24
+KL303	CP091022	gi|2181139493|gb|CP091022.1|	Escherichia coli strain STEC276 chromosome, complete genome	97.99	80.1	26
+KL303	LM995758	gi|675819195|emb|LM995758.1|	Escherichia coli genome assembly FHI24, scaffold scaffold-38_contig-2.0_1_502403	97.58	79.9	6
+KL303	LM995944	gi|675819381|emb|LM995944.1|	Escherichia coli genome assembly FHI4, scaffold scaffold-30_contig-3.0_1_381805_	97.58	79.7	6
+KL303	CP091691	gi|2205047080|gb|CP091691.1|	Escherichia coli strain KMi006 chromosome, complete genome	98.03	79.4	24
+KL303	CP050382	gi|1826561610|gb|CP050382.1|	Escherichia coli strain 52148 chromosome, complete genome	98.32	79.3	28
+KL303	CP021879	gi|1208615138|gb|CP021879.1|	Escherichia coli strain AR_0137, complete genome	98.03	79.3	24
+KL303	CP058661	gi|1876147363|gb|CP058661.1|	Escherichia coli strain 005008 chromosome, complete genome	97.91	79.3	24
+KL303	OZ039057	gi|2852291716|emb|OZ039057.1|	Escherichia coli isolate 30134_6#277 genome assembly, chromosome: 1	97.95	78.4	20
+KL303	CP125059	gi|2505982353|gb|CP125059.1|	Escherichia coli strain KFS-B43 chromosome, complete genome	97.96	78.3	25
+KL303	AP021893	gi|1807829939|dbj|AP021893.1|	Escherichia coli 2018-06-4CC DNA, complete genome >gi|2617170565|dbj|AP027889.1|	97.89	78.0	23
+KL303	CP020048	gi|1163005269|gb|CP020048.1|	Escherichia coli strain AR_0118, complete genome	97.82	77.8	20
+KL303	CP021722	gi|1202271602|gb|CP021722.1|	Escherichia coli strain AR_0128, complete genome	97.82	77.8	20
+KL303	CP021535	gi|1202199909|gb|CP021535.1|	Escherichia coli strain AR_0119, complete genome	97.82	77.8	20
+KL303	CP047469	gi|2482375280|gb|CP047469.1|	Escherichia coli strain DY612 chromosome, complete genome	98.43	77.0	21
+KL303	CP073924	gi|2283229134|gb|CP073924.1|	Escherichia coli strain MB165 chromosome, complete genome	98.18	76.7	31
+KL303	CP082120	gi|2088430565|gb|CP082120.1|	Escherichia coli strain PC-NDM34 chromosome, complete genome	98.18	76.7	25
+KL303	LR134191	gi|1539497555|emb|LR134191.1|	Escherichia coli strain NCTC5934 genome assembly, chromosome: 1	98.17	76.7	30
+KL303	CP042352	gi|2006659086|gb|CP042352.1|	Escherichia coli strain RM9513 chromosome, complete genome	97.98	76.3	26
+KL303	CP195951	gi|3029943346|gb|CP195951.1|	Escherichia coli strain E1 chromosome, complete genome	97.82	76.3	24
+KL303	CP093317	gi|2320091552|gb|CP093317.1|	Escherichia coli strain HUM3355 chromosome, complete genome	97.82	76.3	20
+KL303	CP159628	gi|2754457079|gb|CP159628.1|	Escherichia coli strain Z217-4 chromosome, complete genome	98.91	76.2	21
+KL303	CP159630	gi|2754461251|gb|CP159630.1|	Escherichia coli strain Z217-2 chromosome, complete genome	98.91	76.2	21
+KL303	CP195984	gi|3030000967|gb|CP195984.1|	Escherichia coli strain J3 chromosome, complete genome	97.99	75.9	21
+KL303	CP028748	gi|2204685494|gb|CP028748.1|	Escherichia coli strain A27 chromosome, complete genome	97.88	75.4	27
+KL303	CP101274	gi|2273594131|gb|CP101274.1|	Escherichia coli strain EC21Z-014 chromosome, complete genome	98.55	75.3	25
+KL303	AP026961	gi|2323033087|dbj|AP026961.1|	Escherichia coli EC20-C72-1 DNA, complete genome	97.82	75.3	23
+KL303	AP027865	gi|2617145032|dbj|AP027865.1|	Escherichia coli 2017.20.01CC DNA, complete genome	98.01	75.2	16
+KL303	CP099123	gi|2484994151|gb|CP099123.1|	Escherichia coli strain RHB31-SO-C03 chromosome, complete genome	97.84	74.9	23
+KL303	CP182136	gi|3005728283|gb|CP182136.1|	Escherichia coli strain RX24 chromosome, complete genome	98.14	73.4	17
+KL303	CP079772	gi|2295319736|gb|CP079772.1|	Escherichia coli strain GS04 chromosome, complete genome	98.12	73.2	28
+KL303	CP079780	gi|2295315579|gb|CP079780.1|	Escherichia coli strain BL12 chromosome, complete genome	98.12	73.2	28
+KL303	CP141791	gi|2647939188|gb|CP141791.1|	Escherichia coli strain BHD6 chromosome, complete genome	98.12	73.2	28
+KL303	CP090261	gi|2175163409|gb|CP090261.1|	Escherichia coli strain E-R791-1 chromosome, complete genome	98.55	72.6	18
+KL303	CP090296	gi|2175237842|gb|CP090296.1|	Escherichia coli strain E-T791 chromosome, complete genome	98.55	72.6	18
+KL303	CP101269	gi|2273579181|gb|CP101269.1|	Escherichia coli strain EC21Z-048 chromosome, complete genome	99.22	71.9	28
+KL303	CP016404	gi|1069140834|gb|CP016404.1|	Escherichia coli strain 210221272 chromosome, complete genome	98.43	71.8	23
+KL303	CP057344	gi|1881502443|gb|CP057344.1|	Escherichia coli strain RHB29-C15 chromosome, complete genome	97.95	71.2	14
+KL303	CP070914	gi|1995606065|gb|CP070914.1|	Escherichia coli strain 65COLEC chromosome, complete genome	97.95	71.0	21
+KL306	CP147038	gi|2719092462|gb|CP147038.1|	Escherichia coli strain 21F61 chromosome, complete genome	100.0	100.0	6
+KL306	CP099041	gi|2485184535|gb|CP099041.1|	Escherichia coli strain RHB44-C17 chromosome, complete genome	98.01	100.0	4
+KL306	CP099051	gi|2485174383|gb|CP099051.1|	Escherichia coli strain RHB44-C13 chromosome, complete genome	98.01	100.0	4
+KL306	CP071263	gi|2246663487|gb|CP071263.1|	Escherichia coli strain MEI003 chromosome, complete genome	97.98	100.0	4
+KL306	OY754453	gi|2604806659|emb|OY754453.1|	Escherichia coli isolate F95 genome assembly, chromosome: 1	97.98	99.8	7
+KL306	CP133106	gi|2569605493|gb|CP133106.1|	Escherichia coli strain 8523 chromosome, complete genome	98.01	99.5	4
+KL307	CP070103	gi|1988137626|gb|CP070103.1|	Escherichia coli strain FDAARGOS_1277 chromosome, complete genome	100.0	100.0	1
+KL307	OU349847	gi|2063811042|emb|OU349847.1|	Escherichia coli strain TA381 / O8:H31 / fimH1299 / 7535 (ST Warwick) genome ass	99.34	100.0	3
+KL307	CP034784	gi|1551446656|gb|CP034784.1|	Escherichia coli strain ECZP248 chromosome, complete genome	99.59	99.8	3
+KL307	CP076645	gi|2055694887|gb|CP076645.1|	Escherichia coli strain MSI001 chromosome, complete genome	99.22	99.8	5
+KL307	OY754834	gi|2670459021|emb|OY754834.1|	Escherichia coli isolate Reference genome assembly, chromosome: GPT21-003_1	99.53	91.3	2
+KL307	CP161809	gi|2774623652|gb|CP161809.1|	Escherichia coli strain YF-1 chromosome, complete genome	98.78	91.3	2
+KL307	AP042535	gi|3029650479|dbj|AP042535.1|	Escherichia coli O108:H25 OkiPb01688 DNA, complete genome	98.74	91.1	3
+KL307	CP002291	gi|383101383|gb|CP002291.1|	Escherichia coli P12b, complete genome	97.63	70.5	2
+KL307	CP075061	gi|2042085695|gb|CP075061.1|	Escherichia coli strain TCM_B_2 chromosome, complete genome	97.32	70.5	2
+KL307	CP069882	gi|1987919305|gb|CP069882.1|	Escherichia coli strain FDAARGOS_1289 chromosome, complete genome	97.31	70.5	2
+KL307	CP178715	gi|3044312371|gb|CP178715.1|	Escherichia coli strain VTB96959v chromosome, complete genome	97.31	70.5	2
+KL307	CP165370	gi|2882536420|gb|CP165370.1|	Escherichia coli strain OXEC-464 chromosome, complete genome	97.31	70.5	2
+KL307	CP164552	gi|2839981100|gb|CP164552.1|	Escherichia coli strain OXEC-420 chromosome, complete genome	97.31	70.5	2
+KL307	CP071133	gi|2023048038|gb|CP071133.1|	Escherichia coli strain ECONC427 chromosome	97.29	70.5	2
+KL307	CP164032	gi|2841999521|gb|CP164032.1|	Escherichia coli strain OXEC-97 chromosome, complete genome	97.29	70.5	2
+KL307	CP181631	gi|2970195461|gb|CP181631.1|	Escherichia coli strain A31453 chromosome, complete genome	96.99	70.5	2
+KL307	OZ039018	gi|2852291684|emb|OZ039018.1|	Escherichia coli isolate 30348_2#375 genome assembly, chromosome: 1	96.98	70.5	2
+KL307	CP011134	gi|801066488|gb|CP011134.1|	Escherichia coli VR50, complete genome	96.98	70.5	2
+KL307	CP182408	gi|2917966699|gb|CP182408.1|	Escherichia coli strain C11 chromosome, complete genome	97.45	70.4	2
+KL307	CP068990	gi|1970714605|gb|CP068990.1|	Escherichia coli strain RIVM_C010151 chromosome	97.33	70.4	2
+KL307	CP164008	gi|2841981138|gb|CP164008.1|	Escherichia coli strain OXEC-103 chromosome, complete genome	97.33	70.4	2
+KL307	OZ040101	gi|2852408803|emb|OZ040101.1|	Escherichia coli isolate 30602_6#124 genome assembly, chromosome: 1	97.33	70.4	2
+KL307	CP103533	gi|2294580175|gb|CP103533.1|	Escherichia coli strain 4238 chromosome, complete genome	97.33	70.4	2
+KL307	CP066836	gi|2074711725|gb|CP066836.1|	Escherichia coli strain Ec-FL1-1X chromosome, complete genome	97.33	70.4	2
+KL307	OZ039119	gi|2852291778|emb|OZ039119.1|	Escherichia coli isolate 30602_1#253 genome assembly, chromosome: 1	97.33	70.4	2
+KL307	CP097363	gi|2245140038|gb|CP097363.1|	Escherichia coli strain AGR6137 chromosome, complete genome	97.33	70.4	2
+KL307	CP134389	gi|2579220982|gb|CP134389.1|	Escherichia coli strain TUM10828 chromosome, complete genome	97.33	70.4	2
+KL307	AP045036	gi|3112147748|dbj|AP045036.1|	Escherichia coli TK3889 DNA, complete genome	97.32	70.4	2
+KL307	CP164266	gi|2840614175|gb|CP164266.1|	Escherichia coli strain OXEC-208 chromosome, complete genome	97.32	70.4	2
+KL307	CP165422	gi|2882592580|gb|CP165422.1|	Escherichia coli strain OXEC-449 chromosome, complete genome	97.31	70.4	2
