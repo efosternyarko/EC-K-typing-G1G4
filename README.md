@@ -32,7 +32,7 @@ Groups 1 and 4 share the Wzy-dependent polymerisation pathway. Their capsule bio
 | v0.3 | 93 filtered (positional names) | 183 | 1,112 BSI | 70/93 (75.3%) standard; 88/93 (94.6%) normalised | Positional gene naming + normalised scoring script |
 | v0.3.1 | 93 filtered | 183 | 1,112 BSI + 592 NNS | 592/592 (100%) NNS typeable | KL388 (+6.6 kb) and KL391 (+10.5 kb) replaced with longer NNS representatives from Malawi and South Africa; KL391 now correctly typed by standard Kaptive scoring (previously KL300 Untypeable) |
 | v0.4 | 93 filtered | 183 | 565 BSI | 89/93 (95.7%) normalised | Conserved CDS stripped from G1/G4 loci (528 CDS removed: galF, galF_2, gnd, ugd, wza, wzb, wzc); fixes KL301; typeability 100% |
-| **v0.5** | **93 filtered** | **183** | **565 BSI + 2 NCBI** | **91/93 (97.8%) normalised; 67/93 (72.0%) standard** | **KL306 and KL307 representatives replaced with better NCBI candidates (CP099041, CP070103); self-typing now uses source genomes of current representatives; new reps self-type at AS_norm=2.00; typeability 100%** |
+| **v0.5** | **93 filtered** | **183** | **565 BSI + 2 NCBI** | **91/93 (97.8%) normalised; 67/93 (72.0%) standard** | **KL306 and KL307 representatives replaced with better NCBI candidates (CP099041, CP070103); self-typing now uses source genomes of current representatives; new reps self-type at AS_norm=2.00; typeability 100%; K-type notes added to all GenBank records (Kaptive now reports type names directly instead of "unknown (KLxxx)")** |
 
 ### Reference loci (v0.2)
 
@@ -58,6 +58,7 @@ The v0.2 database contains **125 reference K-loci** (K24, K96, KL300–KL423) ex
 | `scripts/make_v05_db.py` | Script that replaces KL306/KL307 with NCBI candidates via BLAST-based liftover |
 | `scripts/blast_ncbi_candidates.py` | NCBI megaBLAST search for candidate assemblies per locus |
 | `scripts/test_blast_candidates.py` | Downloads and Kaptive-tests candidate assemblies |
+| `scripts/add_ktype_notes.py` | Adds `K type:KLxxx` notes to G1/G4 GenBank source features so Kaptive reports type names instead of `unknown (KLxxx)` |
 
 #### v0.4
 
@@ -193,7 +194,17 @@ python scripts/type_normalized.py \
 
 This internally invokes `kaptive assembly --scores`, which BLASTs every reference CDS individually against the whole assembly without needing to first locate a locus region. It then re-ranks all loci by `AS / total_expected_gene_bp` to remove size bias, assigns every assembly a best-match locus, and writes three output files: the raw scores matrix, normalised typing results, and a per-assembly summary.
 
-**Interpreting the Norm AS output:**
+**Output columns (normalised scoring):**
+
+| Column | Description |
+|--------|-------------|
+| Best match locus | KL locus designation (e.g., `KL302`, `K24`) |
+| Best match confidence | `Typeable` if ≥ 50% of expected genes found; `Untypeable` otherwise |
+| Raw AS | Cumulative BLAST bitscore across all reference CDS genes found. Larger loci accumulate proportionally more — do not compare raw scores across loci of different sizes |
+| Norm AS | Raw AS ÷ total expected CDS base-pairs: a per-base identity metric independent of locus size. ~2.0 indicates perfect 100% identity across all reference genes |
+| Genes found / expected | Count of reference CDS found vs expected; Gene coverage = found ÷ expected |
+
+**Interpreting Norm AS:**
 
 | Norm AS | Interpretation |
 |---------|---------------|
@@ -256,6 +267,17 @@ The current combined database (`DB/EC-K-typing_all_groups_v0.5.gbk`) covering al
 kaptive assembly DB/EC-K-typing_all_groups_v0.5.gbk genome.fasta -o results.tsv
 ```
 
+**Example output (first 8 columns):**
+
+```
+Assembly          Best match locus  Best match type  Match confidence  Problems  Identity  Coverage   Length discrepancy
+sample1.fasta     KL302             KL302            Typeable          !         99.1%     93.1%      n/a
+sample2.fasta     KL336             KL336            Typeable          +!        99.7%     100.0%     -325 bp
+sample3.fasta     KL127             KL127            Typeable          -         99.9%     100.0%     +12 bp
+```
+
+`Best match locus` and `Best match type` are the same for our G1/G4 loci — the KL designation is both the locus name and the type name, since most G1/G4 loci do not yet have a classical K-antigen designation. The `Problems` column uses codes from Kaptive (e.g., `!` = genes found outside the locus; `+` = extra unexpected genes; `-` = missing expected genes; `?` = other issues).
+
 The combined database merges:
 - **Group 2 & 3:** 90 loci (KL1–KL175) from [Gladstone et al.](https://github.com/rgladstone/EC-K-typing) — annotated with Bakta + Panaroo
 - **Group 1 & 4:** 93 loci (K24, K96, KL300–KL423, filtered ≥ 30 kb) from this study — annotated with [pyrodigal](https://github.com/althonos/pyrodigal) (metagenomic mode) + systematic positional gene naming (v0.3); KL388 and KL391 updated to longer NNS representatives (v0.3.1); conserved flanking/export genes stripped for variable-region-only scoring (v0.4); KL306 and KL307 replaced with better NCBI representatives (v0.5)
@@ -274,6 +296,17 @@ python scripts/type_normalized.py \
 # Re-use a pre-computed scores matrix (fast — skips the Kaptive run):
 python scripts/type_normalized.py --skip-kaptive --suffix v0.5norm
 ```
+
+**Example output (`kaptive_validation_results_v0.5norm.tsv`, key columns):**
+
+```
+Assembly          Best match locus  Best match confidence  Genes found  Genes expected  Gene coverage  Raw AS   Norm AS
+sample1.fasta     KL302             Typeable               31           34              91.2%          53826    1.7616
+sample2.fasta     KL336             Typeable               28           28              100.0%         60484    1.9603
+sample3.fasta     KL365             Typeable               29           29              100.0%         53812    1.8891
+```
+
+`Raw AS` is the cumulative BLAST bitscore across all reference genes found — larger loci naturally score higher. `Norm AS` divides Raw AS by the total expected CDS length in base-pairs, giving a per-base identity score comparable across loci of any size.
 
 This raises self-typing of the 93 filtered loci to **91/93 (97.8%)** and typeability to **100%** of assemblies. See `DB/kaptive_validation_results_v0.5norm.tsv` for the pre-computed results on all 567 assemblies (565 BSI + 2 NCBI representative genomes).
 
@@ -354,20 +387,20 @@ blastn -query genome.fasta \
 
 ## Neonatal sepsis (NNS) typing
 
-The database was applied to **592 *E. coli* assemblies** from 8 neonatal sepsis collections representing 6 countries/sites:
+The database was applied to **592 *E. coli* assemblies** from 8 neonatal sepsis collections representing 6 countries/sites, using the v0.5 all-groups database with normalised scoring:
 
-| Collection | Site | n assemblies | G1/G4 (%) | Top G1/G4 loci |
-|------------|------|:------------:|:---------:|----------------|
-| Patan | Nepal | 20 | 100% | KL302(16), KL329(10), KL337(2) |
-| Barnards | South Africa | 75 | 40% | KL302(28), KL301(5), KL303(5) |
-| Mbira | Zimbabwe | 57 | 42% | KL303(6), KL127(6), KL329(5) |
-| CHAMPS_Harar | Ethiopia | 110 | 50% | KL302(17), KL301(11), KL303(7) |
-| Mlw | Malawi | 167 | 43% | KL302(41), KL127(16), KL130(14) |
-| MRCG | Gambia | 130 | 48% | KL2(28), KL130(17), KL302(12) |
-| Benin | Benin | 20 | 55% | KL329(4), KL302(4), KL127(2) |
-| Pakistan | Pakistan | 13 | 54% | KL302(4), KL303(2), KL131(2) |
+| Collection | Site | n | G1/G4 (%) | Top G1/G4 loci |
+|------------|------|:-:|:---------:|----------------|
+| Patan | Nepal | 20 | 75% (15) | KL302(8), KL329(5), KL337(1) |
+| Barnards | South Africa | 75 | 64% (48) | KL302(24), KL301(5), KL303(5) |
+| Mbira | Zimbabwe | 57 | 46% (26) | KL303(6), KL329(5), KL302(4) |
+| CHAMPS_Harar | Ethiopia | 110 | 54% (59) | KL302(19), KL301(13), KL303(8) |
+| Mlw | Malawi | 167 | 48% (80) | KL302(32), KL301(13), KL303(5) |
+| MRCG | Gambia | 130 | 34% (44) | KL302(15), KL379(9), KL305(5) |
+| Benin | Benin | 20 | 55% (11) | KL329(4), KL302(4), KL303(1) |
+| Pakistan | Pakistan | 13 | 62% (8) | KL302(4), KL303(2), KL344(1) |
 
-**All 592/592 assemblies were typeable** using the all-groups v0.3 database with normalised scoring. G1/G4 loci were assigned to 317 assemblies (53.5%); G2/G3 loci to 308 assemblies (47.0%). The most common G1/G4 type was KL302 (126/317; 40%), followed by KL303 (28), KL329 (27), KL301 (21), and KL337 (20).
+**All 592/592 assemblies were typeable** (v0.5 database, normalised scoring). G1/G4 loci were assigned to 291 assemblies (49.2%); G2/G3 loci to 301 assemblies (50.8%). The most common G1/G4 type was KL302 (110/291; 38%), followed by KL301 (35), KL303 (28), KL329 (23), and KL337 (19). Full per-assembly results: `DB/nns_kaptive_results_v0.5norm.tsv`.
 
 ### Database improvement candidates from NNS
 
@@ -377,6 +410,8 @@ The database was applied to **592 *E. coli* assemblies** from 8 neonatal sepsis 
 
 | File | Description |
 |------|-------------|
+| `nns_kaptive_results_v0.5norm.tsv` | **Normalised typing results, v0.5 database** — Assembly, Collection, Best_match_locus, Capsule_group (G1/G4 or G2/G3), Confidence (High/Moderate/Low), Norm_AS, Genes_found, Genes_expected, Gene_coverage, Raw_AS, Typeable |
+| `nns_kaptive_scores_v0.5norm.tsv` | Full locus × assembly score matrix (183 loci × 592 assemblies, v0.5 DB) |
 | `nns_kaptive_results.tsv` | Standard Kaptive typing output (592 assemblies, 8 collections, v0.3 DB) |
 | `nns_kaptive_results_norm.tsv` | Normalised typing results with collection labels (v0.3 DB) |
 | `nns_kaptive_summary_norm.tsv` | Per-collection summary table (v0.3 DB) |
