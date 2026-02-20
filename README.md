@@ -4,9 +4,9 @@ A reference database of *Escherichia coli* capsule (K-antigen) loci for **Group 
 
 This database complements the [EC-K-typing](https://github.com/rgladstone/EC-K-typing) Group 2 & 3 database by Rebecca Gladstone, enabling comprehensive capsule typing across all four *E. coli* capsule groups.
 
-> **Pre-release status:** This database is under active development and uses a **0.x versioning scheme** until it reaches production quality. The current release is **v0.3.1**. Versions will be numbered 0.1, 0.2, 0.3, etc. until the database passes full self-typing validation and systematic gene naming is implemented, at which point it will be released as **v1.0**.
+> **Pre-release status:** This database is under active development and uses a **0.x versioning scheme** until it reaches production quality. The current release is **v0.4**. Versions will be numbered 0.1, 0.2, 0.3, etc. until the database passes full self-typing validation and systematic gene naming is implemented, at which point it will be released as **v1.0**.
 >
-> **Normalised scoring:** A post-processing script (`scripts/type_normalized.py`) re-ranks Kaptive's raw scores by `AS / total_expected_gene_bp`, eliminating bitscore accumulation bias from large reference loci. This raises self-typing of the 93 filtered loci from **70/93 (75.3%)** to **88/93 (94.6%)** and typeability to **100%** of isolates.
+> **Normalised scoring:** A post-processing script (`scripts/type_normalized.py`) re-ranks Kaptive's raw scores by `AS / total_expected_gene_bp`, eliminating bitscore accumulation bias from large reference loci. This raises self-typing of the 93 filtered loci from **70/93 (75.3%)** to **89/93 (95.7%)** and typeability to **100%** of isolates.
 
 ## Background
 
@@ -30,7 +30,8 @@ Groups 1 and 4 share the Wzy-dependent polymerisation pathway. Their capsule bio
 | v0.1 | 46 (KL300–KL343) | 136 | 222 (subset accessible) | 46/46 (100%) | Initial release |
 | v0.2 | 125 (KL300–KL423) | 183 | 1,112 (all BSI no-hit isolates) | 70/93 (75.3%) | |
 | v0.3 | 93 filtered (positional names) | 183 | 1,112 BSI | 70/93 (75.3%) standard; 88/93 (94.6%) normalised | Positional gene naming + normalised scoring script |
-| **v0.3.1** | **93 filtered** | **183** | **1,112 BSI + 592 NNS** | **592/592 (100%) NNS typeable** | **KL388 (+6.6 kb) and KL391 (+10.5 kb) replaced with longer NNS representatives from Malawi and South Africa; KL391 now correctly typed by standard Kaptive scoring (previously KL300 Untypeable)** |
+| v0.3.1 | 93 filtered | 183 | 1,112 BSI + 592 NNS | 592/592 (100%) NNS typeable | KL388 (+6.6 kb) and KL391 (+10.5 kb) replaced with longer NNS representatives from Malawi and South Africa; KL391 now correctly typed by standard Kaptive scoring (previously KL300 Untypeable) |
+| **v0.4** | **93 filtered** | **183** | **565 BSI** | **89/93 (95.7%) normalised** | **Conserved CDS stripped from G1/G4 loci (528 CDS removed: galF, galF_2, gnd, ugd, wza, wzb, wzc); fixes KL301; typeability 100%** |
 
 ### Reference loci (v0.2)
 
@@ -44,7 +45,19 @@ The v0.2 database contains **125 reference K-loci** (K24, K96, KL300–KL423) ex
 
 ### Files
 
-#### v0.3.1 (current)
+#### v0.4 (current)
+
+| File | Description |
+|------|-------------|
+| `DB/EC-K-typing_group1and4_v0.4.gbk` | **G1/G4 database with conserved CDS stripped (galF, galF_2, gnd, ugd, wza, wzb, wzc removed from all 93 loci)** |
+| `DB/EC-K-typing_all_groups_v0.4.gbk` | **Combined all-groups database (183 loci) — G2/G3 unchanged, G1/G4 with variable region only — use this for typing** |
+| `DB/kaptive_validation_results_v0.4.tsv` | Standard Kaptive typing results (565 BSI assemblies, v0.4 DB) |
+| `DB/kaptive_scores_v0.4norm.tsv` | Full locus × assembly score matrix (183 loci × 565 assemblies, v0.4 DB) |
+| `DB/kaptive_validation_results_v0.4norm.tsv` | Normalised typing results (AS / total_expected_gene_bp) |
+| `DB/kaptive_validation_summary_v0.4norm.tsv` | Per-assembly comparison table (normalised scoring) |
+| `scripts/make_v04_db.py` | Script that strips conserved CDS from v0.3.1 G1/G4 loci to produce v0.4 |
+
+#### v0.3.1
 
 | File | Description |
 |------|-------------|
@@ -101,7 +114,8 @@ The v0.2 database contains **125 reference K-loci** (K24, K96, KL300–KL423) ex
 | `scripts/annotate_loci.py` | Annotation script (pyrodigal + Klebsiella K-locus BLASTp) |
 | `scripts/name_loci_positional.py` | Positional gene naming script (v0.3) |
 | `scripts/type_normalized.py` | Normalised scoring script — re-ranks Kaptive scores by `AS / total_expected_gene_bp` |
-| `scripts/swap_reps_v04.py` | Representative swapping script (v0.4 experiment — kept for reference, not used) |
+| `scripts/swap_reps_v04.py` | Representative swapping script (v0.4 experiment — kept for reference, superseded by make_v04_db.py) |
+| `scripts/make_v04_db.py` | v0.4 database builder — strips conserved CDS from G1/G4 loci for variable-region-only scoring |
 | `flanking_genes/flanking_genes.fasta` | Flanking gene marker sequences used for locus detection |
 
 ### Nomenclature
@@ -154,29 +168,32 @@ GenBank records are formatted for [Kaptive](https://github.com/klebgenomics/Kapt
 
 ### With Kaptive
 
-The current combined database (`DB/EC-K-typing_all_groups_v0.3.1.gbk`) covering all four capsule groups (183 loci) is ready for direct use with [Kaptive](https://github.com/klebgenomics/Kaptive):
+The current combined database (`DB/EC-K-typing_all_groups_v0.4.gbk`) covering all four capsule groups (183 loci) is ready for direct use with [Kaptive](https://github.com/klebgenomics/Kaptive):
 
 ```bash
-kaptive assembly DB/EC-K-typing_all_groups_v0.3.1.gbk genome.fasta -o results.tsv
+kaptive assembly DB/EC-K-typing_all_groups_v0.4.gbk genome.fasta -o results.tsv
 ```
 
 The combined database merges:
 - **Group 2 & 3:** 90 loci (KL1–KL175) from [Gladstone et al.](https://github.com/rgladstone/EC-K-typing) — annotated with Bakta + Panaroo
-- **Group 1 & 4:** 93 loci (K24, K96, KL300–KL423, filtered ≥ 30 kb) from this study — annotated with [pyrodigal](https://github.com/althonos/pyrodigal) (metagenomic mode) + systematic positional gene naming (v0.3); KL388 and KL391 updated to longer NNS representatives (v0.3.1)
+- **Group 1 & 4:** 93 loci (K24, K96, KL300–KL423, filtered ≥ 30 kb) from this study — annotated with [pyrodigal](https://github.com/althonos/pyrodigal) (metagenomic mode) + systematic positional gene naming (v0.3); KL388 and KL391 updated to longer NNS representatives (v0.3.1); conserved flanking/export genes stripped for variable-region-only scoring (v0.4)
 
 ### With normalised scoring (recommended)
 
 For improved accuracy on Group 1 & 4 loci, use the normalised scoring script, which re-ranks each assembly's loci by `AS / total_expected_gene_bp` — converting raw bitscore into alignment score per expected reference base:
 
 ```bash
-# Run Kaptive and normalise scores in one step:
-python scripts/type_normalized.py --threads 8
+# Run Kaptive and normalise scores in one step (v0.4 database):
+python scripts/type_normalized.py \
+  --db DB/EC-K-typing_all_groups_v0.4.gbk \
+  --suffix v0.4norm \
+  --threads 8
 
 # Or re-use a pre-computed scores matrix (fast):
-python scripts/type_normalized.py --skip-kaptive --suffix v0.3norm
+python scripts/type_normalized.py --skip-kaptive --suffix v0.4norm
 ```
 
-This raises self-typing of the 93 filtered loci from 70/93 (75.3%) to **88/93 (94.6%)** and typeability to **100%** of assemblies. See `DB/kaptive_validation_results_v0.3norm.tsv` for the pre-computed results on all 565 v0.3 source assemblies.
+This raises self-typing of the 93 filtered loci to **89/93 (95.7%)** and typeability to **100%** of assemblies. See `DB/kaptive_validation_results_v0.4norm.tsv` for the pre-computed results on all 565 v0.3 source assemblies.
 
 ## Validation
 
@@ -317,17 +334,34 @@ Replaced two representatives with longer, more complete sequences extracted from
 
 **NNS re-validation (v0.3.1):** All 592/592 NNS assemblies remain typeable with normalised scoring. ERR4920077 and ERR4920086 (Barnards, South Africa) now type as KL391 with 100% gene coverage (NormAS 2.00 and 1.88 respectively) — both previously typed as KL391 via normalised scoring on v0.3 and now also correctly typed by standard Kaptive. NNS validation files: `DB/nns_kaptive_results_v0.3.1_norm.tsv`, `DB/nns_kaptive_summary_v0.3.1_norm.tsv`.
 
-### v0.4 (next release)
+### v0.4 (completed)
 
-Remaining 5 failures are KX01 loci (KL300, KL301, KL303, KL306, KL307) that all score lower per base than KL302 in their source genomes. These may reflect true biological ambiguity within the KX01 clade, or could be resolved by:
+Stripped conserved flanking/export CDS from all 93 G1/G4 GenBank records, leaving only the variable biosynthetic region for Kaptive scoring. The 5 KX01 loci that failed in v0.3.1 (KL300, KL301, KL303, KL306, KL307) all shared identical conserved genes (wza, wzb, wzc, galF, gnd, ugd) with KL302, contributing equal bitscore background that masked variable region differences.
 
-#### Option A: Variable-region-only scoring
+**Implementation** (`scripts/make_v04_db.py`):
+- Read v0.3.1 G1/G4 GenBank; remove any CDS whose `gene` qualifier is in `{galF, galF_2, gnd, ugd, wza, wzb, wzc}`
+- G2/G3 records are carried through unchanged
+- 528 / 3,304 CDS (16.0%) removed across 93 loci; each locus retains 23–47 variable CDS (above Kaptive's 50% gene coverage threshold)
 
-Remove conserved flanking/export genes (wza, wzb, wzc, galF, gnd, ugd) from the GenBank CDS features used by Kaptive, retaining only the variable biosynthetic region. Since these conserved genes are present at ~100% identity in all loci of the same KX type, they contribute equal bitscore to all references; removing them eliminates the shared background and leaves only the discriminating variable genes.
+**Result:**
+- Self-typing (93 filtered loci): **89/93 (95.7%)** — up from 88/93 (94.6%)
+- KL301 now correctly self-types (previously failed)
+- Typeability: **565/565 (100%)** — unchanged
+- Remaining 4 failures: KL300, KL303, KL306, KL307 (all KX01; still score below KL302 in variable region)
 
-#### Option B: Expanded genome coverage
+**Interpretation:** The conserved gene removal partially helps — KL301 is resolved — but the 4 remaining failures reflect genuine similarity of the KX01 variable biosynthetic genes, not scoring bias from conserved background. Further improvement likely requires better representative sequences or additional discriminating genes.
 
-- Mine [AllTheBacteria](https://doi.org/10.1101/2024.03.08.584059) (~300–500K *E. coli* genomes) using [LexicMap](https://www.nature.com/articles/s41587-025-02812-8) or direct BLAST screening for *galF*/*gnd* flanking genes to discover novel G1/G4 K-locus types beyond the BSI isolate set
+### v0.5 (next release)
+
+Remaining 4 failures are KX01 loci (KL300, KL303, KL306, KL307) that score below KL302 even after removing conserved genes. Options:
+
+#### Option A: Expanded genome coverage
+
+- Mine [AllTheBacteria](https://doi.org/10.1101/2024.03.08.584059) (~300–500K *E. coli* genomes) using [LexicMap](https://www.nature.com/articles/s41587-025-02812-8) or direct BLAST screening for *galF*/*gnd* flanking genes to discover additional representatives for KX01 loci that may better discriminate within the clade
+
+#### Option B: Investigate biological ambiguity
+
+- Examine whether the 4 failures reflect true genome-level similarity (the source assembly may genuinely be closer to KL302 than its assigned type) or annotation issues in the reference locus
 
 ### v1.0 (public release)
 
@@ -344,7 +378,7 @@ v1.0 will be released when:
 | [kTYPr](https://github.com/SushiLab/kTYPr) | *E. coli* Group 2 & 3 (85 loci, HMM-based) | [Schwengers et al. 2025](https://www.biorxiv.org/content/10.1101/2025.08.07.669119v1) |
 | [Kaptive](https://github.com/klebgenomics/Kaptive) | *Klebsiella* and *E. coli* K/O typing | [Lam et al. 2022](https://doi.org/10.1099/mgen.0.000800) |
 | [FastKaptive](https://github.com/rmostowy/fastKaptive) | Fast K-locus pre-screening | Mostowy et al. |
-| **This database** | *E. coli* Group 1 & 4 (93 filtered loci, v0.3.1; 88/93 with normalised scoring) | — |
+| **This database** | *E. coli* Group 1 & 4 (93 filtered loci, v0.4; 89/93 with normalised scoring) | — |
 
 ## Citation
 
