@@ -239,6 +239,37 @@ blastn -query genome.fasta \
   -max_target_seqs 5
 ```
 
+## Neonatal sepsis (NNS) typing
+
+The database was applied to **592 *E. coli* assemblies** from 8 neonatal sepsis collections representing 6 countries/sites:
+
+| Collection | Site | n assemblies | G1/G4 (%) | Top G1/G4 loci |
+|------------|------|:------------:|:---------:|----------------|
+| Patan | Nepal | 20 | 100% | KL302(16), KL329(10), KL337(2) |
+| Barnards | South Africa | 75 | 40% | KL302(28), KL301(5), KL303(5) |
+| Mbira | Zimbabwe | 57 | 42% | KL303(6), KL127(6), KL329(5) |
+| CHAMPS_Harar | Ethiopia | 110 | 50% | KL302(17), KL301(11), KL303(7) |
+| Mlw | Malawi | 167 | 43% | KL302(41), KL127(16), KL130(14) |
+| MRCG | Gambia | 130 | 48% | KL2(28), KL130(17), KL302(12) |
+| Benin | Benin | 20 | 55% | KL329(4), KL302(4), KL127(2) |
+| Pakistan | Pakistan | 13 | 54% | KL302(4), KL303(2), KL131(2) |
+
+**All 592/592 assemblies were typeable** using the all-groups v3.0 database with normalised scoring. G1/G4 loci were assigned to 317 assemblies (53.5%); G2/G3 loci to 308 assemblies (47.0%). The most common G1/G4 type was KL302 (126/317; 40%), followed by KL303 (28), KL329 (27), KL301 (21), and KL337 (20).
+
+### Database improvement candidates from NNS
+
+40 G1/G4 loci were represented in the NNS collections. High-quality matches (normalised AS ≥ 1.9, 100% gene coverage) were found for 22 loci including KL305, KL309, KL313, KL315, KL317, KL319, KL323, KL324, KL327, KL329, KL332, KL336, KL344, KL361, KL363, KL365, KL371, KL374, KL379, KL381, KL388, and KL391. The best NNS representative per locus is catalogued in `DB/nns_g1g4_best_reps.tsv`.
+
+### NNS typing files (`DB/`)
+
+| File | Description |
+|------|-------------|
+| `nns_kaptive_results.tsv` | Standard Kaptive typing output (592 assemblies, 8 collections) |
+| `nns_kaptive_results_norm.tsv` | Normalised typing results with collection labels |
+| `nns_kaptive_summary_norm.tsv` | Per-collection summary table |
+| `nns_kaptive_scores.tsv` | Full locus × assembly score matrix (183 loci × 592 assemblies) |
+| `nns_g1g4_best_reps.tsv` | Best NNS assembly per G1/G4 locus (DB expansion candidates) |
+
 ## Roadmap
 
 ### v0.3 (completed)
