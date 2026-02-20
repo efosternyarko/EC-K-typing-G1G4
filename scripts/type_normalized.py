@@ -64,6 +64,8 @@ EXTRACTION_SUMMARY = Path(
 GENOMES_DIR        = Path(
     "/Users/LSHEF4/Dropbox/work_2025/e_coli_db/db_build_v2/nohits_genomes"
 )
+# NCBI candidate genomes: checked when a mapping entry stem isn't in GENOMES_DIR
+NCBI_GENOMES_DIR   = REPO_DIR / "DB" / "blast_ncbi_results" / "candidate_genomes"
 
 # Typeable threshold: fraction of expected genes that must be found
 MIN_GENE_COVERAGE = 0.50
@@ -278,14 +280,31 @@ def main():
 
     extracted_asms = extraction[extraction["status"] == "extracted"]["assembly"].tolist()
     genome_files, missing = [], []
+    found_stems = set()
     for asm in extracted_asms:
         fa = GENOMES_DIR / asm
         if fa.exists():
             genome_files.append(fa)
+            found_stems.add(Path(asm).stem)
         else:
             missing.append(asm)
     if missing:
         print(f"WARNING: {len(missing)} genome file(s) not found", file=sys.stderr)
+
+    # For representative assemblies not in nohits_genomes (e.g. NCBI replacements),
+    # search the candidate_genomes directory by stem name.
+    ncbi_added = []
+    for stem in expected_kl:
+        if stem not in found_stems and NCBI_GENOMES_DIR.exists():
+            for ext in (".fasta", ".fa", ".fna"):
+                candidate = NCBI_GENOMES_DIR / f"{stem}{ext}"
+                if candidate.exists():
+                    genome_files.append(candidate)
+                    found_stems.add(stem)
+                    ncbi_added.append(stem)
+                    break
+    if ncbi_added:
+        print(f"[2] Added {len(ncbi_added)} NCBI representative genome(s): {', '.join(ncbi_added)}")
     print(f"[2] Genome files: {len(genome_files)}")
 
     # Run Kaptive --scores (or skip)

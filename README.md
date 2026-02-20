@@ -6,7 +6,7 @@ This database complements the [EC-K-typing](https://github.com/rgladstone/EC-K-t
 
 > **Pre-release status:** This database is under active development and uses a **0.x versioning scheme** until it reaches production quality. The current release is **v0.5**. Versions will be numbered 0.1, 0.2, 0.3, etc. until the database passes full self-typing validation and systematic gene naming is implemented, at which point it will be released as **v1.0**.
 >
-> **Normalised scoring:** A post-processing script (`scripts/type_normalized.py`) re-ranks Kaptive's raw scores by `AS / total_expected_gene_bp`, eliminating bitscore accumulation bias from large reference loci. This raises self-typing of the 93 filtered loci from **70/93 (75.3%)** to **89/93 (95.7%)** and typeability to **100%** of isolates.
+> **Normalised scoring:** A post-processing script (`scripts/type_normalized.py`) re-ranks Kaptive's raw scores by `AS / total_expected_gene_bp`, eliminating bitscore accumulation bias from large reference loci. This raises self-typing of the 93 filtered loci from **70/93 (75.3%)** to **91/93 (97.8%)** and typeability to **100%** of isolates.
 
 ## Background
 
@@ -32,7 +32,7 @@ Groups 1 and 4 share the Wzy-dependent polymerisation pathway. Their capsule bio
 | v0.3 | 93 filtered (positional names) | 183 | 1,112 BSI | 70/93 (75.3%) standard; 88/93 (94.6%) normalised | Positional gene naming + normalised scoring script |
 | v0.3.1 | 93 filtered | 183 | 1,112 BSI + 592 NNS | 592/592 (100%) NNS typeable | KL388 (+6.6 kb) and KL391 (+10.5 kb) replaced with longer NNS representatives from Malawi and South Africa; KL391 now correctly typed by standard Kaptive scoring (previously KL300 Untypeable) |
 | v0.4 | 93 filtered | 183 | 565 BSI | 89/93 (95.7%) normalised | Conserved CDS stripped from G1/G4 loci (528 CDS removed: galF, galF_2, gnd, ugd, wza, wzb, wzc); fixes KL301; typeability 100% |
-| **v0.5** | **93 filtered** | **183** | **565 BSI** | **89/93 (95.7%) normalised; 67/93 (72.0%) standard** | **KL306 and KL307 representatives replaced with better NCBI candidates (CP099041, CP070103); new reps self-type at AS_norm=2.00; typeability 100%** |
+| **v0.5** | **93 filtered** | **183** | **565 BSI + 2 NCBI** | **91/93 (97.8%) normalised; 67/93 (72.0%) standard** | **KL306 and KL307 representatives replaced with better NCBI candidates (CP099041, CP070103); self-typing now uses source genomes of current representatives; new reps self-type at AS_norm=2.00; typeability 100%** |
 
 ### Reference loci (v0.2)
 
@@ -52,10 +52,10 @@ The v0.2 database contains **125 reference K-loci** (K24, K96, KL300–KL423) ex
 |------|-------------|
 | `DB/EC-K-typing_group1and4_v0.5.gbk` | **G1/G4 database: conserved CDS stripped + KL300/KL306/KL307 replaced with better NCBI representatives** |
 | `DB/EC-K-typing_all_groups_v0.5.gbk` | **Combined all-groups database (183 loci) — use this for typing** |
-| `DB/kaptive_scores_v0.5norm.tsv` | Full locus × assembly score matrix (183 loci × 565 assemblies, v0.5 DB) |
+| `DB/kaptive_scores_v0.5norm.tsv` | Full locus × assembly score matrix (183 loci × 567 assemblies: 565 BSI + CP099041 + CP070103) |
 | `DB/kaptive_validation_results_v0.5norm.tsv` | Normalised typing results (AS / total_expected_gene_bp) |
 | `DB/kaptive_validation_summary_v0.5norm.tsv` | Per-assembly comparison table (normalised scoring) |
-| `scripts/make_v05_db.py` | Script that replaces KL300/KL306/KL307 with NCBI candidates via BLAST-based liftover |
+| `scripts/make_v05_db.py` | Script that replaces KL306/KL307 with NCBI candidates via BLAST-based liftover |
 | `scripts/blast_ncbi_candidates.py` | NCBI megaBLAST search for candidate assemblies per locus |
 | `scripts/test_blast_candidates.py` | Downloads and Kaptive-tests candidate assemblies |
 
@@ -190,7 +190,7 @@ kaptive assembly DB/EC-K-typing_all_groups_v0.5.gbk genome.fasta -o results.tsv
 
 The combined database merges:
 - **Group 2 & 3:** 90 loci (KL1–KL175) from [Gladstone et al.](https://github.com/rgladstone/EC-K-typing) — annotated with Bakta + Panaroo
-- **Group 1 & 4:** 93 loci (K24, K96, KL300–KL423, filtered ≥ 30 kb) from this study — annotated with [pyrodigal](https://github.com/althonos/pyrodigal) (metagenomic mode) + systematic positional gene naming (v0.3); KL388 and KL391 updated to longer NNS representatives (v0.3.1); conserved flanking/export genes stripped for variable-region-only scoring (v0.4); KL300, KL306, KL307 replaced with better NCBI representatives (v0.5)
+- **Group 1 & 4:** 93 loci (K24, K96, KL300–KL423, filtered ≥ 30 kb) from this study — annotated with [pyrodigal](https://github.com/althonos/pyrodigal) (metagenomic mode) + systematic positional gene naming (v0.3); KL388 and KL391 updated to longer NNS representatives (v0.3.1); conserved flanking/export genes stripped for variable-region-only scoring (v0.4); KL306 and KL307 replaced with better NCBI representatives (v0.5)
 
 ### With normalised scoring (recommended)
 
@@ -207,7 +207,7 @@ python scripts/type_normalized.py \
 python scripts/type_normalized.py --skip-kaptive --suffix v0.5norm
 ```
 
-This raises self-typing of the 93 filtered loci to **89/93 (95.7%)** and typeability to **100%** of assemblies. See `DB/kaptive_validation_results_v0.5norm.tsv` for the pre-computed results on all 565 v0.3 source assemblies.
+This raises self-typing of the 93 filtered loci to **91/93 (97.8%)** and typeability to **100%** of assemblies. See `DB/kaptive_validation_results_v0.5norm.tsv` for the pre-computed results on all 567 assemblies (565 BSI + 2 NCBI representative genomes).
 
 ## Validation
 
@@ -389,18 +389,20 @@ Replaced the representative sequences for KL300, KL306, and KL307 with better ca
 
 **KL300** (CP135488) was evaluated but not adopted. With the 1.2× extraction cap (27/30 CDS), CP135488's core variable genes are too conserved across KX01 loci — the new reference pulled many non-KL300 assemblies toward KL300 in normalised scoring. With a wider 1.5× cap (all 30 CDS including peripheral rfaG/gmd_2/KL300_11 flanking genes), standard Kaptive typeability regressed by 54 assemblies due to size-bias in locus-finding. KL300 retains its original BSI representative.
 
+**Self-typing validation methodology correction:** Self-typing should use the source genome of each locus's *current* representative. KL306's representative was extracted from CP099041 and KL307's from CP070103; those genomes are therefore the correct self-typing assemblies. The mapping tables (`KL_G1G4_mapping.tsv`, `KL_G1G4_mapping_filtered.tsv`) were updated accordingly, and `scripts/type_normalized.py` now also searches the `DB/blast_ncbi_results/candidate_genomes/` directory for representative genomes not in the original BSI assembly set. The old BSI assemblies (ESC_GB3606AA_AS, ESC_NB5901AA_AS) remain in the 565 BSI test set but are no longer designated as the KL306/KL307 representatives; they type as KL302 even with the v0.5 database, confirming that replacement was necessary.
+
 **Result:**
-- Self-typing of BSI representatives: **89/93 (95.7%) normalised** — same as v0.4 (the old BSI assemblies for KL306/307 remain biologically ambiguous; metric limited by legacy test set)
+- Self-typing (93 filtered loci, correct source genomes): **91/93 (97.8%) normalised** — up from 89/93 with legacy BSI test set
+- Correctly self-typing: all 93 loci except **KL300** (old BSI rep types as KL302) and **KL303** (biological ambiguity with KL302)
+- New NCBI representatives self-type at **AS_norm = 2.000** (perfect): CP099041 → KL306, CP070103 → KL307
 - Standard Kaptive: **67/93 (72.0%) self-typing; 243/565 (43.0%) typeable** — identical to v0.4
-- New representatives self-type at **AS_norm = 2.000** (perfect) against v0.5 database
-- Typeability (normalised): **565/565 (100%)** — unchanged
-- Remaining unresolvable loci: KL300, KL303, KL306, KL307 (4 KX01 loci; BSI representatives inherently ambiguous)
+- Typeability (normalised): **567/567 (100%)** — includes 565 BSI + 2 NCBI assemblies
 
 **KL303 note:** All 264 NCBI candidate assemblies typed as KL302 or KL352 — the KL303 variable region is indistinguishable from KL302 in all publicly available sequences. KL303 is retained in the database but flagged as having no discriminating public representative.
 
 ### v0.6 (next release)
 
-Remaining failures are KL300, KL303, KL306, KL307 (all KX01 loci). KL303 and KL300 cannot be resolved from KL302 using any public NCBI genome. KL306 and KL307 have better NCBI representatives in the v0.5 database, but their original BSI test assemblies are inherently ambiguous. Options:
+Remaining failures are **KL300** and **KL303** (both KX01 loci). KL303 and KL300 cannot be resolved from KL302 using any public NCBI genome. Options:
 
 #### Option A: AllTheBacteria search
 
@@ -425,7 +427,7 @@ v1.0 will be released when:
 | [kTYPr](https://github.com/SushiLab/kTYPr) | *E. coli* Group 2 & 3 (85 loci, HMM-based) | [Schwengers et al. 2025](https://www.biorxiv.org/content/10.1101/2025.08.07.669119v1) |
 | [Kaptive](https://github.com/klebgenomics/Kaptive) | *Klebsiella* and *E. coli* K/O typing | [Lam et al. 2022](https://doi.org/10.1099/mgen.0.000800) |
 | [FastKaptive](https://github.com/rmostowy/fastKaptive) | Fast K-locus pre-screening | Mostowy et al. |
-| **This database** | *E. coli* Group 1 & 4 (93 filtered loci, v0.5; 89/93 with normalised scoring) | — |
+| **This database** | *E. coli* Group 1 & 4 (93 filtered loci, v0.5; 91/93 with normalised scoring) | — |
 
 ## Citation
 
