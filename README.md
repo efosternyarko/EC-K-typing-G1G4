@@ -180,7 +180,75 @@ GenBank records are formatted for [Kaptive](https://github.com/klebgenomics/Kapt
 
 ## Usage
 
-### With Kaptive
+### Recommended screening workflow
+
+For most users, the best approach is to run the normalised scoring pipeline directly:
+
+```bash
+python scripts/type_normalized.py \
+  --db DB/EC-K-typing_all_groups_v0.5.gbk \
+  --suffix myrun \
+  --threads 8
+```
+
+This internally invokes `kaptive assembly --scores`, which BLASTs every reference CDS individually against the whole assembly without needing to first locate a locus region. It then re-ranks all loci by `AS / total_expected_gene_bp` to remove size bias, assigns every assembly a best-match locus, and writes three output files: the raw scores matrix, normalised typing results, and a per-assembly summary.
+
+**Interpreting the Norm AS output:**
+
+| Norm AS | Interpretation |
+|---------|---------------|
+| ~2.00 | Perfect: 100% identity across all reference genes |
+| ≥ 1.90 | High confidence: all or nearly all genes found at high identity |
+| 1.50 – 1.90 | Moderate: partial locus or some gene-level divergence |
+| < 1.50 | Low confidence: possibly novel, highly divergent, or mixed type |
+
+**Caveats:** KL303 and KL300 calls should be treated with caution — both are known to be biologically ambiguous with KL302 (see [v0.5 notes](#v05-completed) and [Roadmap](#roadmap)). If an assembly is assigned KL303, independent confirmation is advisable.
+
+Optionally, also run standard Kaptive to obtain locus position information and Kaptive's own confidence grading:
+
+```bash
+kaptive assembly DB/EC-K-typing_all_groups_v0.5.gbk genome.fasta -o results_standard.tsv
+```
+
+If standard Kaptive and normalised scoring agree, the call is robust. If standard Kaptive returns None/Untypeable but normalised scoring assigns a type, the locus is likely fragmented across contigs or highly divergent — treat the normalised call with additional caution and consider manual inspection.
+
+---
+
+### Understanding the two Kaptive modes
+
+Kaptive can be run in two fundamentally different modes, which are **independent** of each other and produce separate outputs:
+
+**Standard mode** (`kaptive assembly db.gbk genome.fasta -o out.tsv`):
+
+1. BLAST the full reference locus sequence against the assembly → locate the locus *region*
+2. Within that region, BLAST each reference CDS → count genes found
+3. If step 1 fails (no clear full-sequence hit), the locus is never located and the assembly is reported as **None** or **Untypeable**, regardless of whether individual genes exist somewhere in the assembly
+
+Standard Kaptive reports a graded confidence level based on the fraction and identity of genes found:
+
+| Confidence | Meaning |
+|-----------|---------|
+| Perfect | 100% expected genes found at high identity |
+| Very High | Nearly all genes; very high identity |
+| High | Most genes found; some minor divergence |
+| Good | Majority of genes found |
+| Low | Few genes found; locus may be incomplete or divergent |
+| None | No significant match |
+| Untypeable | Gene coverage below 50% threshold |
+
+**Scores mode** (`kaptive assembly db.gbk genome.fasta --scores matrix.tsv`), used by `type_normalized.py`:
+
+1. BLAST each reference CDS **directly against the whole assembly** — no locus region is identified first
+2. Scores are accumulated per locus across all genes found anywhere in the assembly
+3. Every assembly receives a score for every reference locus; the best-scoring locus is the type call
+
+Because scores mode does not depend on first locating a locus region, it succeeds even when the locus is fragmented across multiple contigs or too divergent for a full-sequence hit. This is why **normalised scoring achieves 100% typeability** compared to **~43% for standard Kaptive** on the same assemblies — the 57% that standard Kaptive marks as Untypeable are not missing a K locus; they simply have loci that could not be cleanly located by whole-sequence BLAST.
+
+The two modes are run separately and do not interact. Standard Kaptive does not fall back to scores mode when step 1 fails, and normalised scoring does not use or override standard Kaptive results. They should be thought of as complementary tools that measure different things: standard Kaptive confirms locus structure and location; normalised scoring provides the most sensitive and unbiased type assignment.
+
+---
+
+### With Kaptive (standard mode)
 
 The current combined database (`DB/EC-K-typing_all_groups_v0.5.gbk`) covering all four capsule groups (183 loci) is ready for direct use with [Kaptive](https://github.com/klebgenomics/Kaptive):
 
@@ -192,18 +260,18 @@ The combined database merges:
 - **Group 2 & 3:** 90 loci (KL1–KL175) from [Gladstone et al.](https://github.com/rgladstone/EC-K-typing) — annotated with Bakta + Panaroo
 - **Group 1 & 4:** 93 loci (K24, K96, KL300–KL423, filtered ≥ 30 kb) from this study — annotated with [pyrodigal](https://github.com/althonos/pyrodigal) (metagenomic mode) + systematic positional gene naming (v0.3); KL388 and KL391 updated to longer NNS representatives (v0.3.1); conserved flanking/export genes stripped for variable-region-only scoring (v0.4); KL306 and KL307 replaced with better NCBI representatives (v0.5)
 
-### With normalised scoring (recommended)
+Standard Kaptive will correctly type most Group 2 & 3 loci without any post-processing. For Group 1 & 4 loci the normalised scoring workflow above is strongly recommended, as ~57% of assemblies will be marked Untypeable by standard Kaptive due to locus fragmentation or size-bias in the scoring.
 
-For improved accuracy on Group 1 & 4 loci, use the normalised scoring script, which re-ranks each assembly's loci by `AS / total_expected_gene_bp` — converting raw bitscore into alignment score per expected reference base:
+### With normalised scoring (recommended for G1/G4)
 
 ```bash
-# Run Kaptive and normalise scores in one step (v0.5 database):
+# Run Kaptive --scores and normalise in one step:
 python scripts/type_normalized.py \
   --db DB/EC-K-typing_all_groups_v0.5.gbk \
   --suffix v0.5norm \
   --threads 8
 
-# Or re-use a pre-computed scores matrix (fast):
+# Re-use a pre-computed scores matrix (fast — skips the Kaptive run):
 python scripts/type_normalized.py --skip-kaptive --suffix v0.5norm
 ```
 
