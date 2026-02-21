@@ -39,7 +39,7 @@ REPO_DIR  = Path(__file__).resolve().parent.parent
 DB_DIR    = REPO_DIR / "DB"
 V031_G1G4 = DB_DIR / "EC-K-typing_group1and4_v0.3.1.gbk"
 V05_G1G4  = DB_DIR / "EC-K-typing_group1and4_v0.5.gbk"
-G2G3_GBK  = DB_DIR / "EC-K-typing_group2and3_v3.0.0.gbk"
+V05_ALL   = DB_DIR / "EC-K-typing_all_groups_v0.5.gbk"   # source for G2/G3 — includes K-type notes added by add_ktype_notes.py
 V06_G1G4  = DB_DIR / "EC-K-typing_group1and4_v0.6.gbk"
 V06_ALL   = DB_DIR / "EC-K-typing_all_groups_v0.6.gbk"
 
@@ -211,7 +211,9 @@ print("\n[4] Writing databases...")
 SeqIO.write(v05_recs, str(V06_G1G4), "genbank")
 print(f"    Written: {V06_G1G4.name}")
 
-g2g3_recs = list(SeqIO.parse(str(G2G3_GBK), "genbank"))
+g1g4_names = {get_locus_name(r) for r in v05_recs}
+g2g3_recs  = [r for r in SeqIO.parse(str(V05_ALL), "genbank")
+              if get_locus_name(r) not in g1g4_names]
 SeqIO.write(v05_recs + g2g3_recs, str(V06_ALL), "genbank")
 print(f"    Written: {V06_ALL.name}  ({len(v05_recs)} G1/G4 + {len(g2g3_recs)} G2/G3 = {len(v05_recs)+len(g2g3_recs)} total)")
 print("\nDone. Next: run type_normalized.py --db DB/EC-K-typing_all_groups_v0.6.gbk --suffix v0.6norm")
