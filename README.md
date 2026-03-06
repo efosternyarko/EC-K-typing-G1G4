@@ -4,9 +4,11 @@ A reference database of *Escherichia coli* capsule (K-antigen) loci for **Group 
 
 This database complements the [EC-K-typing](https://github.com/rgladstone/EC-K-typing) Group 2 & 3 database by Rebecca Gladstone, enabling comprehensive capsule typing across all four *E. coli* capsule groups.
 
-> **Pre-release status:** This database is under active development and uses a **0.x versioning scheme** until it reaches production quality. The current release is **v0.6**. Versions will be numbered 0.1, 0.2, 0.3, etc. until the database passes full self-typing validation and systematic gene naming is implemented, at which point it will be released as **v1.0**.
+> **Pre-release status:** This database is under active development and uses a **0.x versioning scheme** until it reaches production quality. The current release is **v0.7**. Versions will be numbered 0.1, 0.2, 0.3, etc. until the database passes full self-typing validation and systematic gene naming is implemented, at which point it will be released as **v1.0**.
 >
 > **Normalised scoring:** A post-processing script (`scripts/type_normalized.py`) re-ranks Kaptive's raw scores by `AS / total_expected_gene_bp`, eliminating bitscore accumulation bias from large reference loci. This raises self-typing of the 93 filtered loci from **70/93 (75.3%)** to **91/93 (97.8%)** and typeability to **100%** of isolates.
+>
+> **⚠️ Do not use the combined all-groups database for typing.** Prior to v0.7, a combined G1-4 + G2-3 all-groups database (`EC-K-typing_all_groups_vX.X.gbk`) was distributed. Validation against independent cohorts revealed a *wzy*-interference artefact: G2/G3 isolates carry a *wzy*-dependent O-antigen locus (present in all *E. coli*, regardless of capsule group) that scores above the genuine *kps*-encoded capsule locus when Kaptive searches both databases simultaneously. This causes genuine G2/G3 isolates to appear untypeable when the combined database is used. **The G2/G3 and G1/G4 databases must always be run sequentially** (see [Usage](#usage) below). The all-groups files are retained in `DB/` for reference but should not be used for typing.
 
 ## Background
 
@@ -21,6 +23,39 @@ This database complements the [EC-K-typing](https://github.com/rgladstone/EC-K-t
 
 Groups 1 and 4 share the Wzy-dependent polymerisation pathway. Their capsule biosynthesis genes are located at the *cps* locus, flanked by *galF* (upstream) and *gnd* (downstream), with the *wza-wzb-wzc* export genes further upstream.
 
+## Usage
+
+G1/G4 and G2/G3 capsule groups are mutually exclusive — no *E. coli* isolate carries both. The two databases must therefore be run **sequentially**, not simultaneously. Running both in a single Kaptive search causes a *wzy*-interference artefact (see warning above) that renders many genuine G2/G3 isolates untypeable.
+
+### Recommended two-step workflow
+
+**Step 1 — G2/G3 typing** using the Gladstone EC-K-typing database:
+
+```bash
+kaptive assembly -a assemblies/*.fasta \
+    -k EC-K-typing_group2and3_v3.0.0.gbk \
+    -o results_G23
+```
+
+**Step 2 — G1/G4 typing** on the untypeables from Step 1:
+
+```bash
+# Extract untypeable assembly names from Step 1 results
+grep "Untypeable" results_G23/kaptive_results.tsv | cut -f1 > untypeable_ids.txt
+
+# Run G1/G4 database on untypeables only
+kaptive assembly -a <untypeable assemblies> \
+    -k EC-K-typing_group1and4_v0.6.gbk \
+    -o results_G14
+
+# Apply normalised scoring to G1/G4 results
+python scripts/type_normalized.py results_G14/kaptive_scores.tsv \
+    EC-K-typing_group1and4_v0.6.gbk \
+    -o results_G14_norm.tsv
+```
+
+Combine Step 1 (typeable) and Step 2 results for a complete capsule-type assignment across all four groups.
+
 ## Database
 
 ### Versions
@@ -34,6 +69,7 @@ Groups 1 and 4 share the Wzy-dependent polymerisation pathway. Their capsule bio
 | v0.4 | 93 filtered | 183 | 565 BSI | 89/93 (95.7%) normalised | Conserved CDS stripped from G1/G4 loci (528 CDS removed: galF, galF_2, gnd, ugd, wza, wzb, wzc); fixes KL301; typeability 100% |
 | **v0.5** | **93 filtered** | **183** | **565 BSI + 2 NCBI** | **91/93 (97.8%) normalised; 67/93 (72.0%) standard** | **KL306 and KL307 representatives replaced with better NCBI candidates (CP099041, CP070103); self-typing now uses source genomes of current representatives; new reps self-type at AS_norm=2.00; typeability 100%; K-type notes added to all GenBank records (Kaptive now reports type names directly instead of "unknown (KLxxx)")** |
 | **v0.6** | **93 filtered** | **183** | **565 BSI + 2 NCBI** | **91/93 (97.8%) normalised** | **Conserved flanking/export CDS (wza, wzb, wzc, galF, gnd, ugd) restored to all 92 loci except KL301. KL301 retains stripped annotations (the fix that resolved it in v0.4). KL306/KL307 conserved genes located in new sequences via blastn liftover. Typeability 100%.** |
+| **v0.7** | **93 filtered** | **N/A** | **565 BSI + 2 NCBI** | **91/93 (97.8%) normalised** | **Combined all-groups database discontinued. Validation against Norwegian, UK, and Malawi cohorts demonstrated a *wzy*-interference artefact causing G2/G3 isolates to be mis-scored as untypeable when G1/G4 and G2/G3 databases are searched simultaneously. Sequential two-step workflow (G2/G3 first, then G1/G4 on untypeables) is now the recommended approach. G1/G4 database unchanged from v0.6.** |
 
 ### Reference loci (v0.2)
 
@@ -47,12 +83,24 @@ The v0.2 database contains **125 reference K-loci** (K24, K96, KL300–KL423) ex
 
 ### Files
 
-#### v0.6 (current)
+#### v0.7 (current)
+
+> The G1/G4 GenBank file is unchanged from v0.6. This version removes the combined all-groups database from the recommended workflow following identification of a *wzy*-interference artefact (see warning above).
 
 | File | Description |
 |------|-------------|
-| `DB/EC-K-typing_group1and4_v0.6.gbk` | **G1/G4 database: conserved flanking/export CDS restored to 92/93 loci (KL301 retains stripped annotations)** |
-| `DB/EC-K-typing_all_groups_v0.6.gbk` | **Combined all-groups database (183 loci) — use this for typing** |
+| `DB/EC-K-typing_group1and4_v0.6.gbk` | **G1/G4 database (93 loci) — use this as the second step after G2/G3 typing** |
+| `DB/EC-K-typing_all_groups_v0.6.gbk` | Combined all-groups database (183 loci) — **retained for reference only; do not use for typing** |
+| `DB/kaptive_scores_v0.6norm.tsv` | Full locus × assembly score matrix (93 loci × 567 assemblies) |
+| `DB/kaptive_validation_results_v0.6norm.tsv` | Normalised typing results (AS / total_expected_gene_bp) |
+| `DB/kaptive_validation_summary_v0.6norm.tsv` | Per-assembly comparison table (normalised scoring) |
+
+#### v0.6
+
+| File | Description |
+|------|-------------|
+| `DB/EC-K-typing_group1and4_v0.6.gbk` | G1/G4 database: conserved flanking/export CDS restored to 92/93 loci (KL301 retains stripped annotations) |
+| `DB/EC-K-typing_all_groups_v0.6.gbk` | Combined all-groups database (183 loci) — superseded; see v0.7 warning above |
 | `DB/kaptive_scores_v0.6norm.tsv` | Full locus × assembly score matrix (183 loci × 567 assemblies) |
 | `DB/kaptive_validation_results_v0.6norm.tsv` | Normalised typing results (AS / total_expected_gene_bp) |
 | `DB/kaptive_validation_summary_v0.6norm.tsv` | Per-assembly comparison table (normalised scoring) |

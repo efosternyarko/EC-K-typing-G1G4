@@ -1,0 +1,4 @@
+ERROR step 2: 2026-02-20 14:09:59         get_database] [1;31m  ERROR] No database found for /Users/LSHEF4/Dropbox/work_2025/e_coli_db/EC-K-typing-G1G4/DB/EC-K-typing_all_groups_v3.1.gbk[0m
+2026-02-20 14:09:59         get_database] [1;31m  ERROR] Available databases: Acinetobacter_baumannii_OC_locus_primary_re
+Running kaptive on 592 assemblies with v0.3.1 DB...
+Standard results done.

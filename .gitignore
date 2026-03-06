@@ -3,3 +3,6 @@ __pycache__/
 .DS_Store
 *.db
 *_db.n*
+DB/blast_ncbi_results/
+*.pptx
+*.xml
