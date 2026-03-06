@@ -29,7 +29,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=2
 #SBATCH --mem=16G
-#SBATCH --time=01:00:00
+#SBATCH --time=03:00:00
 #SBATCH --output=/home/ebenezef/js66_scratch/ebenn/atb_screen/logs/screen_%A_%a.log
 #SBATCH --error=/home/ebenezef/js66_scratch/ebenn/atb_screen/logs/screen_%A_%a.log
 
