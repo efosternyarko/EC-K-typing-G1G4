@@ -25,7 +25,7 @@
 
 #SBATCH --job-name=atb_g1g4
 #SBATCH --array=1-888%50
-#SBATCH --partition=genomics
+#SBATCH --partition=comp
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=2
 #SBATCH --mem=16G
