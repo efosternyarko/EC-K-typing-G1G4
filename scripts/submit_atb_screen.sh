@@ -33,7 +33,7 @@
 #SBATCH --output=/home/ebenezef/js66_scratch/ebenn/atb_screen/logs/screen_%A_%a.log
 #SBATCH --error=/home/ebenezef/js66_scratch/ebenn/atb_screen/logs/screen_%A_%a.log
 
-set -euo pipefail
+set -eo pipefail
 
 module load blast/2.15.0
 
