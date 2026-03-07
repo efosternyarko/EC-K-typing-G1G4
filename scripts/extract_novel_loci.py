@@ -29,6 +29,7 @@ from pathlib import Path
 # ── Config ────────────────────────────────────────────────────────────────────
 ARCHIVES_DIR  = "/scratch2/js66/atb_archives"
 CANDIDATES    = "/home/ebenezef/js66_scratch/ebenn/atb_screen/atb_g1g4_candidates.tsv"
+BATCH_LIST    = "/home/ebenezef/js66_scratch/ebenn/atb_screen/batches_with_candidates.txt"
 FLANKING_FA   = "/home/ebenezef/js66_scratch/ebenn/EC-K-typing-G1G4/flanking_genes/flanking_genes.fasta"
 NOVELTY_DB    = "/home/ebenezef/js66_scratch/ebenn/atb_screen/novelty_db/g1g4_refs"
 OUT_DIR       = "/home/ebenezef/js66_scratch/ebenn/atb_screen/novel_loci"
@@ -175,9 +176,17 @@ def extract_locus(contig_fa: str, coords: dict, genome_id: str) -> str:
 
 def main():
     if len(sys.argv) < 2:
-        sys.exit("Usage: extract_novel_loci.py <batch_number>")
+        sys.exit("Usage: extract_novel_loci.py <task_index>")
 
-    batch_num = sys.argv[1]
+    # Resolve actual batch number from the list of batches with candidates
+    # task_index is 1-based (SLURM array task ID)
+    task_idx = int(sys.argv[1])
+    with open(BATCH_LIST) as f:
+        batches = [line.strip() for line in f if line.strip()]
+    if task_idx < 1 or task_idx > len(batches):
+        sys.exit(f"Task index {task_idx} out of range (1-{len(batches)})")
+    batch_num = batches[task_idx - 1]
+
     archive   = f"{ARCHIVES_DIR}/atb.assembly.r0.2.batch.{batch_num}.tar.xz"
 
     if not os.path.exists(archive):

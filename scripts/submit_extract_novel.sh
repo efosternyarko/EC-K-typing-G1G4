@@ -18,7 +18,7 @@
 # =============================================================================
 
 #SBATCH --job-name=atb_extract
-#SBATCH --array=1-665%50
+#SBATCH --array=1-268%50
 #SBATCH --partition=comp
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=2
