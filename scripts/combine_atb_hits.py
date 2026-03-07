@@ -20,7 +20,7 @@ from pathlib import Path
 RESULTS_DIR  = "/home/ebenezef/js66_scratch/ebenn/atb_screen/results"
 OUT_DIR      = "/home/ebenezef/js66_scratch/ebenn/atb_screen"
 ARCHIVES_DIR = "/scratch2/js66/atb_archives"
-N_BATCHES    = 888
+N_BATCHES    = 665
 
 # Require both of these to call a genome a G1/G4 candidate
 REQUIRED_GENES = {"galF", "gnd"}
