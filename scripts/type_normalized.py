@@ -42,6 +42,7 @@ Outputs (written to DB/)
 """
 
 import argparse
+import os
 import re
 import subprocess
 import sys
@@ -59,10 +60,10 @@ _DEFAULT_DB        = DB_DIR / "EC-K-typing_all_groups_v3.0.gbk"
 MAPPING_FILE       = DB_DIR / "KL_G1G4_mapping.tsv"
 FILTERED_MAPPING   = DB_DIR / "KL_G1G4_mapping_filtered.tsv"
 EXTRACTION_SUMMARY = Path(
-    "/Users/LSHEF4/Dropbox/work_2025/e_coli_db/db_build_v2/extraction_summary.tsv"
+    "/Users/lshef4/Documents/dropbox/work_2025/e_coli_db/db_build_v2/extraction_summary.tsv"
 )
 GENOMES_DIR        = Path(
-    "/Users/LSHEF4/Dropbox/work_2025/e_coli_db/db_build_v2/nohits_genomes"
+    "/Users/lshef4/Documents/dropbox/work_2025/e_coli_db/db_build_v2/nohits_genomes"
 )
 # NCBI candidate genomes: checked when a mapping entry stem isn't in GENOMES_DIR
 NCBI_GENOMES_DIR   = REPO_DIR / "DB" / "blast_ncbi_results" / "candidate_genomes"
@@ -98,13 +99,15 @@ def load_locus_stats(db: Path) -> dict:
 
 
 def run_kaptive_scores(db: Path, genome_files: list, scores_tsv: Path, threads: int) -> None:
+    env = os.environ.copy()
+    env["PATH"] = "/Users/lshef4/lshef4_to_copy/anaconda3/envs/kleborate_test/bin:" + env["PATH"]
     cmd = (
-        ["kaptive", "assembly", str(db)]
+        ["/Users/lshef4/Library/Python/3.9/bin/kaptive", "assembly", str(db)]
         + [str(g) for g in genome_files]
         + ["--scores", str(scores_tsv), "-t", str(threads)]
     )
     print(f"\n[kaptive] Running --scores on {len(genome_files)} assemblies → {scores_tsv.name}")
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = subprocess.run(cmd, capture_output=True, text=True, env=env)
     if result.returncode != 0:
         print("ERROR running kaptive:", file=sys.stderr)
         print(result.stderr[:1000], file=sys.stderr)
