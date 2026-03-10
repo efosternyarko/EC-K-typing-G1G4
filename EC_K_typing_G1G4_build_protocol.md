@@ -23,7 +23,7 @@ untypeable assemblies.
 > A combined all-groups database causes wzy-interference: G1/G4 (wzy-based)
 > loci consistently outscore G2/G3 (kps-based) loci in direct competition,
 > rendering genuine G2/G3 loci untypeable. Validation against the Malawi
-> dataset confirmed this — 82/100 correctly G2/G3-typed assemblies became
+> dataset from [Gladstone et al. 2024](https://www.medrxiv.org/content/10.1101/2024.11.22.24317484v1) confirmed this — 82/100 correctly G2/G3-typed assemblies became
 > untypeable when the combined database was used.
 
 ---
