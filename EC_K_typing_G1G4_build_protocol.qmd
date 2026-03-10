@@ -1,5 +1,5 @@
 ---
-title: "EC K-typing G1/G4 Database Build Protocol"
+title: "EC K-typing G1/G4 Database Build Protocol v2"
 subtitle: "From bloodstream genome screening to AllTheBacteria expansion"
 author: "Dr Ebenezer Foster-Nyarko"
 date: today
@@ -185,6 +185,264 @@ directory for this phase is:
 python3 scripts/build_G1G4_db.py
 ```
 
+```{python}
+#| code-fold: true
+#| code-summary: "Show full script: build_G1G4_db.py"
+#!/usr/bin/env python3
+"""
+Build E. coli Group 1 & 4 K-locus reference database.
+
+Uses ALL 1,112 no-hits genomes from EnteroBase (bloodstream infection isolates
+with no hit to the Gladstone Group 2/3 database).
+
+Pipeline:
+  1. BLAST flanking genes (galF, gnd, ugd, wza, wzc) against all genomes
+  2. Extract the cps locus region between flanking genes
+  3. Handle fragmented assemblies (galF/gnd on different contigs)
+  4. Cluster extracted loci at 95% identity / 80% coverage
+  5. Select representative (longest) per cluster
+  6. Output FASTA database with KL nomenclature
+
+Paths are hard-coded for the original build environment; update BASE_DIR
+and WORK_DIR for local use.
+"""
+
+import csv
+import os
+import subprocess
+import sys
+from collections import defaultdict
+from pathlib import Path
+
+from Bio import SeqIO
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
+import pandas as pd
+
+# ── Configuration ──
+BASE_DIR = Path("/Users/LSHEF4/Dropbox/work_2025/e_coli_db")
+WORK_DIR = BASE_DIR / "db_build_v2"
+GENOMES_DIR = WORK_DIR / "nohits_genomes"
+LOCI_DIR = WORK_DIR / "extracted_loci"
+DB_DIR = WORK_DIR / "database"
+FLANKING_FA = BASE_DIR / "db_build" / "flanking_genes" / "flanking_genes.fasta"
+SUMMARY_CSV = BASE_DIR / "G1_and_G4_fastkaptive_summary.csv"
+
+MIN_LOCUS_LEN = 5000
+MAX_LOCUS_LEN = 60000  # increased from 50k to capture larger loci
+BLAST_EVALUE = 1e-10
+CLUSTER_IDENTITY = 0.95
+CLUSTER_COVERAGE = 80
+
+
+def load_fastkaptive_types(summary_csv):
+    """Load FastKaptive KX type assignments for all assemblies."""
+    df = pd.read_csv(summary_csv)
+    type_map = {}
+    for _, row in df.iterrows():
+        asm = str(row['assembly']).strip()
+        kx = str(row['best.match']).strip() if pd.notna(row['best.match']) else 'unknown'
+        type_map[asm] = kx
+    return type_map
+
+
+def blast_flanking(genome_fa, flanking_fa):
+    """BLAST flanking gene references against a genome assembly."""
+    result = subprocess.run(
+        ['blastn', '-query', str(flanking_fa), '-subject', str(genome_fa),
+         '-evalue', str(BLAST_EVALUE),
+         '-outfmt', '6 qseqid sseqid pident length qstart qend sstart send evalue bitscore slen'],
+        capture_output=True, text=True
+    )
+    hits = []
+    for line in result.stdout.strip().split('\n'):
+        if not line:
+            continue
+        parts = line.split('\t')
+        hits.append({
+            'gene': parts[0], 'contig': parts[1], 'pident': float(parts[2]),
+            'length': int(parts[3]), 'qstart': int(parts[4]), 'qend': int(parts[5]),
+            'sstart': int(parts[6]), 'send': int(parts[7]),
+            'evalue': float(parts[8]), 'bitscore': float(parts[9]), 'slen': int(parts[10]),
+        })
+    return hits
+
+
+def find_cps_locus(hits):
+    """Find the cps locus region (same-contig preferred, cross-contig fallback)."""
+    by_contig = defaultdict(list)
+    for h in hits:
+        if h['pident'] >= 80 and h['length'] >= 200:
+            by_contig[h['contig']].append(h)
+
+    best_region = None
+    best_score = 0
+    for contig, contig_hits in by_contig.items():
+        galf_hits = [h for h in contig_hits if h['gene'] == 'galF']
+        gnd_hits = [h for h in contig_hits if h['gene'] == 'gnd']
+        wza_hits = [h for h in contig_hits if h['gene'] == 'wza']
+        if not galf_hits or not gnd_hits:
+            continue
+        for gf in galf_hits:
+            for gd in gnd_hits:
+                positions = [gf['sstart'], gf['send'], gd['sstart'], gd['send']]
+                for wz in wza_hits:
+                    positions.extend([wz['sstart'], wz['send']])
+                start = min(positions)
+                end = max(positions)
+                locus_len = end - start
+                if MIN_LOCUS_LEN <= locus_len <= MAX_LOCUS_LEN:
+                    score = gf['bitscore'] + gd['bitscore']
+                    if score > best_score:
+                        best_score = score
+                        best_region = {
+                            'contig': contig, 'start': start, 'end': end,
+                            'length': locus_len, 'type': 'same_contig',
+                            'galF_pident': gf['pident'], 'gnd_pident': gd['pident'],
+                            'contig_len': gf['slen'],
+                        }
+    if best_region:
+        return best_region
+
+    all_galf = [h for h in hits if h['gene'] == 'galF' and h['pident'] >= 80 and h['length'] >= 200]
+    all_gnd = [h for h in hits if h['gene'] == 'gnd' and h['pident'] >= 80 and h['length'] >= 200]
+    if not all_galf or not all_gnd:
+        return None
+    best_gf = max(all_galf, key=lambda h: h['bitscore'])
+    best_gd = max(all_gnd, key=lambda h: h['bitscore'])
+    if best_gf['contig'] == best_gd['contig']:
+        return None
+    return {
+        'contig': best_gf['contig'], 'contig2': best_gd['contig'],
+        'start': min(best_gf['sstart'], best_gf['send']),
+        'end': max(best_gf['sstart'], best_gf['send']),
+        'start2': min(best_gd['sstart'], best_gd['send']),
+        'end2': max(best_gd['sstart'], best_gd['send']),
+        'type': 'cross_contig', 'galF_pident': best_gf['pident'],
+        'gnd_pident': best_gd['pident'], 'contig_len': best_gf['slen'],
+        'contig2_len': best_gd['slen'], 'length': 0,
+    }
+
+
+def extract_locus_sequence(genome_fa, region):
+    """Extract the locus region sequence from the genome."""
+    records = {r.id: r for r in SeqIO.parse(genome_fa, 'fasta')}
+    if region['type'] == 'same_contig':
+        record = records.get(region['contig'])
+        if not record:
+            return None
+        start = max(0, region['start'] - 500)
+        end = min(len(record.seq), region['end'] + 500)
+        return str(record.seq[start:end])
+    elif region['type'] == 'cross_contig':
+        rec1 = records.get(region['contig'])
+        rec2 = records.get(region['contig2'])
+        if not rec1 or not rec2:
+            return None
+        gf_pos = min(region['start'], region['end'])
+        seq1 = str(rec1.seq[max(0, gf_pos - 500):])
+        gd_pos = max(region['start2'], region['end2'])
+        seq2 = str(rec2.seq[:min(len(rec2.seq), gd_pos + 500)])
+        combined = seq1 + 'N' * 100 + seq2
+        if len(combined) < MIN_LOCUS_LEN or len(combined) > MAX_LOCUS_LEN:
+            return None
+        return combined
+    return None
+
+
+def cluster_loci(loci_fasta, identity_threshold=0.95, coverage_threshold=80):
+    """Cluster locus sequences by pairwise BLAST identity (greedy, longest first)."""
+    if not os.path.exists(loci_fasta) or os.path.getsize(loci_fasta) == 0:
+        return {}
+    db_prefix = str(loci_fasta) + '_db'
+    subprocess.run(
+        ['makeblastdb', '-in', str(loci_fasta), '-dbtype', 'nucl', '-out', db_prefix],
+        capture_output=True, check=True
+    )
+    result = subprocess.run(
+        ['blastn', '-query', str(loci_fasta), '-db', db_prefix,
+         '-evalue', '1e-20', '-outfmt', '6 qseqid sseqid pident qcovs',
+         '-max_target_seqs', '5000', '-num_threads', '4'],
+        capture_output=True, text=True
+    )
+    pairs = defaultdict(dict)
+    for line in result.stdout.strip().split('\n'):
+        if not line:
+            continue
+        parts = line.split('\t')
+        q, s = parts[0], parts[1]
+        pident = float(parts[2])
+        qcovs = float(parts[3])
+        if q != s and pident >= identity_threshold * 100 and qcovs >= coverage_threshold:
+            pairs[q][s] = pident
+            pairs[s][q] = pident
+    all_seqs = list(SeqIO.parse(loci_fasta, 'fasta'))
+    seq_lens = {r.id: len(r.seq) for r in all_seqs}
+    seq_ids_sorted = sorted(seq_lens, key=lambda x: -seq_lens[x])
+    assigned = set()
+    clusters = {}
+    cluster_id = 0
+    for sid in seq_ids_sorted:
+        if sid in assigned:
+            continue
+        cluster_id += 1
+        cluster = [sid]
+        assigned.add(sid)
+        for other in seq_ids_sorted:
+            if other in assigned:
+                continue
+            if other in pairs.get(sid, {}):
+                cluster.append(other)
+                assigned.add(other)
+        clusters[cluster_id] = cluster
+    return clusters
+
+
+def main():
+    print("=" * 70)
+    print("E. coli Group 1 & 4 K-locus Database Builder")
+    print("=" * 70)
+    if not FLANKING_FA.exists():
+        print(f"ERROR: {FLANKING_FA} not found")
+        sys.exit(1)
+    type_map = load_fastkaptive_types(SUMMARY_CSV)
+    genome_files = sorted(GENOMES_DIR.glob("*.fa"))
+    LOCI_DIR.mkdir(parents=True, exist_ok=True)
+    extraction_results = []
+    all_loci_records = []
+    kx_extracted = defaultdict(list)
+    n_same_contig = n_cross_contig = n_no_locus = 0
+    for i, genome_fa in enumerate(genome_files):
+        asm_name = genome_fa.name
+        asm_base = asm_name.replace('.fa', '')
+        kx = type_map.get(asm_name, type_map.get(asm_base, 'unknown'))
+        hits = blast_flanking(genome_fa, FLANKING_FA)
+        region = find_cps_locus(hits)
+        if region is None:
+            n_no_locus += 1
+            continue
+        seq = extract_locus_sequence(genome_fa, region)
+        if seq is None or len(seq) < MIN_LOCUS_LEN:
+            continue
+        if region['type'] == 'same_contig':
+            n_same_contig += 1
+        else:
+            n_cross_contig += 1
+        locus_id = f"{kx}__{asm_base}"
+        record = SeqRecord(Seq(seq), id=locus_id, name=locus_id,
+                           description=f"{region['type']} locus {len(seq)}bp from {asm_name}")
+        all_loci_records.append(record)
+        kx_extracted[kx].append(locus_id)
+    clusters = cluster_loci(WORK_DIR / 'all_extracted_loci.fasta')
+    # Assign KL nomenclature and write outputs
+    DB_DIR.mkdir(parents=True, exist_ok=True)
+    # ... (see full script for complete implementation)
+
+
+if __name__ == '__main__':
+    main()
+```
+
 For each of the 1,112 candidate assemblies:
 
 1. **BLASTn flanking genes** (*galF*, *gnd*, *ugd*, *wza*, *wzb*, *wzc*)
@@ -206,6 +464,238 @@ evidence; the remaining 32 were excluded as redundant or ambiguous types.
 ### Phase 3 — Annotation and Iterative Validation (v0.1–v0.3.1)
 
 **Script:** `annotate_loci.py`
+
+```bash
+python3 scripts/annotate_loci.py
+```
+
+```{python}
+#| code-fold: true
+#| code-summary: "Show full script: annotate_loci.py"
+#!/usr/bin/env python3
+"""
+Annotate Group 1/4 K-locus reference sequences using Klebsiella K-locus gene models.
+
+Filters to loci >= 30 kb, then annotates with pyrodigal + Klebsiella BLASTp.
+Creates Kaptive-compatible GenBank and merged all-groups database.
+
+Uses pyrodigal for gene prediction, then BLASTs predicted CDS against the
+Klebsiella K-locus reference database CDS to transfer gene names.
+Unnamed CDS receive their locus_tag as gene name, ensuring every CDS has a
+unique gene identifier visible to Kaptive's scoring.
+
+Paths are hard-coded for the original build environment; update BASE_DIR
+for local use.
+"""
+
+import os
+import sys
+import subprocess
+import tempfile
+from datetime import date
+from collections import OrderedDict
+
+import pyrodigal
+from Bio import SeqIO
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
+from Bio.SeqFeature import SeqFeature, FeatureLocation
+import pandas as pd
+
+# Paths
+BASE_DIR = "/Users/LSHEF4/Dropbox/work_2025/e_coli_db"
+DB_V2_DIR = os.path.join(BASE_DIR, "db_build_v2", "database")
+FASTA_FILE = os.path.join(DB_V2_DIR, "EC-K-typing_group1and4_v2.0.fasta")
+MAPPING_FILE = os.path.join(DB_V2_DIR, "KL_G1G4_mapping.tsv")
+OUTPUT_FASTA = os.path.join(DB_V2_DIR, "EC-K-typing_group1and4_v2.0_filtered.fasta")
+OUTPUT_GBK = os.path.join(DB_V2_DIR, "EC-K-typing_group1and4_v2.0.gbk")
+G23_GBK = os.path.join(BASE_DIR, "db_build", "database", "EC-K-typing_group2and3_v3.0.0.gbk")
+MERGED_GBK = os.path.join(DB_V2_DIR, "EC-K-typing_all_groups_v2.0.gbk")
+KLEB_REF_GBK = "/tmp/kleb_k_ref.gbk"
+MIN_LOCUS_LEN = 30000
+
+
+def load_mapping():
+    mapping = {}
+    with open(MAPPING_FILE) as f:
+        header = f.readline()
+        for line in f:
+            parts = line.strip().split('\t')
+            if len(parts) >= 4:
+                mapping[parts[0]] = {
+                    'kx_origin': parts[1],
+                    'source_assembly': parts[2],
+                    'length': int(parts[3])
+                }
+    return mapping
+
+
+def extract_kleb_reference_proteins():
+    gene_info = {}
+    proteins = []
+    idx = 0
+    for rec in SeqIO.parse(KLEB_REF_GBK, 'genbank'):
+        for f in rec.features:
+            if f.type == 'CDS' and 'gene' in f.qualifiers:
+                gene = f.qualifiers['gene'][0]
+                product = f.qualifiers.get('product', ['hypothetical protein'])[0]
+                nuc_seq = f.location.extract(rec.seq)
+                if len(nuc_seq) % 3 != 0:
+                    continue
+                try:
+                    prot_seq = str(nuc_seq.translate(to_stop=True))
+                except Exception:
+                    continue
+                if len(prot_seq) < 20:
+                    continue
+                if gene not in gene_info:
+                    gene_info[gene] = product
+                proteins.append((gene, prot_seq, f"ref_{idx}"))
+                idx += 1
+    ref_prot_file = tempfile.NamedTemporaryFile(
+        mode='w', suffix='.faa', delete=False, prefix='kleb_ref_'
+    )
+    for gene, prot, uid in proteins:
+        ref_prot_file.write(f">{uid} {gene}\n{prot}\n")
+    ref_prot_file.close()
+    subprocess.run(
+        ['makeblastdb', '-in', ref_prot_file.name, '-dbtype', 'prot'],
+        capture_output=True
+    )
+    uid_to_gene = {uid: (gene, gene_info[gene]) for gene, _, uid in proteins}
+    return ref_prot_file.name, uid_to_gene
+
+
+def predict_and_annotate(sequence, ref_db, uid_to_gene):
+    orf_finder = pyrodigal.GeneFinder(meta=True)
+    genes = orf_finder.find_genes(bytes(sequence))
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.faa', delete=False) as pf:
+        prot_file = pf.name
+        for i, gene in enumerate(genes):
+            prot = gene.translate()
+            if prot and prot[-1] == '*':
+                prot = prot[:-1]
+            pf.write(f">cds_{i}\n{prot}\n")
+    annotations = {}
+    try:
+        result = subprocess.run(
+            ['blastp', '-query', prot_file, '-db', ref_db,
+             '-outfmt', '6 qseqid sseqid pident qcovs evalue bitscore',
+             '-evalue', '1e-5', '-max_target_seqs', '5'],
+            capture_output=True, text=True
+        )
+        for line in result.stdout.strip().split('\n'):
+            if not line:
+                continue
+            parts = line.split('\t')
+            qid, sid = parts[0], parts[1]
+            pident, qcovs, bitscore = float(parts[2]), float(parts[3]), float(parts[5])
+            gene_idx = int(qid.split('_')[1])
+            ref_gene, ref_product = uid_to_gene.get(sid, (None, None))
+            if ref_gene is None:
+                continue
+            if pident >= 30 and qcovs >= 50:
+                if gene_idx not in annotations or bitscore > annotations[gene_idx][3]:
+                    annotations[gene_idx] = (ref_gene, ref_product, pident, bitscore)
+    finally:
+        os.unlink(prot_file)
+    result_genes = []
+    for i, gene in enumerate(genes):
+        start = gene.begin - 1
+        end = gene.end
+        strand = gene.strand
+        cds_len = end - start
+        if cds_len % 3 != 0:
+            excess = cds_len % 3
+            if strand == 1:
+                end -= excess
+            else:
+                start += excess
+        if end - start < 60:
+            continue
+        if i in annotations:
+            gene_name, product, pident, _ = annotations[i]
+        else:
+            gene_name = None
+            product = 'hypothetical protein'
+        result_genes.append((start, end, strand, gene_name, product))
+    return result_genes
+
+
+def create_genbank_record(locus_name, sequence, source_assembly, gene_list):
+    record = SeqRecord(
+        Seq(str(sequence)),
+        id=f"{locus_name}_{source_assembly}",
+        name=f"{locus_name}_{source_assembly}",
+        description=f"Escherichia coli capsular polysaccharide synthesis gene cluster, {locus_name}",
+    )
+    record.annotations['molecule_type'] = 'DNA'
+    record.annotations['topology'] = 'linear'
+    record.annotations['data_file_division'] = 'BCT'
+    record.annotations['date'] = date.today().strftime('%d-%b-%Y').upper()
+    record.annotations['organism'] = 'Escherichia coli'
+    record.annotations['taxonomy'] = [
+        'Bacteria', 'Pseudomonadota', 'Gammaproteobacteria',
+        'Enterobacterales', 'Enterobacteriaceae', 'Escherichia'
+    ]
+    source_qualifiers = OrderedDict()
+    source_qualifiers['organism'] = ['Escherichia coli']
+    source_qualifiers['mol_type'] = ['genomic DNA']
+    source_qualifiers['note'] = [f'K locus: {locus_name}']
+    source_feature = SeqFeature(
+        FeatureLocation(0, len(sequence)), type='source', qualifiers=source_qualifiers
+    )
+    record.features.append(source_feature)
+    gene_name_counts = {}
+    for i, (start, end, strand, gene_name, product) in enumerate(gene_list):
+        gene_num = str(i + 1).zfill(5)
+        locus_tag = f"{locus_name}_{gene_num}"
+        display_gene = gene_name
+        if gene_name:
+            if gene_name in gene_name_counts:
+                gene_name_counts[gene_name] += 1
+                display_gene = f"{gene_name}_{gene_name_counts[gene_name]}"
+            else:
+                gene_name_counts[gene_name] = 1
+        qualifiers = OrderedDict()
+        qualifiers['locus_tag'] = [locus_tag]
+        qualifiers['gene'] = [display_gene if display_gene else locus_tag]
+        qualifiers['product'] = [product]
+        cds_feature = SeqFeature(
+            FeatureLocation(start, end, strand=strand), type='CDS', qualifiers=qualifiers
+        )
+        record.features.append(cds_feature)
+    return record
+
+
+def main():
+    mapping = load_mapping()
+    records = list(SeqIO.parse(FASTA_FILE, 'fasta'))
+    filtered = [r for r in records if len(r.seq) >= MIN_LOCUS_LEN]
+    SeqIO.write(filtered, OUTPUT_FASTA, 'fasta')
+    ref_db, uid_to_gene = extract_kleb_reference_proteins()
+    genbank_records = []
+    for rec in filtered:
+        locus_name = rec.id
+        source_assembly = mapping.get(locus_name, {}).get('source_assembly', 'unknown')
+        gene_list = predict_and_annotate(rec.seq, ref_db, uid_to_gene)
+        gbk_record = create_genbank_record(locus_name, rec.seq, source_assembly, gene_list)
+        genbank_records.append(gbk_record)
+    os.unlink(ref_db)
+    with open(OUTPUT_GBK, 'w') as out:
+        SeqIO.write(genbank_records, out, 'genbank')
+    if os.path.exists(G23_GBK):
+        with open(MERGED_GBK, 'w') as merged:
+            with open(G23_GBK) as g23:
+                merged.write(g23.read())
+            merged.write('\n')
+            with open(OUTPUT_GBK) as g14:
+                merged.write(g14.read())
+
+
+if __name__ == '__main__':
+    main()
+```
 
 CDS prediction used pyrodigal (metagenomic mode), with gene names transferred
 by BLASTp against the Klebsiella K-locus primary reference.
@@ -234,6 +724,97 @@ discriminating variable-region signal.
 python3 scripts/make_v04_db.py
 ```
 
+```{python}
+#| code-fold: true
+#| code-summary: "Show full script: make_v04_db.py"
+#!/usr/bin/env python3
+"""
+make_v04_db.py — Build v0.4 database by stripping conserved CDS from G1/G4 loci.
+
+The 5 remaining self-typing failures in v0.3.1 (KL300, KL301, KL303, KL306, KL307)
+are all KX01 loci that share identical conserved flanking/export genes with KL302.
+These conserved genes (wza, wzb, wzc, galF, gnd, ugd) contribute equal bitscore to
+every KX01 reference, adding shared background noise that partially masks the variable
+region signal.
+
+Fix: remove conserved CDS features from all 93 G1/G4 GenBank records, leaving only
+the variable biosynthetic region. Kaptive then scores exclusively on discriminating genes.
+
+Usage:
+    python scripts/make_v04_db.py
+
+Outputs (written to DB/):
+    EC-K-typing_group1and4_v0.4.gbk     — G1/G4 only, conserved genes stripped
+    EC-K-typing_all_groups_v0.4.gbk     — combined (G2/G3 unchanged + stripped G1/G4)
+"""
+
+import re
+import sys
+from pathlib import Path
+
+from Bio import SeqIO
+
+REPO_DIR = Path(__file__).resolve().parent.parent
+DB_DIR   = REPO_DIR / "DB"
+
+INPUT_G1G4  = DB_DIR / "EC-K-typing_group1and4_v0.3.1.gbk"
+INPUT_G2G3  = DB_DIR / "EC-K-typing_group2and3_v3.0.0.gbk"
+OUTPUT_G1G4 = DB_DIR / "EC-K-typing_group1and4_v0.4.gbk"
+OUTPUT_ALL  = DB_DIR / "EC-K-typing_all_groups_v0.4.gbk"
+
+CONSERVED_GENE_NAMES = {'galF', 'galF_2', 'gnd', 'ugd', 'wza', 'wzb', 'wzc'}
+
+
+def get_locus_name(rec) -> str:
+    """Extract K locus name from GenBank source feature note."""
+    for f in rec.features:
+        if f.type == "source":
+            for note in f.qualifiers.get("note", []):
+                m = re.search(r"K locus:\s*(\S+)", note)
+                if m:
+                    return m.group(1)
+    return rec.name.split("_")[0]
+
+
+def strip_conserved_cds(rec):
+    """Remove CDS features whose gene name is in CONSERVED_GENE_NAMES."""
+    new_features = [
+        f for f in rec.features
+        if not (f.type == "CDS" and
+                f.qualifiers.get("gene", [""])[0] in CONSERVED_GENE_NAMES)
+    ]
+    rec.features = new_features
+    return rec
+
+
+def main():
+    for path in (INPUT_G1G4, INPUT_G2G3):
+        if not path.exists():
+            print(f"ERROR: input not found: {path}", file=sys.stderr)
+            sys.exit(1)
+
+    stripped_records = []
+    total_before = 0
+    total_removed = 0
+
+    for rec in SeqIO.parse(str(INPUT_G1G4), "genbank"):
+        before = sum(1 for f in rec.features if f.type == "CDS")
+        rec    = strip_conserved_cds(rec)
+        after  = sum(1 for f in rec.features if f.type == "CDS")
+        total_before  += before
+        total_removed += (before - after)
+        stripped_records.append(rec)
+
+    SeqIO.write(stripped_records, str(OUTPUT_G1G4), "genbank")
+    g2g3_records = list(SeqIO.parse(str(INPUT_G2G3), "genbank"))
+    all_records = g2g3_records + stripped_records
+    SeqIO.write(all_records, str(OUTPUT_ALL), "genbank")
+
+
+if __name__ == "__main__":
+    main()
+```
+
 All conserved CDS features (*wza*, *wzb*, *wzc*, *galF*, *galF_2*, *gnd*,
 *ugd*) were removed from all 93 G1/G4 GenBank records. Kaptive then scored
 exclusively on discriminating biosynthetic genes.
@@ -249,6 +830,591 @@ KL306, and KL307 remained failures.
 
 ```bash
 python3 scripts/make_v05_db.py
+```
+
+```{python}
+#| code-fold: true
+#| code-summary: "Show full script: blast_ncbi_candidates.py"
+#!/usr/bin/env python3
+"""
+blast_ncbi_candidates.py — Search NCBI for better KL300/303/306/307 representatives.
+
+Submits each failing locus sequence to NCBI megaBLAST against the `nt` database
+restricted to Escherichia coli (taxid:562). Collects assembly accessions from hits
+with >=90% identity and >=70% query coverage, then ranks them as candidates for
+replacement representatives.
+
+Usage:
+    python scripts/blast_ncbi_candidates.py [--loci KL300 KL303] [--max-hits 300]
+
+Outputs:
+    DB/blast_ncbi_results/<LOCUS>_blast_raw.xml   — raw NCBI XML
+    DB/blast_ncbi_results/<LOCUS>_blast_hits.tsv  — parsed hits
+    DB/blast_ncbi_results/candidates_summary.tsv  — ranked candidates across all loci
+"""
+
+import argparse
+import re
+import sys
+import time
+from pathlib import Path
+import xml.etree.ElementTree as ET
+
+from Bio import Entrez, SeqIO
+from Bio.Blast import NCBIWWW
+
+Entrez.email = "lshef4@lshtm.ac.uk"
+
+REPO_DIR    = Path(__file__).resolve().parent.parent
+DB_DIR      = REPO_DIR / "DB"
+QUERY_FASTA = DB_DIR / "kl_failing_query.fasta"
+OUT_DIR     = DB_DIR / "blast_ncbi_results"
+
+MIN_PIDENT    = 90.0
+MIN_QCOV      = 70.0
+MAX_HITS      = 300
+E_VALUE       = 1e-50
+TARGETS_DEFAULT = ["KL300", "KL303", "KL306", "KL307"]
+
+
+def load_queries(fasta, targets):
+    queries = {}
+    for rec in SeqIO.parse(str(fasta), "fasta"):
+        name = rec.id.split()[0]
+        if name in targets:
+            queries[name] = rec
+    return queries
+
+
+def blast_locus(locus, seq, out_xml, max_hits):
+    print(f"  Submitting {locus} ({len(seq):,} bp) to NCBI megaBLAST...", flush=True)
+    result = NCBIWWW.qblast(
+        program="blastn", database="nt", sequence=seq,
+        hitlist_size=max_hits, entrez_query="Escherichia coli[Organism]",
+        megablast=True, expect=E_VALUE, word_size=28,
+    )
+    xml_text = result.read()
+    out_xml.write_bytes(xml_text if isinstance(xml_text, bytes) else xml_text.encode())
+
+
+def parse_blast_xml(locus, xml_path, qlen):
+    rows = []
+    try:
+        tree = ET.parse(str(xml_path))
+    except ET.ParseError:
+        return rows
+    root = tree.getroot()
+    for iteration in root.findall(".//Iteration"):
+        for hit in iteration.findall(".//Hit"):
+            hit_id  = hit.findtext("Hit_id",  "")
+            hit_def = hit.findtext("Hit_def", "")[:80]
+            covered_qranges = []
+            best_pident = 0.0
+            for hsp in hit.findall(".//Hsp"):
+                ident   = int(hsp.findtext("Hsp_identity",  "0"))
+                aln_len = int(hsp.findtext("Hsp_align-len", "1"))
+                q_from  = int(hsp.findtext("Hsp_query-from","0"))
+                q_to    = int(hsp.findtext("Hsp_query-to",  "0"))
+                pident  = ident / aln_len * 100 if aln_len > 0 else 0
+                best_pident = max(best_pident, pident)
+                covered_qranges.append((min(q_from, q_to), max(q_from, q_to)))
+            covered_qranges.sort()
+            merged = []
+            for start, end in covered_qranges:
+                if merged and start <= merged[-1][1]:
+                    merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+                else:
+                    merged.append([start, end])
+            total_covered = sum(e - s + 1 for s, e in merged)
+            qcov = min(100.0, total_covered / qlen * 100)
+            if best_pident < MIN_PIDENT or qcov < MIN_QCOV:
+                continue
+            parts = hit_id.split("|")
+            if len(parts) >= 4:
+                acc = parts[3].split(".")[0]
+            elif len(parts) >= 2:
+                acc = parts[1].split(".")[0]
+            else:
+                acc = hit_id.split(".")[0]
+            rows.append({
+                "locus": locus, "accession": acc, "hit_id": hit_id,
+                "description": hit_def, "pident": round(best_pident, 2),
+                "qcov": round(qcov, 1), "n_hsps": len(hit.findall(".//Hsp")),
+            })
+    return rows
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--loci", nargs="+", default=TARGETS_DEFAULT)
+    parser.add_argument("--max-hits", type=int, default=MAX_HITS)
+    parser.add_argument("--skip-blast", action="store_true")
+    args = parser.parse_args()
+
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    queries = load_queries(QUERY_FASTA, args.loci)
+    all_hits = []
+
+    for locus in args.loci:
+        if locus not in queries:
+            continue
+        rec     = queries[locus]
+        out_xml = OUT_DIR / f"{locus}_blast_raw.xml"
+        out_tsv = OUT_DIR / f"{locus}_blast_hits.tsv"
+
+        if not (args.skip_blast and out_xml.exists()):
+            blast_locus(locus, str(rec.seq), out_xml, args.max_hits)
+            time.sleep(3)
+
+        hits = parse_blast_xml(locus, out_xml, len(rec.seq))
+        hits.sort(key=lambda r: (-r["qcov"], -r["pident"]))
+        import csv
+        with open(out_tsv, "w", newline="") as fh:
+            if hits:
+                w = csv.DictWriter(fh, fieldnames=hits[0].keys(), delimiter="\t")
+                w.writeheader()
+                w.writerows(hits)
+        all_hits.extend(hits)
+
+    if all_hits:
+        import csv
+        summary = OUT_DIR / "candidates_summary.tsv"
+        with open(summary, "w", newline="") as fh:
+            w = csv.DictWriter(fh, fieldnames=all_hits[0].keys(), delimiter="\t")
+            w.writeheader()
+            w.writerows(all_hits)
+
+
+if __name__ == "__main__":
+    main()
+```
+
+```{python}
+#| code-fold: true
+#| code-summary: "Show full script: test_blast_candidates.py"
+#!/usr/bin/env python3
+"""
+test_blast_candidates.py — Download NCBI BLAST candidates and test with Kaptive.
+
+For each candidate assembly found by blast_ncbi_candidates.py:
+  1. Download the chromosome FASTA via NCBI Entrez
+  2. Run Kaptive (normalised scoring) against the v0.4 database
+  3. Report which candidates type correctly as their expected locus (not KL302)
+
+Usage:
+    python scripts/test_blast_candidates.py [--top-n 10] [--threads 8]
+
+Outputs:
+    DB/blast_ncbi_results/candidate_genomes/   — downloaded FASTAs
+    DB/blast_ncbi_results/candidate_kaptive_scores.tsv
+    DB/blast_ncbi_results/candidate_typing_summary.tsv  (key output)
+"""
+
+import argparse
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+import pandas as pd
+from Bio import Entrez, SeqIO
+
+Entrez.email = "lshef4@lshtm.ac.uk"
+
+REPO_DIR     = Path(__file__).resolve().parent.parent
+DB_DIR       = REPO_DIR / "DB"
+RESULTS_DIR  = DB_DIR / "blast_ncbi_results"
+GENOMES_DIR  = RESULTS_DIR / "candidate_genomes"
+CANDIDATES   = RESULTS_DIR / "candidates_summary.tsv"
+DATABASE     = DB_DIR / "EC-K-typing_all_groups_v0.4.gbk"
+TARGETS = ["KL300", "KL303", "KL306", "KL307"]
+
+
+def pick_candidates(df, top_n):
+    rows = []
+    for locus in TARGETS:
+        sub = df[df["locus"] == locus].sort_values(
+            ["qcov", "pident"], ascending=[False, False]
+        )
+        n = len(sub) if locus == "KL306" else min(top_n, len(sub))
+        rows.append(sub.head(n))
+    return pd.concat(rows, ignore_index=True)
+
+
+def download_fasta(accession, out_fasta):
+    if out_fasta.exists() and out_fasta.stat().st_size > 1000:
+        return True
+    try:
+        handle = Entrez.efetch(
+            db="nucleotide", id=accession, rettype="fasta", retmode="text"
+        )
+        seq = handle.read()
+        handle.close()
+        if len(seq) < 100:
+            return False
+        out_fasta.write_text(seq)
+        return True
+    except Exception as e:
+        print(f"    ERROR downloading {accession}: {e}", file=sys.stderr)
+        return False
+
+
+def run_kaptive_scores(db, genome_files, scores_tsv, threads):
+    cmd = (
+        ["kaptive", "assembly", str(db)]
+        + [str(g) for g in genome_files]
+        + ["--scores", str(scores_tsv), "-t", str(threads)]
+    )
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    return result.returncode == 0
+
+
+def normalise_scores(scores_tsv, db):
+    import re
+    locus_bp = {}
+    for rec in SeqIO.parse(str(db), "genbank"):
+        name = None
+        for f in rec.features:
+            if f.type == "source":
+                for note in f.qualifiers.get("note", []):
+                    m = re.search(r"K locus:\s*(\S+)", note)
+                    if m:
+                        name = m.group(1)
+        if name is None:
+            name = rec.name.split("_")[0]
+        locus_bp[name] = sum(len(f) for f in rec.features if f.type == "CDS")
+
+    df = pd.read_csv(scores_tsv, sep="\t")
+    asm_col = df.columns[0]
+    df["total_bp"] = df["Locus"].map(locus_bp)
+    mask = df["total_bp"].isna() | (df["total_bp"] == 0)
+    df.loc[mask, "total_bp"] = df.loc[mask, "q_len"].clip(lower=1)
+    df["AS_norm"] = df["AS"] / df["total_bp"]
+
+    rows = []
+    for asm, grp in df.groupby(asm_col):
+        active = grp[grp["AS"] > 0]
+        if active.empty:
+            rows.append({"Assembly": asm, "Best_locus": "none", "AS_norm": 0})
+            continue
+        best = active.loc[active["AS_norm"].idxmax()]
+        rows.append({
+            "Assembly": asm, "Best_locus": best["Locus"],
+            "AS_norm": round(best["AS_norm"], 4),
+        })
+    return pd.DataFrame(rows)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--top-n", type=int, default=10)
+    parser.add_argument("--threads", type=int, default=8)
+    parser.add_argument("--skip-download", action="store_true")
+    parser.add_argument("--skip-kaptive",  action="store_true")
+    args = parser.parse_args()
+
+    GENOMES_DIR.mkdir(parents=True, exist_ok=True)
+    per_locus_files = [RESULTS_DIR / f"{l}_blast_hits.tsv" for l in TARGETS]
+    all_candidates = pd.concat(
+        [pd.read_csv(f, sep="\t") for f in per_locus_files], ignore_index=True
+    )
+    all_candidates.to_csv(CANDIDATES, sep="\t", index=False)
+    selected = pick_candidates(all_candidates, args.top_n)
+
+    genome_files, acc_to_locus = [], {}
+    for _, row in selected.iterrows():
+        acc   = row["accession"]
+        locus = row["locus"]
+        out   = GENOMES_DIR / f"{locus}_{acc}.fasta"
+        ok = download_fasta(acc, out) if not args.skip_download else out.exists()
+        time.sleep(0.4)
+        if ok and out.exists():
+            genome_files.append(out)
+            acc_to_locus[out.stem] = locus
+
+    scores_tsv = RESULTS_DIR / "candidate_kaptive_scores.tsv"
+    if not args.skip_kaptive:
+        run_kaptive_scores(DATABASE, genome_files, scores_tsv, args.threads)
+
+    results = normalise_scores(scores_tsv, DATABASE)
+    results["stem"] = results["Assembly"].apply(lambda x: Path(x).stem)
+    results["expected_locus"] = results["stem"].map(acc_to_locus)
+    results["correct"] = results["Best_locus"] == results["expected_locus"]
+
+    out_tsv = RESULTS_DIR / "candidate_typing_summary.tsv"
+    results.to_csv(out_tsv, sep="\t", index=False)
+    print(f"Written: {out_tsv}")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+```{python}
+#| code-fold: true
+#| code-summary: "Show full script: make_v05_db.py"
+#!/usr/bin/env python3
+"""
+make_v05_db.py — Build v0.5 database by replacing KL306 and KL307 with
+better representative sequences identified by NCBI BLAST.
+
+Replacements validated by running Kaptive normalised scoring against the v0.4 database:
+  KL306  ESC_CC8109AA_AS (BSI) -> CP099041   (Norm AS 2.0000, 31/31 CDS)
+  KL307  ESC_NB5901AA_AS (BSI) -> CP070103   (Norm AS 2.0000, 34/34 CDS)
+
+KL300 replacement (CP135488) was evaluated but reverted (net regressions in typeability).
+KL303 is left unchanged — no NCBI candidate typed as KL303.
+
+Usage:
+    python scripts/make_v05_db.py
+
+Outputs (written to DB/):
+    EC-K-typing_group1and4_v0.5.gbk
+    EC-K-typing_all_groups_v0.5.gbk
+"""
+
+import os
+import re
+import subprocess
+import sys
+import tempfile
+from collections import OrderedDict, defaultdict
+from datetime import date
+from pathlib import Path
+
+from Bio import SeqIO
+from Bio.Seq import Seq
+from Bio.SeqFeature import FeatureLocation, SeqFeature
+from Bio.SeqRecord import SeqRecord
+
+REPO_DIR     = Path(__file__).resolve().parent.parent
+DB_DIR       = REPO_DIR / "DB"
+GENOMES_DIR  = DB_DIR / "blast_ncbi_results" / "candidate_genomes"
+INPUT_G1G4   = DB_DIR / "EC-K-typing_group1and4_v0.4.gbk"
+INPUT_G2G3   = DB_DIR / "EC-K-typing_group2and3_v3.0.0.gbk"
+OUTPUT_G1G4  = DB_DIR / "EC-K-typing_group1and4_v0.5.gbk"
+OUTPUT_ALL   = DB_DIR / "EC-K-typing_all_groups_v0.5.gbk"
+
+REPLACEMENTS = {
+    "KL306": "CP099041",
+    "KL307": "CP070103",
+}
+
+CONSERVED_GENE_NAMES = {"galF", "galF_2", "gnd", "ugd", "wza", "wzb", "wzc"}
+FLANK_PAD = 500
+
+
+def get_locus_name(rec) -> str:
+    for f in rec.features:
+        if f.type == "source":
+            for note in f.qualifiers.get("note", []):
+                m = re.search(r"K locus:\s*(\S+)", note)
+                if m:
+                    return m.group(1)
+    return rec.name.split("_")[0]
+
+
+def blast_locate_locus(ref_seq, chrom_fasta):
+    """BLAST ref_seq against chrom_fasta; return (contig_id, start_0, end_0, strand)."""
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".fa", delete=False) as qf:
+        qf.write(f">query\n{ref_seq}\n")
+        query_fa = qf.name
+
+    result = subprocess.run(
+        ["blastn", "-query", query_fa, "-subject", str(chrom_fasta),
+         "-outfmt", "6 sseqid sstart send sstrand bitscore pident",
+         "-max_target_seqs", "1", "-perc_identity", "85"],
+        capture_output=True, text=True,
+    )
+    os.unlink(query_fa)
+
+    groups = defaultdict(list)
+    for line in result.stdout.strip().split("\n"):
+        if not line:
+            continue
+        parts = line.split("\t")
+        contig, sstart, send, sstrand, bitscore = (
+            parts[0], int(parts[1]), int(parts[2]), parts[3], float(parts[4])
+        )
+        groups[(contig, sstrand)].append((sstart, send, bitscore))
+
+    if not groups:
+        return None, 0, 0, 1
+
+    best_key  = max(groups, key=lambda k: sum(h[2] for h in groups[k]))
+    best_hsps = groups[best_key]
+    contig, sstrand = best_key
+
+    max_bs    = max(h[2] for h in best_hsps)
+    threshold = max(max_bs * 0.05, 1000.0)
+    sig_hsps  = [h for h in best_hsps if h[2] >= threshold]
+
+    ref_len    = len(ref_seq)
+    best_hsp   = max(sig_hsps, key=lambda h: h[2])
+    best_center = (best_hsp[0] + best_hsp[1]) / 2
+    max_dist    = ref_len * 2
+    sig_hsps    = [h for h in sig_hsps
+                   if abs((h[0] + h[1]) / 2 - best_center) <= max_dist]
+
+    all_coords = [c for h in sig_hsps for c in (h[0], h[1])]
+    raw_start  = min(all_coords) - 1
+    raw_end    = max(all_coords)
+
+    max_span = int(ref_len * 1.2)
+    if raw_end - raw_start > max_span:
+        best_center = int((best_hsp[0] + best_hsp[1]) / 2)
+        half        = max_span // 2
+        raw_start   = max(0, best_center - half) - 1
+        raw_end     = best_center + half
+
+    strand = 1 if sstrand == "plus" else -1
+    return contig, raw_start, raw_end, strand
+
+
+def extract_locus_from_chrom(chrom_fasta, contig_id, start_0, end_0, strand, pad=FLANK_PAD):
+    chroms = {r.id: r for r in SeqIO.parse(str(chrom_fasta), "fasta")}
+    rec    = chroms[contig_id]
+    s = max(0, start_0 - pad)
+    e = min(len(rec.seq), end_0 + pad)
+    subseq = rec.seq[s:e]
+    if strand == -1:
+        subseq = subseq.reverse_complement()
+    return SeqRecord(subseq, id=chrom_fasta.stem, description="")
+
+
+def liftover_annotation(ref_rec, new_seq):
+    """Transfer CDS annotations from ref_rec onto new_seq by nucleotide BLAST."""
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".fa", delete=False) as sf:
+        sf.write(f">new_seq\n{str(new_seq)}\n")
+        subject_fa = sf.name
+
+    ref_cds = [(i, f) for i, f in enumerate(ref_rec.features) if f.type == "CDS"]
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".fa", delete=False) as qf:
+        for i, f in ref_cds:
+            nuc = str(f.location.extract(ref_rec.seq))
+            qf.write(f">cds_{i}\n{nuc}\n")
+        query_fa = qf.name
+
+    result = subprocess.run(
+        ["blastn", "-query", query_fa, "-subject", subject_fa,
+         "-outfmt", "6 qseqid sstart send sstrand pident",
+         "-perc_identity", "85", "-max_hsps", "1", "-max_target_seqs", "1"],
+        capture_output=True, text=True,
+    )
+    os.unlink(subject_fa)
+    os.unlink(query_fa)
+
+    cds_map = {}
+    for line in result.stdout.strip().split("\n"):
+        if not line:
+            continue
+        parts  = line.split("\t")
+        qid    = parts[0]
+        sstart = int(parts[1])
+        send   = int(parts[2])
+        strd   = 1 if parts[3] == "plus" else -1
+        idx    = int(qid.split("_")[1])
+        if idx not in cds_map:
+            start_0 = min(sstart, send) - 1
+            end_0   = max(sstart, send)
+            cds_map[idx] = (start_0, end_0, strd, float(parts[4]))
+
+    result_genes = []
+    for orig_i, f in ref_cds:
+        gene    = f.qualifiers.get("gene",    [None])[0]
+        product = f.qualifiers.get("product", ["hypothetical protein"])[0]
+        if orig_i in cds_map:
+            start_0, end_0, strand, _ = cds_map[orig_i]
+            result_genes.append((start_0, end_0, strand, gene, product))
+
+    return result_genes
+
+
+def build_genbank_record(locus_name, sequence, source_label, gene_list):
+    """Build a Kaptive-compatible GenBank record."""
+    record = SeqRecord(
+        Seq(str(sequence)),
+        id=f"{locus_name}_{source_label}",
+        name=f"{locus_name}_{source_label}",
+        description=f"Escherichia coli capsular polysaccharide synthesis gene cluster, {locus_name}",
+    )
+    record.annotations.update({
+        "molecule_type": "DNA", "topology": "linear",
+        "data_file_division": "BCT",
+        "date": date.today().strftime("%d-%b-%Y").upper(),
+        "organism": "Escherichia coli",
+        "taxonomy": ["Bacteria", "Pseudomonadota", "Gammaproteobacteria",
+                     "Enterobacterales", "Enterobacteriaceae", "Escherichia"],
+        "source": "Escherichia coli",
+    })
+    src_q = OrderedDict()
+    src_q["organism"] = ["Escherichia coli"]
+    src_q["mol_type"] = ["genomic DNA"]
+    src_q["note"]     = [f"K locus: {locus_name}"]
+    record.features.append(
+        SeqFeature(FeatureLocation(0, len(sequence)), type="source", qualifiers=src_q)
+    )
+    gene_name_counts = {}
+    for i, (start, end, strand, gene_name, product) in enumerate(gene_list):
+        locus_tag = f"{locus_name}_{str(i+1).zfill(5)}"
+        display_gene = gene_name
+        if gene_name:
+            cnt = gene_name_counts.get(gene_name, 0) + 1
+            gene_name_counts[gene_name] = cnt
+            if cnt > 1:
+                display_gene = f"{gene_name}_{cnt}"
+        q = OrderedDict()
+        q["locus_tag"] = [locus_tag]
+        q["gene"]      = [display_gene if display_gene else locus_tag]
+        q["product"]   = [product]
+        record.features.append(
+            SeqFeature(FeatureLocation(start, end, strand=strand), type="CDS", qualifiers=q)
+        )
+    return record
+
+
+def strip_conserved_cds(rec):
+    rec.features = [
+        f for f in rec.features
+        if not (f.type == "CDS" and
+                f.qualifiers.get("gene", [""])[0] in CONSERVED_GENE_NAMES)
+    ]
+    return rec
+
+
+def main():
+    v04_records = list(SeqIO.parse(str(INPUT_G1G4), "genbank"))
+    v04_by_name = {get_locus_name(r): r for r in v04_records}
+
+    new_records = {}
+    for locus_name, acc in REPLACEMENTS.items():
+        chrom_fasta = GENOMES_DIR / f"{locus_name}_{acc}.fasta"
+        if not chrom_fasta.exists():
+            print(f"ERROR: {chrom_fasta} not found", file=sys.stderr)
+            sys.exit(1)
+        ref_rec  = v04_by_name[locus_name]
+        ref_seq  = str(ref_rec.seq)
+        contig_id, start_0, end_0, strand = blast_locate_locus(ref_seq, chrom_fasta)
+        if contig_id is None:
+            print(f"ERROR: could not locate {locus_name} in {acc}", file=sys.stderr)
+            sys.exit(1)
+        locus_rec = extract_locus_from_chrom(chrom_fasta, contig_id, start_0, end_0, strand)
+        gene_list = liftover_annotation(ref_rec, locus_rec.seq)
+        full_rec  = build_genbank_record(locus_name, locus_rec.seq, acc, gene_list)
+        new_records[locus_name] = strip_conserved_cds(full_rec)
+
+    out_g1g4 = []
+    for rec in v04_records:
+        lname = get_locus_name(rec)
+        out_g1g4.append(new_records[lname] if lname in new_records else rec)
+
+    SeqIO.write(out_g1g4, str(OUTPUT_G1G4), "genbank")
+    g2g3 = list(SeqIO.parse(str(INPUT_G2G3), "genbank"))
+    SeqIO.write(g2g3 + out_g1g4, str(OUTPUT_ALL), "genbank")
+
+
+if __name__ == "__main__":
+    main()
 ```
 
 `blast_ncbi_candidates.py` was used to identify NCBI chromosome sequences
@@ -277,6 +1443,143 @@ assemblies.
 
 ```bash
 python3 scripts/make_v06_db.py
+```
+
+```{python}
+#| code-fold: true
+#| code-summary: "Show full script: make_v06_db.py"
+#!/usr/bin/env python3
+"""
+make_v06_db.py — Restore conserved CDS annotations to all G1/G4 loci except KL301.
+
+Strategy:
+  - KL301: keep conserved genes stripped (their removal is what fixed it).
+  - 91 loci with unchanged sequences: copy conserved CDS features directly from v0.3.1.
+  - KL306 and KL307: new representative sequences; use per-gene blastn liftover.
+
+Output:
+  DB/EC-K-typing_group1and4_v0.6.gbk
+  DB/EC-K-typing_all_groups_v0.6.gbk
+"""
+import copy
+import re
+import subprocess
+import tempfile
+from pathlib import Path
+
+from Bio import SeqIO
+from Bio.SeqFeature import SeqFeature, FeatureLocation
+
+REPO_DIR  = Path(__file__).resolve().parent.parent
+DB_DIR    = REPO_DIR / "DB"
+V031_G1G4 = DB_DIR / "EC-K-typing_group1and4_v0.3.1.gbk"
+V05_G1G4  = DB_DIR / "EC-K-typing_group1and4_v0.5.gbk"
+V05_ALL   = DB_DIR / "EC-K-typing_all_groups_v0.5.gbk"
+V06_G1G4  = DB_DIR / "EC-K-typing_group1and4_v0.6.gbk"
+V06_ALL   = DB_DIR / "EC-K-typing_all_groups_v0.6.gbk"
+
+CONSERVED_NAMES = {'galF', 'galF_2', 'gnd', 'ugd', 'wza', 'wzb', 'wzc'}
+SKIP_LOCI       = {'KL301'}
+LIFTOVER_LOCI   = {'KL306', 'KL307'}
+
+MIN_BLAST_PIDENT  = 80.0
+MIN_BLAST_QCOV    = 80.0
+
+
+def get_locus_name(rec) -> str:
+    for f in rec.features:
+        if f.type == "source":
+            for note in f.qualifiers.get("note", []):
+                m = re.search(r"K locus:\s*(\S+)", note)
+                if m:
+                    return m.group(1)
+    return rec.name.split("_")[0]
+
+
+def conserved_features(rec) -> list:
+    return [
+        f for f in rec.features
+        if f.type == "CDS"
+        and f.qualifiers.get("gene", [""])[0] in CONSERVED_NAMES
+    ]
+
+
+def blastn_lift(query_seq, subject_seq, gene_name, source_feat):
+    """Align one CDS from v0.3.1 against new rep sequence; return new SeqFeature or None."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        q = Path(tmpdir) / "q.fa"
+        s = Path(tmpdir) / "s.fa"
+        q.write_text(f">q\n{query_seq}\n")
+        s.write_text(f">s\n{subject_seq}\n")
+        r = subprocess.run(
+            ["blastn", "-query", str(q), "-subject", str(s),
+             "-outfmt", "6 sstart send pident qcovs",
+             "-perc_identity", str(MIN_BLAST_PIDENT),
+             "-max_target_seqs", "1", "-max_hsps", "1"],
+            capture_output=True, text=True
+        )
+    if not r.stdout.strip():
+        return None
+    parts = r.stdout.strip().split("\n")[0].split("\t")
+    sstart, send, pident, qcovhsp = int(parts[0]), int(parts[1]), float(parts[2]), float(parts[3])
+    if qcovhsp < MIN_BLAST_QCOV:
+        return None
+    if sstart <= send:
+        start0, end0, strand = sstart - 1, send, 1
+    else:
+        start0, end0, strand = send - 1, sstart, -1
+    length = end0 - start0
+    rem = length % 3
+    if rem != 0:
+        adj = 3 - rem
+        if strand == -1:
+            start0 = max(0, start0 - adj)
+        else:
+            end0 = min(end0 + adj, len(subject_seq))
+        length = end0 - start0
+        if length % 3 != 0:
+            end0 -= length % 3
+    loc = FeatureLocation(start0, end0, strand=strand)
+    return SeqFeature(loc, type="CDS", qualifiers=copy.deepcopy(source_feat.qualifiers))
+
+
+# Load v0.3.1 conserved features
+v031_conserved = {}
+v031_recs = {}
+for rec in SeqIO.parse(str(V031_G1G4), "genbank"):
+    ln = get_locus_name(rec)
+    v031_conserved[ln] = conserved_features(rec)
+    v031_recs[ln] = rec
+
+# Process v0.5 G1/G4 records
+v05_recs = list(SeqIO.parse(str(V05_G1G4), "genbank"))
+for rec in v05_recs:
+    ln = get_locus_name(rec)
+    if ln in SKIP_LOCI:
+        continue
+    if ln in LIFTOVER_LOCI:
+        src = v031_recs.get(ln)
+        if src is None:
+            continue
+        added = []
+        for feat in v031_conserved[ln]:
+            gene = feat.qualifiers.get("gene", ["?"])[0]
+            cds_seq = str(feat.extract(src.seq))
+            new_feat = blastn_lift(cds_seq, str(rec.seq), gene, feat)
+            if new_feat:
+                added.append(new_feat)
+        rec.features.extend(added)
+    else:
+        feats = v031_conserved.get(ln, [])
+        rec.features.extend([copy.deepcopy(f) for f in feats])
+    rec.features.sort(key=lambda f: (int(f.location.start), int(f.location.end)))
+
+# Write outputs
+SeqIO.write(v05_recs, str(V06_G1G4), "genbank")
+g1g4_names = {get_locus_name(r) for r in v05_recs}
+g2g3_recs  = [r for r in SeqIO.parse(str(V05_ALL), "genbank")
+              if get_locus_name(r) not in g1g4_names]
+SeqIO.write(v05_recs + g2g3_recs, str(V06_ALL), "genbank")
 ```
 
 Conserved genes were restored to 91 of the 93 loci by copying CDS features
@@ -323,6 +1626,181 @@ cd /home/ebenezef/js66_scratch/ebenn/atb_screen
 sbatch /home/ebenezef/js66_scratch/ebenn/EC-K-typing-G1G4/scripts/submit_atb_screen.sh
 ```
 
+```{bash}
+#| code-fold: true
+#| code-summary: "Show full script: submit_atb_screen.sh"
+#!/bin/bash
+# =============================================================================
+# submit_atb_screen.sh
+#
+# SLURM array job: screen all 888 AllTheBacteria batches for G1/G4 flanking
+# genes (galF + gnd). Runs up to 50 tasks concurrently.
+#
+# Prerequisites on M3:
+#   module load blast/2.15.0
+#   git clone https://github.com/efosternyarko/EC-K-typing-G1G4.git \
+#       /home/ebenezef/js66_scratch/ebenn/EC-K-typing-G1G4
+#
+# Submit:
+#   cd /home/ebenezef/js66_scratch/ebenn/atb_screen
+#   sbatch submit_atb_screen.sh
+# =============================================================================
+
+#SBATCH --job-name=atb_g1g4
+#SBATCH --array=1-888%50
+#SBATCH --partition=comp
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=2
+#SBATCH --mem=16G
+#SBATCH --time=03:00:00
+#SBATCH --output=/home/ebenezef/js66_scratch/ebenn/atb_screen/logs/screen_%A_%a.log
+#SBATCH --error=/home/ebenezef/js66_scratch/ebenn/atb_screen/logs/screen_%A_%a.log
+
+set -eo pipefail
+
+module load blast/2.15.0
+
+SCRIPT="/home/ebenezef/js66_scratch/ebenn/EC-K-typing-G1G4/scripts/atb_screen_batch.py"
+
+echo "Task ${SLURM_ARRAY_TASK_ID} starting on $(hostname) at $(date)"
+python3 "$SCRIPT" "${SLURM_ARRAY_TASK_ID}"
+echo "Task ${SLURM_ARRAY_TASK_ID} finished at $(date)"
+```
+
+```{python}
+#| code-fold: true
+#| code-summary: "Show full script: atb_screen_batch.py"
+#!/usr/bin/env python3
+"""
+atb_screen_batch.py — Screen one AllTheBacteria batch for G1/G4 flanking genes.
+
+For each genome in the batch, detects presence of galF and gnd (the conserved
+flanking genes that bracket the E. coli Group 1/4 cps locus). Genomes with
+both markers are G1/G4 candidates for locus extraction.
+
+Usage:
+    python atb_screen_batch.py <batch_number>
+
+Output:
+    <OUT_DIR>/batch_<N>_hits.tsv
+    Columns: genome, gene, contig, pident, qcov
+"""
+
+import os
+import subprocess
+import sys
+import tarfile
+import tempfile
+from collections import defaultdict
+from pathlib import Path
+
+ARCHIVES_DIR = "/scratch2/js66/atb_archives"
+FLANKING_FA  = "/home/ebenezef/js66_scratch/ebenn/EC-K-typing-G1G4/flanking_genes/flanking_genes.fasta"
+OUT_DIR      = "/home/ebenezef/js66_scratch/ebenn/atb_screen/results"
+
+PIDENT_THRESH = 80.0
+QCOV_THRESH   = 70.0
+BLAST_EVALUE  = 1e-10
+
+
+def build_combined_fasta(batch_dir, out_fa):
+    genome_map = {}
+    with open(out_fa, "w") as out:
+        for fa_path in sorted(batch_dir.glob("*.fa")):
+            genome_id = fa_path.stem
+            with open(fa_path) as f:
+                for line in f:
+                    if line.startswith(">"):
+                        contig = line.strip()[1:].split()[0]
+                        prefixed = f"{genome_id}___{contig}"
+                        genome_map[prefixed] = (genome_id, contig)
+                        out.write(f">{prefixed}\n")
+                    else:
+                        out.write(line)
+    return genome_map
+
+
+def run_blast(query, db):
+    result = subprocess.run(
+        ["blastn", "-query", query, "-db", db,
+         "-evalue", str(BLAST_EVALUE),
+         "-outfmt", "6 qseqid sseqid pident length qlen",
+         "-perc_identity", "75", "-max_target_seqs", "100000"],
+        capture_output=True, text=True
+    )
+    return result.stdout
+
+
+def parse_hits(blast_output, genome_map):
+    hits = defaultdict(dict)
+    for line in blast_output.strip().splitlines():
+        parts = line.split("\t")
+        if len(parts) < 5:
+            continue
+        gene    = parts[0]
+        seq_id  = parts[1]
+        pident  = float(parts[2])
+        aln_len = int(parts[3])
+        qlen    = int(parts[4])
+        qcov    = 100.0 * aln_len / qlen
+
+        if pident < PIDENT_THRESH or qcov < QCOV_THRESH:
+            continue
+
+        genome_id, contig = genome_map.get(seq_id, (seq_id, seq_id))
+        if gene not in hits[genome_id] or pident > hits[genome_id][gene]["pident"]:
+            hits[genome_id][gene] = {"pident": pident, "qcov": qcov, "contig": contig}
+    return hits
+
+
+def main():
+    if len(sys.argv) < 2:
+        sys.exit("Usage: atb_screen_batch.py <batch_number>")
+
+    batch_num = sys.argv[1]
+    archive   = f"{ARCHIVES_DIR}/atb.assembly.r0.2.batch.{batch_num}.tar.xz"
+
+    if not os.path.exists(archive):
+        sys.exit(f"Archive not found: {archive}")
+
+    os.makedirs(OUT_DIR, exist_ok=True)
+    out_file = os.path.join(OUT_DIR, f"batch_{batch_num}_hits.tsv")
+
+    if os.path.exists(out_file):
+        print(f"Batch {batch_num}: already processed, skipping.")
+        return
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        with tarfile.open(archive, "r:xz") as tar:
+            tar.extractall(tmpdir)
+
+        batch_dir = next(Path(tmpdir).iterdir())
+        combined_fa = os.path.join(tmpdir, "combined.fa")
+        genome_map  = build_combined_fasta(batch_dir, combined_fa)
+
+        db = os.path.join(tmpdir, "batch_db")
+        subprocess.run(
+            ["makeblastdb", "-in", combined_fa, "-dbtype", "nucl", "-out", db],
+            check=True, capture_output=True
+        )
+
+        blast_output = run_blast(FLANKING_FA, db)
+        hits = parse_hits(blast_output, genome_map)
+
+    with open(out_file, "w") as f:
+        f.write("genome\tgene\tcontig\tpident\tqcov\n")
+        for genome_id in sorted(hits):
+            for gene, h in sorted(hits[genome_id].items()):
+                f.write(f"{genome_id}\t{gene}\t{h['contig']}\t{h['pident']:.1f}\t{h['qcov']:.1f}\n")
+
+    n_both = sum(1 for g in hits if "galF" in hits[g] and "gnd" in hits[g])
+    print(f"Batch {batch_num}: {len(hits)} genomes with any hit, {n_both} with both galF+gnd.")
+
+
+if __name__ == "__main__":
+    main()
+```
+
 Each array task (`1–888`, max 50 concurrent):
 
 1. Extracts all assemblies from the `.tar.xz` archive into a temp directory
@@ -347,6 +1825,113 @@ ls results/batch_*_hits.tsv | wc -l   # expect 665 with candidates
 python3 /home/ebenezef/js66_scratch/ebenn/EC-K-typing-G1G4/scripts/combine_atb_hits.py
 ```
 
+```{python}
+#| code-fold: true
+#| code-summary: "Show full script: combine_atb_hits.py"
+#!/usr/bin/env python3
+"""
+combine_atb_hits.py — Combine per-batch screening results and identify G1/G4 candidates.
+
+Reads all batch_*_hits.tsv files from the results directory, filters for
+genomes with both galF AND gnd hits, and writes:
+  - atb_g1g4_candidates.tsv  : genomes with both flanking markers
+  - atb_all_hits.tsv         : all hits across all batches (for QC)
+  - atb_screen_summary.txt   : summary statistics
+
+Usage:
+    python combine_atb_hits.py
+"""
+
+import csv
+import os
+from collections import defaultdict
+from pathlib import Path
+
+RESULTS_DIR  = "/home/ebenezef/js66_scratch/ebenn/atb_screen/results"
+OUT_DIR      = "/home/ebenezef/js66_scratch/ebenn/atb_screen"
+ARCHIVES_DIR = "/scratch2/js66/atb_archives"
+N_BATCHES    = 665
+
+REQUIRED_GENES = {"galF", "gnd"}
+
+
+def main():
+    results_dir = Path(RESULTS_DIR)
+    hit_files   = sorted(results_dir.glob("batch_*_hits.tsv"))
+    print(f"Found {len(hit_files)} completed batch result files (of {N_BATCHES} total).")
+
+    all_hits = defaultdict(dict)
+    for hit_file in hit_files:
+        batch_num = hit_file.stem.replace("batch_", "").replace("_hits", "")
+        with open(hit_file) as f:
+            reader = csv.DictReader(f, delimiter="\t")
+            for row in reader:
+                genome = row["genome"]
+                gene   = row["gene"]
+                if gene not in all_hits[genome] or float(row["pident"]) > all_hits[genome][gene]["pident"]:
+                    all_hits[genome][gene] = {
+                        "pident": float(row["pident"]),
+                        "qcov":   float(row["qcov"]),
+                        "contig": row["contig"],
+                        "batch":  batch_num,
+                    }
+
+    candidates = {
+        gid: genes for gid, genes in all_hits.items()
+        if REQUIRED_GENES.issubset(genes.keys())
+    }
+
+    cand_out = os.path.join(OUT_DIR, "atb_g1g4_candidates.tsv")
+    with open(cand_out, "w") as f:
+        f.write("genome\tbatch\tgalF_pident\tgalF_qcov\tgalF_contig\tgnd_pident\tgnd_qcov\tgnd_contig\tsame_contig\n")
+        for genome_id in sorted(candidates):
+            genes = candidates[genome_id]
+            galf  = genes.get("galF", {})
+            gnd   = genes.get("gnd", {})
+            same  = galf.get("contig") == gnd.get("contig")
+            f.write(
+                f"{genome_id}\t{galf.get('batch','')}\t"
+                f"{galf.get('pident','')}\t{galf.get('qcov','')}\t{galf.get('contig','')}\t"
+                f"{gnd.get('pident','')}\t{gnd.get('qcov','')}\t{gnd.get('contig','')}\t"
+                f"{same}\n"
+            )
+
+    all_out = os.path.join(OUT_DIR, "atb_all_hits.tsv")
+    with open(all_out, "w") as f:
+        f.write("genome\tgene\tcontig\tpident\tqcov\tbatch\n")
+        for genome_id in sorted(all_hits):
+            for gene, h in sorted(all_hits[genome_id].items()):
+                f.write(f"{genome_id}\t{gene}\t{h['contig']}\t{h['pident']}\t{h['qcov']}\t{h['batch']}\n")
+
+    n_same_ctg = sum(
+        1 for g in candidates
+        if candidates[g].get("galF", {}).get("contig") == candidates[g].get("gnd", {}).get("contig")
+    )
+    summary = [
+        f"AllTheBacteria G1/G4 screen summary",
+        f"  Batches processed     : {len(hit_files)} / {N_BATCHES}",
+        f"  Genomes with any hit  : {len(all_hits)}",
+        f"  G1/G4 candidates      : {len(candidates)}  (galF + gnd both present)",
+        f"  Both on same contig   : {n_same_ctg}  (highest confidence)",
+        f"  Candidates file       : {cand_out}",
+        f"  All hits file         : {all_out}",
+    ]
+    print("\n".join(summary))
+
+    # Write batches with candidates for extract_novel_loci job
+    batches_with_candidates = sorted(set(
+        candidates[g].get("galF", {}).get("batch", "")
+        for g in candidates
+        if candidates[g].get("galF", {}).get("batch", "")
+    ), key=lambda x: int(x) if x.isdigit() else x)
+    with open(os.path.join(OUT_DIR, "batches_with_candidates.txt"), "w") as f:
+        f.write("\n".join(batches_with_candidates) + "\n")
+
+
+if __name__ == "__main__":
+    main()
+```
+
 Filters for genomes with **both** *galF* AND *gnd* hits on the **same contig**.
 Outputs:
 
@@ -368,6 +1953,43 @@ sequences that match the existing reference database.
 bash /home/ebenezef/js66_scratch/ebenn/EC-K-typing-G1G4/scripts/setup_novelty_db.sh
 ```
 
+```{bash}
+#| code-fold: true
+#| code-summary: "Show full script: setup_novelty_db.sh"
+#!/bin/bash
+# =============================================================================
+# setup_novelty_db.sh
+#
+# Run ONCE before submitting extract_novel_loci job.
+# Builds a BLAST nucleotide database from the 93 G1/G4 reference loci so
+# that novelty screening can run without re-building it per task.
+#
+# Usage:
+#   bash scripts/setup_novelty_db.sh
+# =============================================================================
+
+set -eo pipefail
+
+module load blast/2.15.0
+
+REPO="/home/ebenezef/js66_scratch/ebenn/EC-K-typing-G1G4"
+REF_FASTA="${REPO}/DB/reference_loci_v0.6.fasta"
+DB_DIR="/home/ebenezef/js66_scratch/ebenn/atb_screen/novelty_db"
+DB_PATH="${DB_DIR}/g1g4_refs"
+
+mkdir -p "$DB_DIR"
+
+echo "Building BLAST DB from 93 G1/G4 reference loci..."
+makeblastdb \
+    -in "$REF_FASTA" \
+    -dbtype nucl \
+    -out "$DB_PATH" \
+    -title "G1G4_reference_loci_v0.6"
+
+echo "Done. DB at: ${DB_PATH}"
+echo "Verify with: blastdbcmd -db ${DB_PATH} -info"
+```
+
 Builds a BLAST nucleotide database from `DB/reference_loci_v0.6.fasta`
 (93 existing loci) at:
 `/home/ebenezef/js66_scratch/ebenn/atb_screen/novelty_db/g1g4_refs`
@@ -378,6 +2000,282 @@ Builds a BLAST nucleotide database from `DB/reference_loci_v0.6.fasta`
 
 ```bash
 sbatch /home/ebenezef/js66_scratch/ebenn/EC-K-typing-G1G4/scripts/submit_extract_novel.sh
+```
+
+```{bash}
+#| code-fold: true
+#| code-summary: "Show full script: submit_extract_novel.sh"
+#!/bin/bash
+# =============================================================================
+# submit_extract_novel.sh
+#
+# SLURM array job: extract novel G1/G4 loci from AllTheBacteria candidates.
+#
+# Prerequisites:
+#   1. Screening complete (665 batch_*_hits.tsv files exist)
+#   2. combine_atb_hits.py has been run (atb_g1g4_candidates.tsv exists)
+#   3. setup_novelty_db.sh has been run (BLAST DB built from reference loci)
+#
+# Submit:
+#   bash scripts/setup_novelty_db.sh        # run once first
+#   sbatch scripts/submit_extract_novel.sh
+#
+# After completion:
+#   python scripts/cluster_novel_loci.py
+# =============================================================================
+
+#SBATCH --job-name=atb_extract
+#SBATCH --array=1-268%50
+#SBATCH --partition=comp
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=2
+#SBATCH --mem=32G
+#SBATCH --time=04:00:00
+#SBATCH --output=/home/ebenezef/js66_scratch/ebenn/atb_screen/logs/extract_%A_%a.log
+#SBATCH --error=/home/ebenezef/js66_scratch/ebenn/atb_screen/logs/extract_%A_%a.log
+
+set -eo pipefail
+
+module load blast/2.15.0
+
+SCRIPT="/home/ebenezef/js66_scratch/ebenn/EC-K-typing-G1G4/scripts/extract_novel_loci.py"
+
+echo "Task ${SLURM_ARRAY_TASK_ID} starting on $(hostname) at $(date)"
+python3 "$SCRIPT" "${SLURM_ARRAY_TASK_ID}"
+echo "Task ${SLURM_ARRAY_TASK_ID} finished at $(date)"
+```
+
+```{python}
+#| code-fold: true
+#| code-summary: "Show full script: extract_novel_loci.py"
+#!/usr/bin/env python3
+"""
+extract_novel_loci.py — Extract G1/G4 cps loci from novel ATB candidates.
+
+For each same-contig G1/G4 candidate in a given batch:
+  1. Screen contig against existing 93 G1/G4 reference loci (blastn)
+     -> if >=95% identity AND >=80% query coverage -> known type, skip
+  2. For novel candidates: BLAST flanking genes vs contig to get coordinates
+  3. Extract locus sequence between galF_end and gnd_start (+-500 bp flanking)
+  4. Write to output FASTA
+
+Output per batch:
+  <OUT_DIR>/batch_<N>_novel_loci.fasta
+  <OUT_DIR>/batch_<N>_extract_summary.tsv
+
+Usage:
+    python extract_novel_loci.py <batch_number>
+"""
+
+import csv
+import os
+import subprocess
+import sys
+import tarfile
+import tempfile
+from collections import defaultdict
+from pathlib import Path
+
+ARCHIVES_DIR  = "/scratch2/js66/atb_archives"
+CANDIDATES    = "/home/ebenezef/js66_scratch/ebenn/atb_screen/atb_g1g4_candidates.tsv"
+BATCH_LIST    = "/home/ebenezef/js66_scratch/ebenn/atb_screen/batches_with_candidates.txt"
+FLANKING_FA   = "/home/ebenezef/js66_scratch/ebenn/EC-K-typing-G1G4/flanking_genes/flanking_genes.fasta"
+NOVELTY_DB    = "/home/ebenezef/js66_scratch/ebenn/atb_screen/novelty_db/g1g4_refs"
+OUT_DIR       = "/home/ebenezef/js66_scratch/ebenn/atb_screen/novel_loci"
+
+KNOWN_PIDENT  = 95.0
+KNOWN_QCOV    = 80.0
+FLANK_PIDENT  = 80.0
+FLANK_QCOV    = 70.0
+FLANK_PAD     = 500
+MIN_LOCUS_LEN = 15000
+
+
+def load_candidates(batch_num):
+    candidates = []
+    with open(CANDIDATES) as f:
+        reader = csv.DictReader(f, delimiter="\t")
+        for row in reader:
+            if row["batch"] == batch_num and row["same_contig"] == "True":
+                candidates.append(row)
+    return candidates
+
+
+def is_known_type(contig_fa, genome_id):
+    result = subprocess.run(
+        ["blastn", "-query", contig_fa, "-db", NOVELTY_DB,
+         "-evalue", "1e-10", "-outfmt", "6 sseqid pident length qlen",
+         "-max_target_seqs", "1", "-perc_identity", "85"],
+        capture_output=True, text=True
+    )
+    best_match, best_pident, best_qcov = "none", 0.0, 0.0
+    for line in result.stdout.strip().splitlines():
+        parts = line.split("\t")
+        if len(parts) < 4:
+            continue
+        ref_id  = parts[0]
+        pident  = float(parts[1])
+        aln_len = int(parts[2])
+        qlen    = int(parts[3])
+        qcov    = 100.0 * aln_len / qlen
+        if pident > best_pident:
+            best_pident = pident
+            best_qcov   = qcov
+            best_match  = ref_id
+    is_known = (best_pident >= KNOWN_PIDENT) and (best_qcov >= KNOWN_QCOV)
+    return is_known, best_match, best_pident, best_qcov
+
+
+def get_flanking_coords(contig_fa):
+    result = subprocess.run(
+        ["blastn", "-query", FLANKING_FA, "-subject", contig_fa,
+         "-evalue", "1e-10", "-outfmt", "6 qseqid pident length qlen sstart send",
+         "-perc_identity", "75", "-max_target_seqs", "3"],
+        capture_output=True, text=True
+    )
+    coords = {}
+    for line in result.stdout.strip().splitlines():
+        parts = line.split("\t")
+        if len(parts) < 6:
+            continue
+        gene    = parts[0]
+        pident  = float(parts[1])
+        aln_len = int(parts[2])
+        qlen    = int(parts[3])
+        sstart  = int(parts[4])
+        send    = int(parts[5])
+        qcov    = 100.0 * aln_len / qlen
+        if pident < FLANK_PIDENT or qcov < FLANK_QCOV:
+            continue
+        if gene not in coords or pident > coords[gene]["pident"]:
+            start  = min(sstart, send)
+            end    = max(sstart, send)
+            strand = "+" if send >= sstart else "-"
+            coords[gene] = {"start": start, "end": end, "strand": strand, "pident": pident}
+    return coords
+
+
+def extract_locus(contig_fa, coords, genome_id):
+    if "galF" not in coords or "gnd" not in coords:
+        return ""
+    galF_end   = coords["galF"]["end"]
+    gnd_start  = coords["gnd"]["start"]
+    locus_start = min(galF_end, gnd_start)
+    locus_end   = max(galF_end, gnd_start)
+    if locus_end - locus_start < 5000:
+        return ""
+    seq = ""
+    with open(contig_fa) as f:
+        for line in f:
+            if not line.startswith(">"):
+                seq += line.strip()
+    contig_len = len(seq)
+    extract_start = max(0, locus_start - FLANK_PAD - 1)
+    extract_end   = min(contig_len, locus_end + FLANK_PAD)
+    locus_seq = seq[extract_start:extract_end]
+    if len(locus_seq) < MIN_LOCUS_LEN:
+        return ""
+    return locus_seq
+
+
+def main():
+    if len(sys.argv) < 2:
+        sys.exit("Usage: extract_novel_loci.py <task_index>")
+
+    task_idx = int(sys.argv[1])
+    with open(BATCH_LIST) as f:
+        batches = [line.strip() for line in f if line.strip()]
+    if task_idx < 1 or task_idx > len(batches):
+        sys.exit(f"Task index {task_idx} out of range (1-{len(batches)})")
+    batch_num = batches[task_idx - 1]
+
+    archive   = f"{ARCHIVES_DIR}/atb.assembly.r0.2.batch.{batch_num}.tar.xz"
+    if not os.path.exists(archive):
+        print(f"Archive not found: {archive}")
+        return
+
+    os.makedirs(OUT_DIR, exist_ok=True)
+    out_fasta   = os.path.join(OUT_DIR, f"batch_{batch_num}_novel_loci.fasta")
+    out_summary = os.path.join(OUT_DIR, f"batch_{batch_num}_extract_summary.tsv")
+
+    if os.path.exists(out_fasta):
+        print(f"Batch {batch_num}: already processed, skipping.")
+        return
+
+    candidates = load_candidates(batch_num)
+    if not candidates:
+        open(out_fasta, "w").close()
+        with open(out_summary, "w") as f:
+            f.write("genome\tcontig\tstatus\tbest_ref\tpident\tqcov\tlocus_len\n")
+        return
+
+    needed = {c["genome"]: c["galF_contig"] for c in candidates}
+    n_novel = n_known = n_failed = 0
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        with tarfile.open(archive, "r:xz") as tar:
+            members = tar.getmembers()
+            to_extract = [m for m in members
+                          if any(m.name.endswith(f"{gid}.fa") for gid in needed)]
+            tar.extractall(tmpdir, members=to_extract)
+
+        batch_dir = next(Path(tmpdir).iterdir())
+
+        with open(out_fasta, "w") as fa_out, open(out_summary, "w") as sum_out:
+            sum_out.write("genome\tcontig\tstatus\tbest_ref\tpident\tqcov\tlocus_len\n")
+            for candidate in candidates:
+                genome_id     = candidate["genome"]
+                target_contig = candidate["galF_contig"]
+                genome_fa = batch_dir / f"{genome_id}.fa"
+                if not genome_fa.exists():
+                    sum_out.write(f"{genome_id}\t{target_contig}\tarchive_missing\t\t\t\t\n")
+                    n_failed += 1
+                    continue
+
+                contig_fa = os.path.join(tmpdir, f"{genome_id}_contig.fa")
+                found_contig = False
+                with open(genome_fa) as fin, open(contig_fa, "w") as fout:
+                    write = False
+                    for line in fin:
+                        if line.startswith(">"):
+                            contig_name = line.strip()[1:].split()[0]
+                            write = (contig_name == target_contig)
+                            if write:
+                                found_contig = True
+                        if write:
+                            fout.write(line)
+
+                if not found_contig:
+                    n_failed += 1
+                    continue
+
+                is_known, best_ref, pident, qcov = is_known_type(contig_fa, genome_id)
+                if is_known:
+                    sum_out.write(f"{genome_id}\t{target_contig}\tknown\t{best_ref}\t{pident:.1f}\t{qcov:.1f}\t\n")
+                    n_known += 1
+                    continue
+
+                coords = get_flanking_coords(contig_fa)
+                locus_seq = extract_locus(contig_fa, coords, genome_id)
+                if not locus_seq:
+                    n_failed += 1
+                    continue
+
+                galF_pi = coords.get("galF", {}).get("pident", 0)
+                gnd_pi  = coords.get("gnd",  {}).get("pident", 0)
+                header  = (f">{genome_id} novel_locus {len(locus_seq)}bp "
+                           f"[galF({galF_pi:.1f}%)--gnd({gnd_pi:.1f}%)] "
+                           f"best_ref={best_ref}({pident:.1f}%id,{qcov:.1f}%cov)")
+                fa_out.write(f"{header}\n{locus_seq}\n")
+                sum_out.write(f"{genome_id}\t{target_contig}\tnovel\t{best_ref}\t{pident:.1f}\t{qcov:.1f}\t{len(locus_seq)}\n")
+                n_novel += 1
+
+    print(f"Batch {batch_num}: {n_novel} novel loci extracted, "
+          f"{n_known} known types skipped, {n_failed} failed.")
+
+
+if __name__ == "__main__":
+    main()
 ```
 
 Each array task (`1–268`, max 50 concurrent):
@@ -404,6 +2302,163 @@ Each array task (`1–268`, max 50 concurrent):
 
 ```bash
 sbatch /home/ebenezef/js66_scratch/ebenn/EC-K-typing-G1G4/scripts/cluster_novel_loci.sh
+```
+
+```{bash}
+#| code-fold: true
+#| code-summary: "Show full script: cluster_novel_loci.sh"
+#!/bin/bash
+# =============================================================================
+# cluster_novel_loci.sh
+#
+# Cluster novel G1/G4 loci extracted from AllTheBacteria to identify new KL types.
+#
+# Steps:
+#   1. Combine all novel loci FASTAs into one file
+#   2. Cluster with MMseqs2 at 95% nucleotide identity, 80% coverage
+#   3. Extract representative sequence per cluster
+#   4. Assign new KL type numbers (KL344+)
+#   5. Write summary TSV
+#
+# Submit as:
+#   sbatch scripts/cluster_novel_loci.sh
+# =============================================================================
+
+#SBATCH --job-name=cluster_novel
+#SBATCH --partition=comp
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=128G
+#SBATCH --time=06:00:00
+#SBATCH --output=/home/ebenezef/js66_scratch/ebenn/atb_screen/logs/cluster_%j.log
+#SBATCH --error=/home/ebenezef/js66_scratch/ebenn/atb_screen/logs/cluster_%j.log
+
+set -eo pipefail
+
+module load mmseqs2/17-b804f-cuda12
+module load blast/2.15.0
+
+NOVEL_DIR="/home/ebenezef/js66_scratch/ebenn/atb_screen/novel_loci"
+OUT_DIR="/home/ebenezef/js66_scratch/ebenn/atb_screen/clustering"
+REF_FASTA="/home/ebenezef/js66_scratch/ebenn/EC-K-typing-G1G4/DB/reference_loci_v0.6.fasta"
+EXISTING_KL_COUNT=93   # KL300-KL343 + K24 + K96; new types start at KL344
+
+PIDENT=0.95   # 95% nucleotide identity
+QCOV=0.80     # 80% query coverage
+THREADS=16
+
+mkdir -p "$OUT_DIR"
+
+echo "=========================================="
+echo " Novel G1/G4 loci clustering"
+echo " $(date)"
+echo "=========================================="
+
+# Step 1: Combine all novel loci
+echo "[1] Combining novel loci FASTAs..."
+COMBINED="${OUT_DIR}/all_novel_loci.fasta"
+cat "${NOVEL_DIR}"/*.fasta > "$COMBINED"
+N_TOTAL=$(grep -c "^>" "$COMBINED" || echo 0)
+echo "    Total sequences: ${N_TOTAL}"
+
+if [ "$N_TOTAL" -eq 0 ]; then
+    echo "No novel loci found. Exiting."
+    exit 0
+fi
+
+# Step 2: Cluster with MMseqs2
+echo "[2] Clustering with MMseqs2 (${PIDENT} id, ${QCOV} cov, ${THREADS} threads)..."
+MMSEQS_DB="${OUT_DIR}/mmseqs_db"
+MMSEQS_CLUDB="${OUT_DIR}/mmseqs_clu"
+MMSEQS_TMP="${OUT_DIR}/mmseqs_tmp"
+
+mkdir -p "$MMSEQS_TMP"
+
+mmseqs createdb "$COMBINED" "$MMSEQS_DB"
+
+mmseqs cluster \
+    "$MMSEQS_DB" \
+    "$MMSEQS_CLUDB" \
+    "$MMSEQS_TMP" \
+    --min-seq-id "$PIDENT" \
+    -c "$QCOV" \
+    --cov-mode 0 \
+    --cluster-mode 0 \
+    --threads "$THREADS" \
+    -v 2
+
+REPS_FA="${OUT_DIR}/cluster_representatives.fasta"
+mmseqs result2repseq "$MMSEQS_DB" "$MMSEQS_CLUDB" "${OUT_DIR}/mmseqs_reps"
+mmseqs convert2fasta "${OUT_DIR}/mmseqs_reps" "$REPS_FA"
+
+N_CLUSTERS=$(grep -c "^>" "$REPS_FA" || echo 0)
+echo "    Clusters found: ${N_CLUSTERS}"
+
+CLUSTER_TSV="${OUT_DIR}/cluster_membership.tsv"
+mmseqs createtsv "$MMSEQS_DB" "$MMSEQS_DB" "$MMSEQS_CLUDB" "$CLUSTER_TSV"
+echo "    Cluster membership written to: ${CLUSTER_TSV}"
+
+# Step 3: Assign KL type numbers
+echo "[3] Assigning KL type numbers starting at KL$((300 + EXISTING_KL_COUNT + 1))..."
+python3 << 'PYEOF'
+import os, re
+from Bio import SeqIO
+from collections import defaultdict
+
+OUT_DIR      = "/home/ebenezef/js66_scratch/ebenn/atb_screen/clustering"
+REPS_FA      = f"{OUT_DIR}/cluster_representatives.fasta"
+CLU_TSV      = f"{OUT_DIR}/cluster_membership.tsv"
+EXISTING     = 93    # existing KL types in DB
+KL_START     = 344   # KL344 is first new type (note: actual pipeline used KL_START=392;
+                     # see protocol text and KL numbering correction callout)
+
+# Read cluster sizes
+clu_sizes = defaultdict(int)
+with open(CLU_TSV) as f:
+    for line in f:
+        rep, member = line.strip().split('\t')
+        clu_sizes[rep] += 1
+
+# Read representatives and assign KL numbers
+records = list(SeqIO.parse(REPS_FA, 'fasta'))
+
+# Sort by cluster size (largest first) — biggest clusters get lowest KL numbers
+rep_ids = [r.id for r in records]
+rep_ids_sorted = sorted(rep_ids, key=lambda x: -clu_sizes.get(x, 0))
+
+kl_map = {}
+for i, rep_id in enumerate(rep_ids_sorted):
+    kl_num = KL_START + i
+    kl_map[rep_id] = f"KL{kl_num}"
+
+out_fa = f"{OUT_DIR}/novel_kl_types.fasta"
+out_tsv = f"{OUT_DIR}/novel_kl_summary.tsv"
+
+with open(out_fa, 'w') as fa, open(out_tsv, 'w') as tsv:
+    tsv.write("KL_type\trep_genome\tseq_len\tcluster_size\n")
+    for rec in records:
+        kl = kl_map.get(rec.id, "unknown")
+        size = clu_sizes.get(rec.id, 1)
+        fa.write(f">{kl} {rec.id} {len(rec.seq)}bp cluster_size={size}\n{str(rec.seq)}\n")
+        tsv.write(f"{kl}\t{rec.id}\t{len(rec.seq)}\t{size}\n")
+
+print(f"Novel KL types assigned: {len(records)}")
+print(f"KL range: KL{KL_START} - KL{KL_START + len(records) - 1}")
+print(f"Written: {out_fa}")
+print(f"Written: {out_tsv}")
+PYEOF
+
+# Step 4: Summary
+echo ""
+echo "=========================================="
+echo " Clustering complete"
+echo " $(date)"
+echo "=========================================="
+echo "  Input sequences : ${N_TOTAL}"
+echo "  Novel KL clusters: ${N_CLUSTERS}"
+echo "  Representatives : ${OUT_DIR}/novel_kl_types.fasta"
+echo "  Summary TSV     : ${OUT_DIR}/novel_kl_summary.tsv"
+echo "  Cluster membership: ${OUT_DIR}/cluster_membership.tsv"
 ```
 
 MMseqs2 parameters:
@@ -458,6 +2513,275 @@ atb_screen/clustering/
 python3 scripts/annotate_and_merge_atb_loci.py 2>&1 | tee /tmp/annotate_v08.log
 ```
 
+```{python}
+#| code-fold: true
+#| code-summary: "Show full script: annotate_and_merge_atb_loci.py"
+#!/usr/bin/env python3
+"""
+annotate_and_merge_atb_loci.py
+
+Annotate novel G1/G4 K-loci from AllTheBacteria clustering and merge
+with the existing v0.6 reference database to produce v0.8.
+
+Steps:
+  1. Screen novel loci against existing DB: discard any novel locus where
+     >= 80% of the novel sequence aligns at >= 95% identity to an existing locus
+  2. Extract Klebsiella K-locus reference proteins (for BLASTp annotation)
+  3. For each novel locus in atb_clustering/novel_kl_types.fasta:
+       - Predict CDS with pyrodigal (metagenomic mode)
+       - BLASTp predicted proteins vs Klebsiella reference
+       - Transfer gene names (>=30% identity, >=50% coverage)
+       - Build Kaptive-compatible GenBank record
+  4. Merge annotated novel loci with existing v0.6 GenBank -> v0.8
+  5. Write annotation summary TSV
+
+Usage:
+    python3 scripts/annotate_and_merge_atb_loci.py
+
+Requirements:
+    pip install pyrodigal biopython
+    BLAST+ (blastp, makeblastdb)
+"""
+
+import os
+import re
+import subprocess
+import tempfile
+from collections import OrderedDict
+from datetime import date
+from pathlib import Path
+
+import pyrodigal
+from Bio import SeqIO
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
+from Bio.SeqFeature import SeqFeature, FeatureLocation
+
+REPO_DIR    = Path(__file__).resolve().parent.parent
+DB_DIR      = REPO_DIR / "DB"
+ATB_DIR     = REPO_DIR.parent / "atb_clustering"
+
+NOVEL_FASTA  = ATB_DIR / "novel_kl_types.fasta"
+EXISTING_GBK = DB_DIR / "EC-K-typing_group1and4_v0.6.gbk"
+OUTPUT_GBK   = DB_DIR / "EC-K-typing_group1and4_v0.8.gbk"
+SUMMARY_TSV  = DB_DIR / "annotation_summary_atb_v0.8.tsv"
+
+KLEB_REF_GBK = Path(
+    "/Users/lshef4/Library/Python/3.9/lib/python/site-packages"
+    "/kaptive/data/Klebsiella_k_locus_primary_reference.gbk"
+)
+BLASTP      = "/Users/lshef4/lshef4_to_copy/anaconda3/envs/my_python.env/bin/blastp"
+MAKEBLASTDB = "/Users/lshef4/lshef4_to_copy/anaconda3/envs/my_python.env/bin/makeblastdb"
+
+MIN_PIDENT = 30.0
+MIN_QCOV   = 50.0
+
+
+def build_kleb_blast_db():
+    gene_info = {}
+    proteins  = []
+    idx = 0
+    for rec in SeqIO.parse(str(KLEB_REF_GBK), "genbank"):
+        for f in rec.features:
+            if f.type != "CDS" or "gene" not in f.qualifiers:
+                continue
+            gene    = f.qualifiers["gene"][0]
+            product = f.qualifiers.get("product", ["hypothetical protein"])[0]
+            nuc_seq = f.location.extract(rec.seq)
+            if len(nuc_seq) % 3 != 0:
+                continue
+            try:
+                prot = str(nuc_seq.translate(to_stop=True))
+            except Exception:
+                continue
+            if len(prot) < 20:
+                continue
+            if gene not in gene_info:
+                gene_info[gene] = product
+            proteins.append((gene, prot, f"ref_{idx}"))
+            idx += 1
+
+    ref_fa = tempfile.NamedTemporaryFile(mode="w", suffix=".faa", delete=False, prefix="kleb_ref_")
+    for gene, prot, uid in proteins:
+        ref_fa.write(f">{uid} {gene}\n{prot}\n")
+    ref_fa.close()
+    subprocess.run([MAKEBLASTDB, "-in", ref_fa.name, "-dbtype", "prot"],
+                   capture_output=True, check=True)
+    uid_to_gene = {uid: (gene, gene_info[gene]) for gene, _, uid in proteins}
+    return ref_fa.name, uid_to_gene
+
+
+def predict_and_annotate(sequence, ref_db, uid_to_gene):
+    orf_finder = pyrodigal.GeneFinder(meta=True)
+    genes = orf_finder.find_genes(bytes(sequence))
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".faa", delete=False) as pf:
+        prot_file = pf.name
+        for i, gene in enumerate(genes):
+            prot = gene.translate()
+            if prot and prot[-1] == "*":
+                prot = prot[:-1]
+            pf.write(f">cds_{i}\n{prot}\n")
+
+    annotations = {}
+    try:
+        result = subprocess.run(
+            [BLASTP, "-query", prot_file, "-db", ref_db,
+             "-outfmt", "6 qseqid sseqid pident qcovs evalue bitscore",
+             "-evalue", "1e-5", "-max_target_seqs", "5", "-num_threads", "4"],
+            capture_output=True, text=True
+        )
+        for line in result.stdout.strip().split("\n"):
+            if not line:
+                continue
+            parts = line.split("\t")
+            qid, sid = parts[0], parts[1]
+            pident, qcovs, bitscore = float(parts[2]), float(parts[3]), float(parts[5])
+            gene_idx = int(qid.split("_")[1])
+            ref_gene, ref_product = uid_to_gene.get(sid, (None, None))
+            if ref_gene is None:
+                continue
+            if pident >= MIN_PIDENT and qcovs >= MIN_QCOV:
+                if gene_idx not in annotations or bitscore > annotations[gene_idx][3]:
+                    annotations[gene_idx] = (ref_gene, ref_product, pident, bitscore)
+    finally:
+        os.unlink(prot_file)
+
+    result_genes = []
+    for i, gene in enumerate(genes):
+        start = gene.begin - 1
+        end   = gene.end
+        strand = gene.strand
+        cds_len = end - start
+        if cds_len % 3 != 0:
+            excess = cds_len % 3
+            if strand == 1:
+                end -= excess
+            else:
+                start += excess
+        if end - start < 60:
+            continue
+        if i in annotations:
+            gene_name, product, _, _ = annotations[i]
+        else:
+            gene_name = None
+            product   = "hypothetical protein"
+        result_genes.append((start, end, strand, gene_name, product))
+    return result_genes
+
+
+def make_genbank_record(locus_name, source_assembly, sequence, gene_list):
+    record = SeqRecord(
+        Seq(str(sequence)),
+        id=f"{locus_name}_{source_assembly}",
+        name=f"{locus_name}_{source_assembly}"[:16],
+        description=f"Escherichia coli capsular polysaccharide synthesis gene cluster, {locus_name}",
+    )
+    record.annotations.update({
+        "molecule_type": "DNA", "topology": "linear",
+        "data_file_division": "BCT",
+        "date": date.today().strftime("%d-%b-%Y").upper(),
+        "organism": "Escherichia coli",
+        "taxonomy": ["Bacteria", "Pseudomonadota", "Gammaproteobacteria",
+                     "Enterobacterales", "Enterobacteriaceae", "Escherichia"],
+        "source": "Escherichia coli",
+    })
+    src_quals = OrderedDict([
+        ("organism", ["Escherichia coli"]),
+        ("mol_type", ["genomic DNA"]),
+        ("note",     [f"K locus: {locus_name}"]),
+    ])
+    record.features.append(
+        SeqFeature(FeatureLocation(0, len(sequence)), type="source", qualifiers=src_quals)
+    )
+    gene_name_counts = {}
+    for i, (start, end, strand, gene_name, product) in enumerate(gene_list):
+        locus_tag    = f"{locus_name}_{str(i+1).zfill(5)}"
+        display_gene = gene_name
+        if gene_name:
+            if gene_name in gene_name_counts:
+                gene_name_counts[gene_name] += 1
+                display_gene = f"{gene_name}_{gene_name_counts[gene_name]}"
+            else:
+                gene_name_counts[gene_name] = 1
+        quals = OrderedDict([("locus_tag", [locus_tag])])
+        if display_gene:
+            quals["gene"] = [display_gene]
+        quals["product"] = [product]
+        record.features.append(
+            SeqFeature(FeatureLocation(start, end, strand=strand), type="CDS", qualifiers=quals)
+        )
+    return record
+
+
+def screen_against_existing(novel_records, existing_gbk):
+    existing_fa = tempfile.NamedTemporaryFile(mode="w", suffix=".fasta", delete=False)
+    for rec in SeqIO.parse(str(existing_gbk), "genbank"):
+        existing_fa.write(f">{rec.id}\n{str(rec.seq)}\n")
+    existing_fa.close()
+    novel_fa = tempfile.NamedTemporaryFile(mode="w", suffix=".fasta", delete=False)
+    for rec in novel_records:
+        novel_fa.write(f">{rec.id}\n{str(rec.seq)}\n")
+    novel_fa.close()
+    db_path = existing_fa.name + "_db"
+    subprocess.run([MAKEBLASTDB, "-in", existing_fa.name, "-dbtype", "nucl", "-out", db_path],
+                   capture_output=True, check=True)
+    result = subprocess.run(
+        ["/Users/lshef4/.local/bin/blastn",
+         "-query", novel_fa.name, "-db", db_path,
+         "-outfmt", "6 qseqid sseqid pident qcovs",
+         "-perc_identity", "95", "-qcov_hsp_perc", "80", "-max_target_seqs", "1"],
+        capture_output=True, text=True
+    )
+    rejected = set()
+    for line in result.stdout.strip().split("\n"):
+        if not line:
+            continue
+        parts = line.split("\t")
+        rejected.add(parts[0])
+    os.unlink(existing_fa.name)
+    os.unlink(novel_fa.name)
+    kept = [r for r in novel_records if r.id not in rejected]
+    return kept, rejected
+
+
+def main():
+    novel_records_raw = list(SeqIO.parse(str(NOVEL_FASTA), "fasta"))
+    novel_records_input, _ = screen_against_existing(novel_records_raw, EXISTING_GBK)
+    ref_db, uid_to_gene = build_kleb_blast_db()
+
+    novel_gbk_records = []
+    summary_rows = []
+    for i, rec in enumerate(novel_records_input, 1):
+        parts = rec.description.split()
+        locus_name      = parts[0]
+        source_assembly = parts[1] if len(parts) > 1 else "unknown"
+        gene_list = predict_and_annotate(rec.seq, ref_db, uid_to_gene)
+        n_cds = len(gene_list)
+        n_ann = sum(1 for g in gene_list if g[3] is not None)
+        gbk_rec = make_genbank_record(locus_name, source_assembly, rec.seq, gene_list)
+        novel_gbk_records.append(gbk_rec)
+        summary_rows.append({
+            "KL_type": locus_name, "source_assembly": source_assembly,
+            "seq_len": len(rec.seq), "n_cds": n_cds, "n_annotated": n_ann,
+            "pct_annotated": f"{100*n_ann/n_cds:.1f}" if n_cds else "0.0",
+        })
+
+    existing_records = list(SeqIO.parse(str(EXISTING_GBK), "genbank"))
+    all_records = existing_records + novel_gbk_records
+    SeqIO.write(all_records, str(OUTPUT_GBK), "genbank")
+
+    with open(str(SUMMARY_TSV), "w") as f:
+        f.write("KL_type\tsource_assembly\tseq_len\tn_cds\tn_annotated\tpct_annotated\n")
+        for row in summary_rows:
+            f.write(f"{row['KL_type']}\t{row['source_assembly']}\t{row['seq_len']}\t"
+                    f"{row['n_cds']}\t{row['n_annotated']}\t{row['pct_annotated']}\n")
+    print(f"Done. v0.8 database: {OUTPUT_GBK}")
+
+
+if __name__ == "__main__":
+    main()
+```
+
 Pipeline steps:
 
 1. **Partial-capture screening:** BLASTn each novel locus against v0.6.
@@ -487,6 +2811,368 @@ to its expected KL against the complete v0.8 database.
 python3 scripts/type_normalized.py \
     --db DB/EC-K-typing_group1and4_v0.8.gbk \
     --suffix v0.8norm
+```
+
+```{python}
+#| code-fold: true
+#| code-summary: "Show full script: type_normalized.py"
+#!/usr/bin/env python3
+"""
+type_normalized.py — Normalised K-locus typing using Kaptive scores.
+
+Kaptive's default scoring accumulates raw alignment score (AS) across all
+genes found in a reference locus.  Large references (e.g. KL302: 40 CDS /
+37.8 kb; KL304: 44 CDS / 46.5 kb) systematically dominate smaller same-KX-type
+loci even at lower per-base identity, causing 23/93 filtered loci to fail
+self-typing in v3.0.
+
+Fix
+---
+Run Kaptive with `--scores` to obtain the full per-locus score matrix for every
+assembly, then re-rank each assembly's loci by:
+
+    normalised_score  =  AS  /  total_expected_gene_bp
+
+where `total_expected_gene_bp` is the sum of CDS sequence lengths in the
+reference GenBank record.  This converts raw bitscore into "alignment score per
+expected reference base" — a per-base identity metric that is independent of
+locus size.
+
+Loci that match all their genes at 100 % identity receive the maximum possible
+normalised score regardless of how many genes they have.  Only loci that either
+miss genes (lower AS numerator) or have lower per-base identity score worse.
+
+Usage
+-----
+    python scripts/type_normalized.py [--threads N] [--suffix v3norm]
+                                      [--db PATH] [--skip-kaptive]
+
+    --threads N       Kaptive alignment threads (0 = all; default 0)
+    --suffix SUFFIX   Output file suffix (default: v3norm)
+    --db PATH         Kaptive database (default: EC-K-typing_all_groups_v3.0.gbk)
+    --skip-kaptive    Re-use an existing scores TSV instead of re-running Kaptive
+
+Outputs (written to DB/)
+------------------------
+    kaptive_scores_{suffix}.tsv          — raw Kaptive scores matrix (loci × N assemblies)
+    kaptive_validation_results_{suffix}.tsv — normalised typing results (Kaptive-format)
+    kaptive_validation_summary_{suffix}.tsv — per-assembly comparison table
+"""
+
+import argparse
+import os
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+import pandas as pd
+from Bio import SeqIO
+
+# ---------------------------------------------------------------------------
+# Paths
+# ---------------------------------------------------------------------------
+REPO_DIR           = Path(__file__).resolve().parent.parent
+DB_DIR             = REPO_DIR / "DB"
+_DEFAULT_DB        = DB_DIR / "EC-K-typing_all_groups_v3.0.gbk"
+MAPPING_FILE       = DB_DIR / "KL_G1G4_mapping.tsv"
+FILTERED_MAPPING   = DB_DIR / "KL_G1G4_mapping_filtered.tsv"
+EXTRACTION_SUMMARY = Path(
+    "/Users/lshef4/Documents/dropbox/work_2025/e_coli_db/db_build_v2/extraction_summary.tsv"
+)
+GENOMES_DIR        = Path(
+    "/Users/lshef4/Documents/dropbox/work_2025/e_coli_db/db_build_v2/nohits_genomes"
+)
+NCBI_GENOMES_DIR   = REPO_DIR / "DB" / "blast_ncbi_results" / "candidate_genomes"
+NOVEL_FASTAS_DIR   = DB_DIR / "novel_rep_fastas"
+NOVEL_MAPPING_FILE = DB_DIR / "novel_rep_kl_map.tsv"
+
+MIN_GENE_COVERAGE = 0.50
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def get_locus_name(rec) -> str:
+    for f in rec.features:
+        if f.type == "source":
+            for note in f.qualifiers.get("note", []):
+                m = re.search(r"K locus:\s*(\S+)", note)
+                if m:
+                    return m.group(1)
+    return rec.name.split("_")[0]
+
+
+def load_locus_stats(db: Path) -> dict:
+    """Return {locus: total_expected_gene_bp} and {locus: n_genes} from GenBank."""
+    locus_total_bp = {}
+    locus_n_genes  = {}
+    for rec in SeqIO.parse(str(db), "genbank"):
+        lname = get_locus_name(rec)
+        cds   = [f for f in rec.features if f.type == "CDS"]
+        locus_n_genes[lname]  = len(cds)
+        locus_total_bp[lname] = sum(len(f) for f in cds)
+    return locus_total_bp, locus_n_genes
+
+
+def run_kaptive_scores(db: Path, genome_files: list, scores_tsv: Path, threads: int) -> None:
+    env = os.environ.copy()
+    env["PATH"] = "/Users/lshef4/lshef4_to_copy/anaconda3/envs/kleborate_test/bin:" + env["PATH"]
+    cmd = (
+        ["/Users/lshef4/Library/Python/3.9/bin/kaptive", "assembly", str(db)]
+        + [str(g) for g in genome_files]
+        + ["--scores", str(scores_tsv), "-t", str(threads)]
+    )
+    if scores_tsv.exists():
+        scores_tsv.unlink()
+    print(f"\n[kaptive] Running --scores on {len(genome_files)} assemblies → {scores_tsv.name}")
+    result = subprocess.run(cmd, capture_output=True, text=True, env=env)
+    if result.returncode != 0:
+        print("ERROR running kaptive:", file=sys.stderr)
+        print(result.stderr[:1000], file=sys.stderr)
+        sys.exit(1)
+    if result.stderr:
+        print(result.stderr[:300])
+
+
+def normalise_and_rank(scores_tsv: Path, locus_total_bp: dict) -> pd.DataFrame:
+    """
+    Read the Kaptive scores matrix TSV and re-rank each assembly by normalised score.
+
+    Returns a DataFrame with one row per assembly:
+      Assembly, Best match locus, Best match confidence,
+      Genes found, Genes expected, Gene coverage %,
+      Raw AS, Norm AS, Norm rank (1 = best)
+    """
+    df = pd.read_csv(scores_tsv, sep="\t")
+    asm_col = df.columns[0]
+
+    df["total_expected_bp"] = df["Locus"].map(locus_total_bp)
+    mask_missing = df["total_expected_bp"].isna() | (df["total_expected_bp"] == 0)
+    df.loc[mask_missing, "total_expected_bp"] = df.loc[mask_missing, "q_len"].clip(lower=1)
+
+    df["AS_norm"] = df["AS"] / df["total_expected_bp"]
+
+    rows = []
+    for asm, grp in df.groupby(asm_col):
+        active = grp[grp["AS"] > 0]
+        if active.empty:
+            rows.append({
+                "Assembly":             asm,
+                "Best match locus":     "none",
+                "Best match confidence": "Untypeable",
+                "Genes found":          0,
+                "Genes expected":       0,
+                "Gene coverage":        "0.0%",
+                "Raw AS":               0,
+                "Norm AS":              0.0,
+            })
+            continue
+
+        best = active.sort_values(["AS_norm", "AS"], ascending=[False, False]).iloc[0]
+        genes_found    = int(best["genes_found"])
+        genes_expected = int(best["genes_expected"])
+        coverage       = genes_found / genes_expected if genes_expected > 0 else 0
+        conf           = "Typeable" if coverage >= MIN_GENE_COVERAGE else "Untypeable"
+
+        rows.append({
+            "Assembly":             asm,
+            "Best match locus":     best["Locus"],
+            "Best match confidence": conf,
+            "Genes found":          genes_found,
+            "Genes expected":       genes_expected,
+            "Gene coverage":        f"{100*coverage:.1f}%",
+            "Raw AS":               int(best["AS"]),
+            "Norm AS":              round(best["AS_norm"], 4),
+        })
+
+    return pd.DataFrame(rows)
+
+
+def parse_results(results_df: pd.DataFrame, expected_kl: dict, filtered_kls: set) -> pd.DataFrame:
+    df = results_df.copy()
+    df["assembly_stem"] = df["Assembly"].apply(lambda x: Path(x).stem)
+    df["expected_KL"]      = df["assembly_stem"].map(expected_kl)
+    df["is_representative"] = df["expected_KL"].notna()
+    df["in_filtered_set"]  = df["expected_KL"].apply(
+        lambda x: x in filtered_kls if pd.notna(x) else False
+    )
+    df["best_match_locus"] = df["Best match locus"]
+    df["correct_type"] = df.apply(
+        lambda r: (r["best_match_locus"] == r["expected_KL"])
+        if r["is_representative"] else pd.NA,
+        axis=1,
+    )
+    df["typeable"] = df["Best match confidence"].str.contains("Typeable", na=False) & \
+                     ~df["Best match confidence"].str.contains("Untypeable", na=False)
+    return df
+
+
+def print_summary(df: pd.DataFrame) -> None:
+    reps          = df[df["is_representative"]]
+    reps_filtered = df[df["in_filtered_set"]]
+    reps_novel    = reps[~reps["in_filtered_set"]]
+
+    print("\n" + "=" * 60)
+    print("NORMALISED TYPING SUMMARY  (AS / total_expected_gene_bp)")
+    print("=" * 60)
+
+    n_all     = len(reps)
+    n_all_ok  = int(reps["correct_type"].sum())
+    n_filt    = len(reps_filtered)
+    n_filt_ok = int(reps_filtered["correct_type"].sum())
+    n_novel   = len(reps_novel)
+    n_nov_ok  = int(reps_novel["correct_type"].sum())
+
+    print(f"\n1. Self-typing (representative assemblies)")
+    print(f"   All {n_all} loci:          {n_all_ok}/{n_all}  "
+          f"({100*n_all_ok/n_all:.1f}%)")
+    print(f"   Original 93 BSI loci:  {n_filt_ok}/{n_filt}  "
+          f"({100*n_filt_ok/n_filt:.1f}%)")
+    if n_novel > 0:
+        print(f"   Novel ATB loci:        {n_nov_ok}/{n_novel}  "
+              f"({100*n_nov_ok/n_novel:.1f}%)")
+
+    wrong = reps[reps["correct_type"] == False][
+        ["assembly_stem", "expected_KL", "best_match_locus"]
+    ]
+    if not wrong.empty:
+        print(f"\n   Incorrect self-types ({len(wrong)}):")
+        for _, row in wrong.iterrows():
+            print(f"     {row['assembly_stem']:30s}  expected {row['expected_KL']:10s}  "
+                  f"got {row['best_match_locus']}")
+
+    n_total    = len(df)
+    n_typeable = int(df["typeable"].sum())
+    print(f"\n2. Typeability (all {n_total} extracted assemblies)")
+    print(f"   Typeable:              {n_typeable}/{n_total}  "
+          f"({100*n_typeable/n_total:.1f}%)")
+
+    bsi_util     = set(reps_filtered[reps_filtered["correct_type"] == True]["expected_KL"])
+    bsi_not_util = set(reps_filtered["expected_KL"]) - bsi_util
+    n_bsi        = len(set(reps_filtered["expected_KL"]))
+    print(f"\n3. Locus utilisation")
+    print(f"   BSI loci ({n_bsi}):  {len(bsi_util)}/{n_bsi} correctly self-typed")
+    if bsi_not_util:
+        print(f"   Not self-typed ({len(bsi_not_util)}):  {', '.join(sorted(bsi_not_util))}")
+
+    if n_novel > 0:
+        nov_util     = set(reps_novel[reps_novel["correct_type"] == True]["expected_KL"])
+        nov_not_util = set(reps_novel["expected_KL"]) - nov_util
+        n_nov_uniq   = len(set(reps_novel["expected_KL"]))
+        print(f"   Novel ATB loci ({n_nov_uniq}):  {len(nov_util)}/{n_nov_uniq} correctly self-typed")
+        if nov_not_util:
+            print(f"   Not self-typed ({len(nov_not_util)}):  {', '.join(sorted(nov_not_util))}")
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("-t", "--threads", type=int, default=0)
+    parser.add_argument("--suffix",      default="v3norm",
+                        help="Output file suffix (default: v3norm)")
+    parser.add_argument("--db",          type=Path, default=None,
+                        help="Kaptive database (default: v3.0 all-groups)")
+    parser.add_argument("--skip-kaptive", action="store_true",
+                        help="Skip Kaptive; re-use existing scores TSV")
+    args = parser.parse_args()
+
+    db         = args.db if args.db else _DEFAULT_DB
+    suffix     = args.suffix
+    scores_tsv = DB_DIR / f"kaptive_scores_{suffix}.tsv"
+    results_tsv= DB_DIR / f"kaptive_validation_results_{suffix}.tsv"
+    summary_tsv= DB_DIR / f"kaptive_validation_summary_{suffix}.tsv"
+
+    print(f"[1] Loading locus stats from {db.name}...")
+    locus_total_bp, locus_n_genes = load_locus_stats(db)
+    print(f"    {len(locus_total_bp)} loci; "
+          f"total expected bp range: "
+          f"{min(locus_total_bp.values())}–{max(locus_total_bp.values())} bp")
+
+    mapping          = pd.read_csv(MAPPING_FILE, sep="\t")
+    filtered_mapping = pd.read_csv(FILTERED_MAPPING, sep="\t")
+    extraction       = pd.read_csv(EXTRACTION_SUMMARY, sep="\t")
+
+    expected_kl  = dict(zip(mapping["source_assembly"], mapping["KL"]))
+    filtered_kls = set(filtered_mapping["KL"])
+
+    extracted_asms = extraction[extraction["status"] == "extracted"]["assembly"].tolist()
+    genome_files, missing = [], []
+    found_stems = set()
+    for asm in extracted_asms:
+        fa = GENOMES_DIR / asm
+        if fa.exists():
+            genome_files.append(fa)
+            found_stems.add(Path(asm).stem)
+        else:
+            missing.append(asm)
+    if missing:
+        print(f"WARNING: {len(missing)} genome file(s) not found", file=sys.stderr)
+
+    ncbi_added = []
+    for stem in expected_kl:
+        if stem not in found_stems and NCBI_GENOMES_DIR.exists():
+            for ext in (".fasta", ".fa", ".fna"):
+                candidate = NCBI_GENOMES_DIR / f"{stem}{ext}"
+                if candidate.exists():
+                    genome_files.append(candidate)
+                    found_stems.add(stem)
+                    ncbi_added.append(stem)
+                    break
+    if ncbi_added:
+        print(f"[2] Added {len(ncbi_added)} NCBI representative genome(s): {', '.join(ncbi_added)}")
+
+    novel_added = 0
+    if NOVEL_MAPPING_FILE.exists() and NOVEL_FASTAS_DIR.exists():
+        novel_mapping = pd.read_csv(NOVEL_MAPPING_FILE, sep="\t")
+        for _, row in novel_mapping.iterrows():
+            kl  = row["KL"]
+            acc = row["source_assembly"]
+            if acc not in found_stems:
+                for ext in (".fa", ".fasta", ".fna"):
+                    fa = NOVEL_FASTAS_DIR / f"{acc}{ext}"
+                    if fa.exists():
+                        genome_files.append(fa)
+                        found_stems.add(acc)
+                        expected_kl[acc] = kl
+                        novel_added += 1
+                        break
+    if novel_added:
+        print(f"[2] Added {novel_added} novel ATB representative genome(s)")
+    print(f"[2] Genome files: {len(genome_files)}")
+
+    if not args.skip_kaptive:
+        if not db.exists():
+            print(f"ERROR: database not found: {db}", file=sys.stderr)
+            sys.exit(1)
+        run_kaptive_scores(db, genome_files, scores_tsv, args.threads)
+    else:
+        if not scores_tsv.exists():
+            print(f"ERROR: --skip-kaptive but {scores_tsv} not found", file=sys.stderr)
+            sys.exit(1)
+        print(f"\n[kaptive] Skipping run, reading: {scores_tsv}")
+
+    print(f"\n[3] Normalising scores (AS / total_expected_gene_bp)...")
+    results_df = normalise_and_rank(scores_tsv, locus_total_bp)
+    results_df.to_csv(results_tsv, sep="\t", index=False)
+    print(f"    Written: {results_tsv.name}")
+
+    df = parse_results(results_df, expected_kl, filtered_kls)
+    df.to_csv(summary_tsv, sep="\t", index=False)
+
+    print_summary(df)
+
+    print(f"\n   Raw scores:   {scores_tsv}")
+    print(f"   Results:      {results_tsv}")
+    print(f"   Summary:      {summary_tsv}")
+
+
+if __name__ == "__main__":
+    main()
 ```
 
 ::: callout-note
@@ -551,6 +3237,180 @@ scp scripts/validate_novel_loci_m3.sh \
 sbatch ~/EC-K-typing-G1G4/scripts/validate_novel_loci_m3.sh
 ```
 
+```{bash}
+#| code-fold: true
+#| code-summary: "Show full script: validate_novel_loci_m3.sh"
+#!/bin/bash
+# =============================================================================
+# validate_novel_loci_m3.sh
+#
+# Self-typing validation for the 574 novel ATB loci (KL392-KL968) in v0.8.
+#
+# Steps:
+#   1. Build accession→batch map from ATB screen results
+#   2. Extract representative FASTAs from batch archives
+#   3. Run Kaptive v3 --scores against v0.8 GenBank
+#   4. Normalised scoring: check each assembly types to its correct KL
+#
+# Prerequisites:
+#   scp DB/EC-K-typing_group1and4_v0.8.gbk ebenezef@m3.massive.org.au:~/EC-K-typing-G1G4/DB/
+#   scp atb_clustering/novel_kl_summary.tsv  ebenezef@m3.massive.org.au:~/EC-K-typing-G1G4/DB/
+#
+# Submit:
+#   sbatch scripts/validate_novel_loci_m3.sh
+# =============================================================================
+
+#SBATCH --job-name=val_novel
+#SBATCH --partition=comp
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=64G
+#SBATCH --time=08:00:00
+#SBATCH --output=/home/ebenezef/js66_scratch/ebenn/EC-K-typing-G1G4/logs/val_novel_%j.log
+#SBATCH --error=/home/ebenezef/js66_scratch/ebenn/EC-K-typing-G1G4/logs/val_novel_%j.log
+
+set -euo pipefail
+
+module load minimap2/2.28
+
+REPO_DIR="/home/ebenezef/js66_scratch/ebenn/EC-K-typing-G1G4"
+DB="${REPO_DIR}/DB/EC-K-typing_group1and4_v0.8.gbk"
+NOVEL_SUMMARY="${REPO_DIR}/DB/novel_kl_summary.tsv"
+RESULTS_DIR="/home/ebenezef/js66_scratch/ebenn/atb_screen/results"
+ARCHIVES_DIR="/scratch2/js66/atb_archives"
+FASTA_DIR="${REPO_DIR}/DB/novel_rep_fastas"
+SCORES_TSV="${REPO_DIR}/DB/kaptive_scores_novel_v0.8norm.tsv"
+THREADS=16
+
+mkdir -p "$FASTA_DIR"
+mkdir -p "${REPO_DIR}/logs"
+
+echo "=================================================="
+echo " Novel loci self-typing validation — v0.8"
+echo " $(date)"
+echo "=================================================="
+
+# ── Step 1: Install Kaptive v3 ───────────────────────────────────────────────
+echo "[1] Checking Kaptive version..."
+if python3 -c "import kaptive; from kaptive._version import __version__; v=__version__; assert int(v.split('.')[0])>=3" 2>/dev/null; then
+    echo "    Kaptive v3+ already installed."
+else
+    echo "    Installing Kaptive v3..."
+    pip install --user --quiet "kaptive>=3.0"
+    echo "    Done."
+fi
+KAPTIVE=$(python3 -c "import os,sys; print(os.path.join(os.path.dirname(sys.executable),'..','bin','kaptive'))" 2>/dev/null || echo "kaptive")
+export PATH="$HOME/.local/bin:$PATH"
+kaptive --version 2>&1 | head -1
+
+# ── Step 2: Build accession→batch map and extract FASTAs ─────────────────────
+echo "[2] Building accession→batch map and extracting FASTAs..."
+
+python3 << 'PYEOF'
+import subprocess
+from pathlib import Path
+from collections import defaultdict
+
+CANDIDATES_FILE = Path("/home/ebenezef/js66_scratch/ebenn/atb_screen/batches_with_candidates.txt")
+ARCHIVES_DIR    = Path("/scratch2/js66/atb_archives")
+NOVEL_SUMMARY   = Path("/home/ebenezef/js66_scratch/ebenn/EC-K-typing-G1G4/DB/novel_kl_summary.tsv")
+FASTA_DIR       = Path("/home/ebenezef/js66_scratch/ebenn/EC-K-typing-G1G4/DB/novel_rep_fastas")
+
+targets = {}
+with open(NOVEL_SUMMARY) as f:
+    next(f)
+    for line in f:
+        parts = line.strip().split('\t')
+        kl, acc = parts[0], parts[1]
+        targets[acc] = kl
+print(f"    Target accessions: {len(targets)}")
+
+with open(CANDIDATES_FILE) as f:
+    candidate_batches = [line.strip() for line in f if line.strip()]
+
+print(f"    Scanning {len(candidate_batches)} candidate archives for target accessions...")
+acc_to_archive = {}
+remaining = set(targets.keys())
+
+for batch_num in candidate_batches:
+    if not remaining:
+        break
+    archive = ARCHIVES_DIR / f"atb.assembly.incr_release.202408.batch.{batch_num}.tar.xz"
+    if not archive.exists():
+        continue
+    result = subprocess.run(
+        ["tar", "tf", str(archive)],
+        capture_output=True, text=True
+    )
+    for member in result.stdout.splitlines():
+        acc = Path(member).stem
+        if acc in remaining:
+            acc_to_archive[acc] = (archive, member)
+            remaining.discard(acc)
+
+print(f"    Found: {len(acc_to_archive)}/{len(targets)}")
+if remaining:
+    print(f"    Not found in any candidate batch: {len(remaining)} — {list(remaining)[:5]}")
+
+already = {p.stem for p in FASTA_DIR.glob("*.fa")}
+n_extracted = 0
+
+archive_to_accs = defaultdict(list)
+for acc, (archive, member) in acc_to_archive.items():
+    if acc not in already:
+        archive_to_accs[archive].append(member)
+
+for archive, members in sorted(archive_to_accs.items()):
+    cmd = ["tar", "xf", str(archive), "-C", str(FASTA_DIR),
+           "--strip-components=1"] + members
+    result = subprocess.run(cmd, capture_output=True)
+    if result.returncode != 0:
+        print(f"    WARNING: tar error for {archive.name}: {result.stderr.decode()[:200]}")
+    extracted = sum(1 for m in members if (FASTA_DIR / Path(m).name).exists())
+    n_extracted += extracted
+    print(f"    {archive.name}: {extracted}/{len(members)} extracted")
+
+print(f"    Total FASTAs available: {n_extracted + len(already)} "
+      f"({len(already)} pre-existing, {n_extracted} newly extracted)")
+
+mapping_file = Path("/home/ebenezef/js66_scratch/ebenn/EC-K-typing-G1G4/DB/novel_rep_kl_map.tsv")
+with open(mapping_file, 'w') as f:
+    f.write("accession\tKL_type\tfasta_path\n")
+    for acc, kl in targets.items():
+        fa = FASTA_DIR / f"{acc}.fa"
+        if fa.exists():
+            f.write(f"{acc}\t{kl}\t{fa}\n")
+n_mapped = sum(1 for line in open(mapping_file)) - 1
+print(f"    Mapping written: {n_mapped} entries → {mapping_file}")
+PYEOF
+
+echo "    Extraction complete."
+
+# ── Step 3: Run Kaptive --scores ──────────────────────────────────────────────
+echo "[3] Running Kaptive --scores on $(ls $FASTA_DIR/*.fa | wc -l) assemblies..."
+
+kaptive assembly "$DB" ${FASTA_DIR}/*.fa \
+    --scores "$SCORES_TSV" \
+    -t "$THREADS" \
+    2>&1 | tail -5
+
+echo "    Scores written: $SCORES_TSV"
+
+# ── Step 4: Normalised scoring ────────────────────────────────────────────────
+echo "[4] Running normalised scoring..."
+
+python3 "${REPO_DIR}/scripts/normalise_novel_scores.py" \
+    --scores   "$SCORES_TSV" \
+    --db       "$DB" \
+    --mapping  "${REPO_DIR}/DB/novel_rep_kl_map.tsv" \
+    --out      "${REPO_DIR}/DB/novel_validation_summary_v0.8norm.tsv"
+
+echo ""
+echo "=================================================="
+echo " Validation complete — $(date)"
+echo "=================================================="
+```
+
 The script:
 
 1. Installs Kaptive v3 (`pip install --user "kaptive>=3.0"`)
@@ -602,6 +3462,236 @@ carry KL300 or KL303.
 bash scripts/run_atb_lexicmap_ec2.sh
 ```
 
+```{bash}
+#| code-fold: true
+#| code-summary: "Show full script: run_atb_lexicmap_ec2.sh"
+#!/usr/bin/env bash
+# =============================================================================
+# run_atb_lexicmap_ec2.sh
+#
+# Launch a spot EC2 instance in eu-west-2, mount the AllTheBacteria LexicMap
+# index from S3, search KL300/303/306/307 query sequences, and return results.
+#
+# Prerequisites (local):
+#   aws configure         (valid credentials + region eu-west-2)
+#   ssh-keygen            (creates ~/.ssh/atb_search_key if needed)
+#
+# Cost: ~$0.30–0.80 total for a c7g.8xlarge spot instance (~20–30 min)
+#
+# Usage:
+#   bash scripts/run_atb_lexicmap_ec2.sh
+# =============================================================================
+
+set -euo pipefail
+
+REGION="eu-west-2"
+INSTANCE_TYPE="c7g.8xlarge"
+KEY_NAME="atb-search-key"
+KEY_FILE="$HOME/.ssh/atb_search_key"
+SECURITY_GROUP_NAME="atb-lexicmap-sg"
+QUERY_FASTA="DB/kl_failing_query.fasta"
+RESULTS_DIR="DB/atb_lexicmap_results"
+REMOTE_RESULTS="/home/ec2-user/results.tsv.gz"
+AMI_ID="ami-0a3c640e8f9c74b61"
+
+mkdir -p "$RESULTS_DIR"
+
+echo "============================================================"
+echo " ATB LexicMap Search — KL300/303/306/307"
+echo " Region: $REGION  |  Instance: $INSTANCE_TYPE (spot)"
+echo "============================================================"
+
+if [ ! -f "$KEY_FILE" ]; then
+    echo "[1] Generating SSH key: $KEY_FILE"
+    ssh-keygen -t ed25519 -f "$KEY_FILE" -N "" -C "atb-search"
+else
+    echo "[1] SSH key exists: $KEY_FILE"
+fi
+PUB_KEY=$(cat "${KEY_FILE}.pub")
+
+aws ec2 import-key-pair \
+    --region "$REGION" \
+    --key-name "$KEY_NAME" \
+    --public-key-material "$(base64 < "${KEY_FILE}.pub")" \
+    2>/dev/null || true
+echo "    Key pair '$KEY_NAME' ready in $REGION"
+
+echo "[2] Setting up security group..."
+SG_ID=$(aws ec2 describe-security-groups \
+    --region "$REGION" \
+    --filters "Name=group-name,Values=$SECURITY_GROUP_NAME" \
+    --query "SecurityGroups[0].GroupId" \
+    --output text 2>/dev/null || echo "None")
+
+if [ "$SG_ID" = "None" ] || [ -z "$SG_ID" ]; then
+    SG_ID=$(aws ec2 create-security-group \
+        --region "$REGION" \
+        --group-name "$SECURITY_GROUP_NAME" \
+        --description "Temporary SG for ATB LexicMap search" \
+        --query "GroupId" --output text)
+    aws ec2 authorize-security-group-ingress \
+        --region "$REGION" \
+        --group-id "$SG_ID" \
+        --protocol tcp --port 22 --cidr 0.0.0.0/0
+    echo "    Created security group: $SG_ID"
+else
+    echo "    Security group exists: $SG_ID"
+fi
+
+echo "[3] Verifying AMI $AMI_ID in $REGION..."
+AMI_CHECK=$(aws ec2 describe-images \
+    --region "$REGION" \
+    --image-ids "$AMI_ID" \
+    --query "Images[0].Name" --output text 2>/dev/null || echo "NOT_FOUND")
+if [ "$AMI_CHECK" = "NOT_FOUND" ] || [ -z "$AMI_CHECK" ]; then
+    echo "    AMI $AMI_ID not found — looking up latest Amazon Linux 2023 ARM64..."
+    AMI_ID=$(aws ec2 describe-images \
+        --region "$REGION" \
+        --filters \
+            "Name=name,Values=al2023-ami-2023*-kernel-6*-arm64" \
+            "Name=owner-alias,Values=amazon" \
+            "Name=state,Values=available" \
+        --query "sort_by(Images, &CreationDate)[-1].ImageId" \
+        --output text)
+    echo "    Using AMI: $AMI_ID"
+else
+    echo "    AMI found: $AMI_CHECK"
+fi
+
+QUERY_B64=$(base64 < "$QUERY_FASTA")
+
+USER_DATA=$(cat <<USERDATA_EOF
+#!/bin/bash
+set -euxo pipefail
+exec > /var/log/lexicmap_run.log 2>&1
+
+echo "=== Starting ATB LexicMap search ==="
+cd /home/ec2-user
+
+dnf install -y wget tar fuse fuse-libs amazon-cloudwatch-agent 2>/dev/null || true
+
+wget -q "https://s3.amazonaws.com/mountpoint-s3-release/latest/arm64/mount-s3.rpm"
+dnf install -y ./mount-s3.rpm || yum install -y ./mount-s3.rpm
+
+wget -q https://github.com/shenwei356/LexicMap/releases/download/v0.8.1/lexicmap_linux_arm64.tar.gz
+tar xzf lexicmap_linux_arm64.tar.gz
+mv lexicmap /usr/local/bin/lexicmap
+lexicmap version
+
+mkdir -p /mnt/atb_index
+UNSTABLE_MOUNTPOINT_MAX_PREFETCH_WINDOW_SIZE=65536 \
+    mount-s3 --read-only --prefix 202408/ allthebacteria-lexicmap \
+    /mnt/atb_index --no-sign-request
+echo "=== Index mounted ==="
+
+echo "${QUERY_B64}" | base64 -d > /home/ec2-user/query.fasta
+
+echo "=== Running LexicMap search ==="
+lexicmap search \
+    -d /mnt/atb_index \
+    /home/ec2-user/query.fasta \
+    -o /home/ec2-user/results.tsv.gz \
+    --align-min-match-pident 90 \
+    --min-qcov-per-genome 70 \
+    --top-n-genomes 0 \
+    -j 32 \
+    --debug
+echo "=== Search complete ==="
+
+touch /home/ec2-user/DONE
+USERDATA_EOF
+)
+
+echo "[4] Launching spot instance ($INSTANCE_TYPE)..."
+
+LAUNCH_SPEC=$(cat <<LAUNCH_EOF
+{
+  "ImageId": "$AMI_ID",
+  "InstanceType": "$INSTANCE_TYPE",
+  "KeyName": "$KEY_NAME",
+  "SecurityGroupIds": ["$SG_ID"],
+  "BlockDeviceMappings": [
+    {
+      "DeviceName": "/dev/xvda",
+      "Ebs": {
+        "VolumeSize": 30,
+        "VolumeType": "gp3",
+        "DeleteOnTermination": true
+      }
+    }
+  ],
+  "UserData": "$(echo "$USER_DATA" | base64 | tr -d '\n')"
+}
+LAUNCH_EOF
+)
+
+INSTANCE_ID=$(aws ec2 run-instances \
+    --region "$REGION" \
+    --instance-market-options '{"MarketType":"spot","SpotOptions":{"SpotInstanceType":"one-time"}}' \
+    --cli-input-json "$LAUNCH_SPEC" \
+    --query "Instances[0].InstanceId" \
+    --output text)
+
+echo "    Instance launched: $INSTANCE_ID"
+
+echo "[5] Waiting for instance to reach running state..."
+aws ec2 wait instance-running --region "$REGION" --instance-ids "$INSTANCE_ID"
+
+PUBLIC_IP=$(aws ec2 describe-instances \
+    --region "$REGION" \
+    --instance-ids "$INSTANCE_ID" \
+    --query "Reservations[0].Instances[0].PublicIpAddress" \
+    --output text)
+echo "    Public IP: $PUBLIC_IP"
+
+echo ""
+echo " INSTANCE ID (save this): $INSTANCE_ID"
+echo " Monitor: ssh -i $KEY_FILE -o StrictHostKeyChecking=no ec2-user@$PUBLIC_IP"
+echo " Then: bash scripts/fetch_atb_results.sh $INSTANCE_ID $PUBLIC_IP"
+echo ""
+
+cat > "$RESULTS_DIR/instance_info.txt" <<INFO_EOF
+INSTANCE_ID=$INSTANCE_ID
+PUBLIC_IP=$PUBLIC_IP
+REGION=$REGION
+KEY_FILE=$KEY_FILE
+LAUNCHED=$(date -u)
+INFO_EOF
+
+echo "[6] Waiting for search to complete (polls every 60s)..."
+MAX_WAIT=7200
+ELAPSED=0
+while [ $ELAPSED -lt $MAX_WAIT ]; do
+    sleep 60
+    ELAPSED=$((ELAPSED + 60))
+    DONE=$(ssh -i "$KEY_FILE" \
+        -o StrictHostKeyChecking=no \
+        -o ConnectTimeout=10 \
+        -o BatchMode=yes \
+        "ec2-user@$PUBLIC_IP" \
+        "test -f /home/ec2-user/DONE && echo yes || echo no" 2>/dev/null || echo "connecting")
+    if [ "$DONE" = "yes" ]; then
+        echo "    [${ELAPSED}s] Search complete!"
+        break
+    else
+        echo "    [${ELAPSED}s] Still running... ($DONE)"
+    fi
+done
+
+echo "[7] Fetching results..."
+scp -i "$KEY_FILE" -o StrictHostKeyChecking=no \
+    "ec2-user@$PUBLIC_IP:results.tsv.gz" \
+    "$RESULTS_DIR/atb_lexicmap_raw.tsv.gz"
+
+scp -i "$KEY_FILE" -o StrictHostKeyChecking=no \
+    "ec2-user@$PUBLIC_IP:/var/log/lexicmap_run.log" \
+    "$RESULTS_DIR/lexicmap_run.log"
+
+echo "[8] Terminating instance $INSTANCE_ID..."
+aws ec2 terminate-instances --region "$REGION" --instance-ids "$INSTANCE_ID"
+echo "    Done! Results in: $RESULTS_DIR/atb_lexicmap_raw.tsv.gz"
+```
+
 Launches an `r7g.4xlarge` on-demand EC2 instance (16 vCPU, 128 GB RAM,
 ARM64, eu-west-2) and runs LexicMap against the ATB S3 index:
 
@@ -635,6 +3725,50 @@ ssh -i ~/.ssh/atb_search_key ec2-user@<PUBLIC_IP> \
 bash scripts/fetch_atb_results.sh <INSTANCE_ID> <PUBLIC_IP>
 ```
 
+```{bash}
+#| code-fold: true
+#| code-summary: "Show full script: fetch_atb_results.sh"
+#!/usr/bin/env bash
+# fetch_atb_results.sh — Fetch LexicMap results from EC2 and terminate instance
+#
+# Usage:
+#   bash scripts/fetch_atb_results.sh <INSTANCE_ID> <PUBLIC_IP>
+#
+# Or reads from DB/atb_lexicmap_results/instance_info.txt if no args given.
+
+set -euo pipefail
+
+RESULTS_DIR="DB/atb_lexicmap_results"
+REGION="eu-west-2"
+KEY_FILE="$HOME/.ssh/atb_search_key"
+
+if [ $# -eq 2 ]; then
+    INSTANCE_ID="$1"
+    PUBLIC_IP="$2"
+else
+    source "$RESULTS_DIR/instance_info.txt"
+fi
+
+echo "Fetching results from $PUBLIC_IP (instance $INSTANCE_ID)..."
+
+scp -i "$KEY_FILE" -o StrictHostKeyChecking=no \
+    "ec2-user@${PUBLIC_IP}:results.tsv.gz" \
+    "$RESULTS_DIR/atb_lexicmap_raw.tsv.gz"
+
+scp -i "$KEY_FILE" -o StrictHostKeyChecking=no \
+    "ec2-user@${PUBLIC_IP}:/home/ec2-user/lexicmap_run.log" \
+    "$RESULTS_DIR/lexicmap_run.log"
+
+echo "Results saved to $RESULTS_DIR/atb_lexicmap_raw.tsv.gz"
+
+echo "Terminating instance $INSTANCE_ID..."
+aws ec2 terminate-instances --region "$REGION" --instance-ids "$INSTANCE_ID" > /dev/null
+echo "Instance terminated."
+
+echo ""
+echo "Next: python scripts/analyse_atb_results.py"
+```
+
 ::: callout-note
 ## EC2 troubleshooting notes
 
@@ -649,6 +3783,123 @@ bash scripts/fetch_atb_results.sh <INSTANCE_ID> <PUBLIC_IP>
 
 ```bash
 python3 scripts/analyse_atb_results.py
+```
+
+```{python}
+#| code-fold: true
+#| code-summary: "Show full script: analyse_atb_results.py"
+#!/usr/bin/env python3
+"""
+analyse_atb_results.py — Rank ATB matches to identify better KL300/303/306/307 reps.
+
+Reads the raw LexicMap output from the ATB search and ranks candidate assemblies
+by two criteria:
+
+  1. High coverage of the query locus (>= 80%) — confirms it really has this locus type
+  2. Low identity to KL302 variable region — means it would discriminate better
+
+Usage
+-----
+    python scripts/analyse_atb_results.py
+
+Outputs
+-------
+    DB/atb_lexicmap_results/atb_candidates.tsv  — ranked candidate assemblies
+    DB/atb_lexicmap_results/atb_summary.txt     — per-locus summary
+"""
+
+import gzip
+import sys
+from pathlib import Path
+
+import pandas as pd
+
+REPO_DIR    = Path(__file__).resolve().parent.parent
+DB_DIR      = REPO_DIR / "DB"
+RESULTS_DIR = DB_DIR / "atb_lexicmap_results"
+RAW_TSV     = RESULTS_DIR / "atb_lexicmap_raw.tsv.gz"
+OUT_TSV     = RESULTS_DIR / "atb_candidates.tsv"
+OUT_SUMMARY = RESULTS_DIR / "atb_summary.txt"
+
+TARGETS = ["KL300", "KL303", "KL306", "KL307"]
+
+MIN_QCOV   = 70.0
+MIN_PIDENT = 90.0
+
+
+def main():
+    if not RAW_TSV.exists():
+        print(f"ERROR: {RAW_TSV} not found. Run run_atb_lexicmap_ec2.sh first.",
+              file=sys.stderr)
+        sys.exit(1)
+
+    print(f"Reading {RAW_TSV}...")
+    opener = gzip.open if str(RAW_TSV).endswith(".gz") else open
+    with opener(RAW_TSV, "rt") as fh:
+        df = pd.read_csv(fh, sep="\t", comment="#")
+
+    print(f"  {len(df):,} alignment rows")
+    df.columns = [c.strip() for c in df.columns]
+
+    query_col  = [c for c in df.columns if c.lower() in ("query", "qname")][0]
+    genome_col = [c for c in df.columns if c.lower() in ("sgenome", "genome", "subject")][0]
+    pident_col = [c for c in df.columns if c.lower() in ("pident", "identity")][0]
+    qcov_col   = [c for c in df.columns if "qcovgnm" in c.lower() or "qcov" in c.lower()][0]
+
+    df["locus"] = df[query_col].str.split().str[0]
+    df = df[df["locus"].isin(TARGETS)].copy()
+    print(f"  {len(df):,} rows for target loci {TARGETS}")
+
+    df[pident_col] = pd.to_numeric(df[pident_col], errors="coerce")
+    df[qcov_col]   = pd.to_numeric(df[qcov_col],   errors="coerce")
+    df["score"]    = df[pident_col] * df[qcov_col]
+
+    best = (df.sort_values("score", ascending=False)
+              .drop_duplicates(subset=["locus", genome_col])
+              .copy())
+
+    candidates = best[
+        (best[pident_col] >= MIN_PIDENT) &
+        (best[qcov_col]   >= MIN_QCOV)
+    ].copy()
+
+    print(f"\n  Candidates (pident>={MIN_PIDENT}%, qcov>={MIN_QCOV}%): "
+          f"{len(candidates):,}")
+
+    candidates = candidates.sort_values(
+        [qcov_col, pident_col], ascending=[False, False]
+    )
+
+    out_cols = ["locus", genome_col, qcov_col, pident_col]
+    out_cols += [c for c in candidates.columns
+                 if c not in out_cols and c not in ("score",)]
+    candidates[out_cols].to_csv(OUT_TSV, sep="\t", index=False)
+    print(f"  Written: {OUT_TSV}")
+
+    lines = []
+    lines.append("ATB LexicMap search — candidate assemblies per locus")
+    lines.append("=" * 60)
+    for locus in TARGETS:
+        sub = candidates[candidates["locus"] == locus]
+        lines.append(f"\n{locus}:  {len(sub)} candidates")
+        if not sub.empty:
+            lines.append(f"  {'Assembly':<30}  {'qcov%':>6}  {'pident%':>7}")
+            for _, row in sub.head(20).iterrows():
+                lines.append(
+                    f"  {str(row[genome_col]):<30}  "
+                    f"{row[qcov_col]:>6.1f}  "
+                    f"{row[pident_col]:>7.2f}"
+                )
+
+    summary_text = "\n".join(lines)
+    print("\n" + summary_text)
+    with open(OUT_SUMMARY, "w") as fh:
+        fh.write(summary_text + "\n")
+    print(f"\nWritten: {OUT_SUMMARY}")
+
+
+if __name__ == "__main__":
+    main()
 ```
 
 **Results:** 16,324,589 alignment rows processed.
@@ -670,6 +3921,205 @@ scp scripts/validate_kl300_kl303_m3.sh \
 
 # On M3:
 sbatch ~/EC-K-typing-G1G4/scripts/validate_kl300_kl303_m3.sh
+```
+
+```{bash}
+#| code-fold: true
+#| code-summary: "Show full script: validate_kl300_kl303_m3.sh"
+#!/bin/bash
+# =============================================================================
+# validate_kl300_kl303_m3.sh
+#
+# Extract top candidate assemblies for KL300 and KL303 from ATB archives
+# on M3 and run Kaptive v3 normalised scoring to confirm self-typing.
+#
+# Submit:
+#   sbatch scripts/validate_kl300_kl303_m3.sh
+# =============================================================================
+
+#SBATCH --job-name=val_kl300_303
+#SBATCH --partition=comp
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=32G
+#SBATCH --time=02:00:00
+#SBATCH --output=/home/ebenezef/js66_scratch/ebenn/EC-K-typing-G1G4/logs/val_kl300_303_%j.log
+#SBATCH --error=/home/ebenezef/js66_scratch/ebenn/EC-K-typing-G1G4/logs/val_kl300_303_%j.log
+
+set -euo pipefail
+
+module load minimap2/2.28
+
+REPO_DIR="/home/ebenezef/js66_scratch/ebenn/EC-K-typing-G1G4"
+DB="${REPO_DIR}/DB/EC-K-typing_group1and4_v0.8.gbk"
+ARCHIVES_DIR="/scratch2/js66/atb_archives"
+FASTA_DIR="${REPO_DIR}/DB/kl300_303_fastas"
+SCORES_TSV="${REPO_DIR}/DB/kaptive_scores_kl300_303.tsv"
+MAPPING_FILE="${REPO_DIR}/DB/kl300_303_kl_map.tsv"
+THREADS=8
+
+mkdir -p "$FASTA_DIR" "${REPO_DIR}/logs"
+export PATH="$HOME/.local/bin:$PATH"
+
+echo "=================================================="
+echo " KL300/KL303 candidate validation"
+echo " $(date)"
+echo "=================================================="
+
+echo "[1] Checking Kaptive and Python dependencies..."
+if ! python3 -c "import kaptive; from kaptive._version import __version__; v=__version__; assert int(v.split('.')[0])>=3" 2>/dev/null; then
+    pip install --user --quiet "kaptive>=3.0"
+fi
+pip install --user --quiet pandas
+kaptive --version 2>&1 | head -1
+
+echo "[2] Downloading candidate FASTAs from ENA/NCBI..."
+
+python3 << 'PYEOF'
+import subprocess
+import urllib.request
+import urllib.error
+import json
+from pathlib import Path
+
+FASTA_DIR    = Path("/home/ebenezef/js66_scratch/ebenn/EC-K-typing-G1G4/DB/kl300_303_fastas")
+MAPPING_FILE = Path("/home/ebenezef/js66_scratch/ebenn/EC-K-typing-G1G4/DB/kl300_303_kl_map.tsv")
+FASTA_DIR.mkdir(parents=True, exist_ok=True)
+
+targets = {
+    "SAMD00053151":   "KL300",
+    "SAMEA103908486": "KL300",
+    "SAMN12532904":   "KL300",
+    "SAMEA6656333":   "KL303",
+    "SAMEA6656328":   "KL303",
+    "SAMN20959615":   "KL303",
+}
+print(f"    Target accessions: {len(targets)}")
+
+
+def ena_get_assembly_ftp(biosample_acc):
+    url = (f"https://www.ebi.ac.uk/ena/portal/api/filereport"
+           f"?accession={biosample_acc}&result=assembly"
+           f"&fields=submitted_ftp,ftp&format=json")
+    try:
+        with urllib.request.urlopen(url, timeout=30) as r:
+            data = json.loads(r.read())
+            if data:
+                ftp = data[0].get("submitted_ftp") or data[0].get("ftp", "")
+                for f in ftp.split(";"):
+                    if f.endswith((".fasta.gz", ".fa.gz", ".fasta", ".fa")):
+                        return f.strip()
+    except Exception:
+        pass
+    return None
+
+
+def ncbi_get_assembly_url(biosample_acc):
+    try:
+        result = subprocess.run(
+            ["datasets", "summary", "genome", "accession", biosample_acc,
+             "--as-json-lines"],
+            capture_output=True, text=True, timeout=30
+        )
+        for line in result.stdout.splitlines():
+            d = json.loads(line)
+            ftp = (d.get("assembly_info", {})
+                    .get("assembly_stats", {})
+                    .get("ftp_path", ""))
+            if ftp:
+                name = ftp.rstrip("/").split("/")[-1]
+                return f"{ftp}/{name}_genomic.fna.gz"
+    except Exception:
+        pass
+    return None
+
+
+def download_fasta(url, dest_fa):
+    import gzip, shutil
+    http_url = url.replace("ftp://", "http://")
+    tmp = dest_fa.with_suffix(".tmp.gz" if url.endswith(".gz") else ".tmp.fa")
+    try:
+        urllib.request.urlretrieve(http_url, str(tmp))
+    except Exception as e:
+        print(f"      ERROR: {e}")
+        return False
+    if url.endswith(".gz"):
+        with gzip.open(str(tmp), 'rb') as fin, open(dest_fa, 'wb') as fout:
+            shutil.copyfileobj(fin, fout)
+        tmp.unlink()
+    else:
+        tmp.rename(dest_fa)
+    return dest_fa.exists() and dest_fa.stat().st_size > 0
+
+
+already = {p.stem: p for p in FASTA_DIR.glob("*.fa")}
+downloaded = 0
+failed = []
+
+for acc, kl in targets.items():
+    dest = FASTA_DIR / f"{acc}.fa"
+    if acc in already:
+        print(f"    {acc}: already exists, skipping")
+        downloaded += 1
+        continue
+
+    print(f"    {acc} ({kl}):")
+    url = ena_get_assembly_ftp(acc)
+    if url and download_fasta(url, dest):
+        downloaded += 1
+        continue
+
+    url = ncbi_get_assembly_url(acc)
+    if url and download_fasta(url, dest):
+        downloaded += 1
+        continue
+
+    s3_url = f"https://allthebacteria-assemblies.s3.amazonaws.com/{acc}.fa.gz"
+    if download_fasta(s3_url, dest):
+        downloaded += 1
+        continue
+
+    print(f"      FAILED: could not download {acc}")
+    failed.append(acc)
+
+print(f"\n    Downloaded: {downloaded}/{len(targets)}")
+if failed:
+    print(f"    Failed: {failed}")
+
+with open(MAPPING_FILE, 'w') as f:
+    f.write("accession\tKL_type\tfasta_path\n")
+    for acc, kl in targets.items():
+        fa = FASTA_DIR / f"{acc}.fa"
+        if fa.exists() and fa.stat().st_size > 0:
+            f.write(f"{acc}\t{kl}\t{fa}\n")
+PYEOF
+
+echo "    Extraction complete."
+ls -lh "$FASTA_DIR"
+
+echo "[3] Running Kaptive --scores on $(ls $FASTA_DIR/*.fa | wc -l) assemblies..."
+rm -f "$SCORES_TSV"
+
+kaptive assembly "$DB" ${FASTA_DIR}/*.fa \
+    --scores "$SCORES_TSV" \
+    -t "$THREADS" \
+    2>&1 | tail -5
+
+echo "    Scores written: $SCORES_TSV"
+
+echo "[4] Running normalised scoring..."
+
+python3 "${REPO_DIR}/scripts/normalise_novel_scores.py" \
+    --scores  "$SCORES_TSV" \
+    --db      "$DB" \
+    --mapping "$MAPPING_FILE" \
+    --out     "${REPO_DIR}/DB/kl300_303_validation_summary.tsv"
+
+echo ""
+echo "=================================================="
+echo " Validation complete — $(date)"
+echo " Results: ${REPO_DIR}/DB/kl300_303_validation_summary.tsv"
+echo "=================================================="
 ```
 
 The script downloads assemblies for the 6 top candidates directly from ENA
@@ -726,6 +4176,291 @@ Only SAMEA6656333 is fetched; no valid KL300 assembly was identified.
 ```bash
 python3 scripts/replace_kl300_kl303.py \
     --kl303_fasta DB/kl300_303_fastas/SAMEA6656333.fa
+```
+
+```{python}
+#| code-fold: true
+#| code-summary: "Show full script: replace_kl300_kl303.py"
+#!/usr/bin/env python3
+"""
+replace_kl300_kl303.py
+
+Given validated assembly FASTAs for KL300 and KL303, this script:
+  1. Aligns the existing KL300/KL303 locus sequences (from v0.8 GenBank) to
+     each assembly using minimap2 to locate the locus region
+  2. Extracts the locus region (plus 500 bp flanks, trimmed to contig bounds)
+  3. Annotates with pyrodigal (metagenomic) + BLASTp vs Klebsiella reference
+  4. Replaces the KL300 and KL303 records in v0.8 GenBank → v0.9
+
+Usage:
+    python3 scripts/replace_kl300_kl303.py \\
+        --kl300_fasta DB/kl300_303_fastas/SAMD00053151.fa \\
+        --kl303_fasta DB/kl300_303_fastas/SAMEA6656333.fa
+
+    # Or auto-select from validation summary:
+    python3 scripts/replace_kl300_kl303.py --auto
+"""
+
+import argparse
+import os
+import re
+import subprocess
+import tempfile
+from pathlib import Path
+from typing import Optional
+
+import pyrodigal
+from Bio import SeqIO
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
+from Bio.SeqFeature import SeqFeature, FeatureLocation
+
+REPO_DIR   = Path(__file__).resolve().parent.parent
+DB_DIR     = REPO_DIR / "DB"
+INPUT_GBK  = DB_DIR / "EC-K-typing_group1and4_v0.8.gbk"
+OUTPUT_GBK = DB_DIR / "EC-K-typing_group1and4_v0.9.gbk"
+FASTA_DIR  = DB_DIR / "kl300_303_fastas"
+VALID_TSV  = DB_DIR / "kl300_303_validation_summary.tsv"
+
+KLEB_REF_GBK = Path(
+    "/Users/lshef4/Library/Python/3.9/lib/python/site-packages"
+    "/kaptive/data/Klebsiella_k_locus_primary_reference.gbk"
+)
+BLASTP      = "/Users/lshef4/lshef4_to_copy/anaconda3/envs/my_python.env/bin/blastp"
+MAKEBLASTDB = "/Users/lshef4/lshef4_to_copy/anaconda3/envs/my_python.env/bin/makeblastdb"
+MINIMAP2 = "/Users/lshef4/lshef4_to_copy/anaconda3/envs/kleborate_test/bin/minimap2"
+FLANK    = 500
+
+MIN_GENE_ID  = 30.0
+MIN_GENE_COV = 50.0
+
+
+def get_locus_name(rec):
+    for f in rec.features:
+        if f.type == "source":
+            for note in f.qualifiers.get("note", []):
+                m = re.search(r"K locus:\s*(\S+)", note)
+                if m:
+                    return m.group(1)
+    return rec.name.split("_")[0]
+
+
+def extract_klebsiella_proteins(kleb_gbk: Path, out_faa: Path):
+    with open(out_faa, "w") as fh:
+        for rec in SeqIO.parse(str(kleb_gbk), "genbank"):
+            ln = get_locus_name(rec)
+            for f in rec.features:
+                if f.type != "CDS":
+                    continue
+                gene = f.qualifiers.get("gene", ["unknown"])[0]
+                aa = f.qualifiers.get("translation", [None])[0]
+                if aa:
+                    fh.write(f">{ln}__{gene}\n{aa}\n")
+
+
+def make_blastdb(faa: Path, db_path: Path):
+    subprocess.run(
+        [MAKEBLASTDB, "-in", str(faa), "-dbtype", "prot", "-out", str(db_path)],
+        check=True, capture_output=True
+    )
+
+
+def blastp_annotate(query_faa: Path, db_path: Path):
+    result = subprocess.run(
+        [BLASTP, "-query", str(query_faa), "-db", str(db_path),
+         "-outfmt", "6 qseqid sseqid pident qcovs",
+         "-max_target_seqs", "1", "-num_threads", "4"],
+        capture_output=True, text=True, check=True
+    )
+    hits = {}
+    for line in result.stdout.splitlines():
+        parts = line.split("\t")
+        if len(parts) < 4:
+            continue
+        qid, sid, pident, qcovs = parts[0], parts[1], float(parts[2]), float(parts[3])
+        if pident >= MIN_GENE_ID and qcovs >= MIN_GENE_COV:
+            gene = sid.split("__")[-1]
+            if qid not in hits:
+                hits[qid] = gene
+    return hits
+
+
+def predict_and_annotate(locus_seq: str, locus_name: str, blast_db: Path):
+    orf_finder = pyrodigal.GeneFinder(meta=True)
+    genes = orf_finder.find_genes(locus_seq.encode())
+    with tempfile.NamedTemporaryFile(suffix=".faa", mode="w", delete=False) as fh:
+        faa_path = Path(fh.name)
+        for i, gene in enumerate(genes):
+            fh.write(f">gene_{i+1}\n{gene.translate()}\n")
+    gene_names = blastp_annotate(faa_path, blast_db)
+    faa_path.unlink()
+    features = []
+    for i, gene in enumerate(genes):
+        gid = f"gene_{i+1}"
+        gname = gene_names.get(gid, "")
+        loc = FeatureLocation(gene.begin - 1, gene.end, strand=gene.strand)
+        quals = {"product": [gname if gname else "hypothetical protein"],
+                 "translation": [gene.translate()]}
+        if gname:
+            quals["gene"] = [gname]
+        features.append(SeqFeature(loc, type="CDS", qualifiers=quals))
+    return features
+
+
+def build_gbk_record(locus_name: str, seq: str, accession: str, features: list) -> SeqRecord:
+    source = SeqFeature(
+        FeatureLocation(0, len(seq), strand=1),
+        type="source",
+        qualifiers={"note": [f"K locus: {locus_name}"],
+                    "organism": ["Escherichia coli"],
+                    "mol_type": ["genomic DNA"]}
+    )
+    rec = SeqRecord(
+        Seq(seq),
+        id=f"{locus_name}_ATB",
+        name=f"{locus_name}_ATB",
+        description=f"E. coli {locus_name} K-locus, extracted from ATB assembly {accession}",
+        features=[source] + features,
+        annotations={"molecule_type": "DNA"}
+    )
+    return rec
+
+
+def extract_locus_from_assembly(locus_seq: str, assembly_fasta: Path,
+                                locus_name: str) -> Optional[str]:
+    with tempfile.NamedTemporaryFile(suffix=".fa", mode="w", delete=False) as fh:
+        fh.write(f">{locus_name}\n{locus_seq}\n")
+        query_fa = Path(fh.name)
+    try:
+        result = subprocess.run(
+            [MINIMAP2, "-c", "--cs", "-x", "asm5", str(assembly_fasta), str(query_fa)],
+            capture_output=True, text=True, check=True
+        )
+    finally:
+        query_fa.unlink()
+    if not result.stdout.strip():
+        return None
+    best = None
+    for line in result.stdout.splitlines():
+        cols = line.split("\t")
+        if len(cols) < 12:
+            continue
+        t_name  = cols[5]
+        t_len   = int(cols[6])
+        t_start = int(cols[7])
+        t_end   = int(cols[8])
+        n_match = int(cols[9])
+        if best is None or n_match > best[4]:
+            best = (t_name, t_len, t_start, t_end, n_match)
+    if best is None:
+        return None
+    t_name, t_len, t_start, t_end, _ = best
+    extract_start = max(0, t_start - FLANK)
+    extract_end   = min(t_len, t_end + FLANK)
+    assembly = SeqIO.to_dict(SeqIO.parse(str(assembly_fasta), "fasta"))
+    if t_name not in assembly:
+        return None
+    region = str(assembly[t_name].seq[extract_start:extract_end])
+    print(f"    Extracted {len(region):,} bp from {t_name}:{extract_start}-{extract_end}")
+    return region
+
+
+def auto_select_fastas():
+    import csv
+    selected = {}
+    if not VALID_TSV.exists():
+        raise FileNotFoundError(f"Validation summary not found: {VALID_TSV}")
+    with open(VALID_TSV) as fh:
+        reader = csv.DictReader(fh, delimiter="\t")
+        for row in reader:
+            kl = row.get("Expected_KL", "")
+            correct = row.get("Correct", "")
+            asm = Path(row.get("Assembly", "")).stem
+            if correct == "True" and kl in ("KL300", "KL303") and kl not in selected:
+                fa = FASTA_DIR / f"{asm}.fa"
+                if fa.exists():
+                    selected[kl] = (fa, asm)
+                    print(f"    Auto-selected for {kl}: {asm}")
+    return selected
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--kl300_fasta", type=Path)
+    parser.add_argument("--kl303_fasta", type=Path)
+    parser.add_argument("--auto", action="store_true")
+    args = parser.parse_args()
+
+    if args.auto:
+        selected = auto_select_fastas()
+        kl300_fa, kl300_acc = selected.get("KL300", (None, None))
+        kl303_fa, kl303_acc = selected.get("KL303", (None, None))
+    else:
+        kl300_fa  = args.kl300_fasta
+        kl303_fa  = args.kl303_fasta
+        kl300_acc = kl300_fa.stem if kl300_fa else None
+        kl303_acc = kl303_fa.stem if kl303_fa else None
+
+    to_replace = {}
+    if kl300_fa:
+        to_replace["KL300"] = (kl300_fa, kl300_acc)
+    if kl303_fa:
+        to_replace["KL303"] = (kl303_fa, kl303_acc)
+    if not to_replace:
+        raise ValueError("Need at least one FASTA.")
+
+    print("\n[1] Building BLASTp reference DB...")
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir = Path(tmpdir)
+        kleb_faa  = tmpdir / "kleb_ref.faa"
+        blast_db  = tmpdir / "kleb_ref"
+        extract_klebsiella_proteins(KLEB_REF_GBK, kleb_faa)
+        make_blastdb(kleb_faa, blast_db)
+
+        print("\n[2] Loading existing KL300/KL303 sequences from v0.8 GenBank...")
+        existing_loci = {}
+        for rec in SeqIO.parse(str(INPUT_GBK), "genbank"):
+            ln = get_locus_name(rec)
+            if ln in ("KL300", "KL303"):
+                existing_loci[ln] = str(rec.seq)
+                print(f"    {ln}: {len(rec.seq):,} bp")
+
+        print("\n[3] Extracting locus regions from assemblies via minimap2...")
+        new_seqs = {}
+        for kl, (fa, acc) in to_replace.items():
+            seq = extract_locus_from_assembly(existing_loci[kl], fa, kl)
+            if seq is None:
+                raise RuntimeError(f"Failed to extract {kl} locus from {acc}")
+            new_seqs[kl] = (seq, acc)
+
+        print("\n[4] Annotating extracted loci...")
+        new_records = {}
+        for kl, (seq, acc) in new_seqs.items():
+            features = predict_and_annotate(seq, kl, blast_db)
+            n_ann = sum(1 for f in features if f.qualifiers.get("gene"))
+            print(f"    {kl}: {len(features)} CDS, {n_ann} annotated")
+            new_records[kl] = build_gbk_record(kl, seq, acc, features)
+
+    print(f"\n[5] Writing v0.9 GenBank: {OUTPUT_GBK}")
+    written = 0
+    replaced = set()
+    with open(OUTPUT_GBK, "w") as out:
+        for rec in SeqIO.parse(str(INPUT_GBK), "genbank"):
+            ln = get_locus_name(rec)
+            if ln in new_records:
+                SeqIO.write(new_records[ln], out, "genbank")
+                replaced.add(ln)
+            else:
+                SeqIO.write(rec, out, "genbank")
+            written += 1
+
+    print(f"v0.9 GenBank written: {OUTPUT_GBK}")
+    print(f"  Total records: {written}")
+    print(f"  Replaced: {', '.join(sorted(replaced))}")
+
+
+if __name__ == "__main__":
+    main()
 ```
 
 The script accepts either or both loci (`--kl300_fasta`, `--kl303_fasta`,
@@ -804,6 +4539,113 @@ or were indistinguishable from other types, reducing the database from
 python3 scripts/remove_oversized_loci.py --cds-threshold 60
 ```
 
+```{python}
+#| code-fold: true
+#| code-summary: "Show full script: remove_oversized_loci.py"
+#!/usr/bin/env python3
+"""
+remove_oversized_loci.py — Remove aberrantly large novel loci from the v0.9 GenBank.
+
+Novel ATB loci with >60 CDS captured extensive flanking chromosomal sequence during
+extraction.  These universally outscore legitimate loci in Kaptive because their
+conserved chromosomal genes are present in every assembly, giving a normalized score
+close to the maximum regardless of K-locus identity.
+
+The original 93 BSI loci have a maximum of 53 CDS (KL308).  A cutoff of 60 CDS
+cleanly separates legitimate K loci from extraction artefacts in the novel set.
+
+Usage:
+    python scripts/remove_oversized_loci.py [--cds-threshold N] [--dry-run]
+"""
+
+import argparse
+import re
+import shutil
+from pathlib import Path
+
+from Bio import SeqIO
+
+REPO_DIR       = Path(__file__).resolve().parent.parent
+DB_DIR         = REPO_DIR / "DB"
+INPUT_GBK      = DB_DIR / "EC-K-typing_group1and4_v0.9.gbk"
+OUTPUT_GBK     = DB_DIR / "EC-K-typing_group1and4_v0.9.gbk"   # overwrite
+NOVEL_SUMMARY  = DB_DIR / "novel_kl_summary.tsv"
+NOVEL_MAP      = DB_DIR / "novel_rep_kl_map.tsv"
+NOVEL_FASTAS   = DB_DIR / "novel_rep_fastas"
+
+
+def get_locus_name(rec) -> str:
+    for f in rec.features:
+        if f.type == "source":
+            for note in f.qualifiers.get("note", []):
+                m = re.search(r"K locus:\s*(\S+)", note)
+                if m:
+                    return m.group(1)
+    return rec.name.split("_")[0]
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--cds-threshold", type=int, default=60,
+                        help="Remove loci with more than this many CDS (default: 60)")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Print what would be removed without modifying files")
+    args = parser.parse_args()
+
+    to_remove = set()
+    kept = []
+    for rec in SeqIO.parse(str(INPUT_GBK), "genbank"):
+        lname = get_locus_name(rec)
+        n_cds = len([f for f in rec.features if f.type == "CDS"])
+        if n_cds > args.cds_threshold:
+            to_remove.add(lname)
+            print(f"  REMOVE {lname:10s}  {n_cds:4d} CDS  {len(rec):,} bp")
+        else:
+            kept.append(rec)
+
+    print(f"\nRemoving {len(to_remove)} loci; keeping {len(kept)}")
+
+    if args.dry_run:
+        print("(dry run — no files modified)")
+        return
+
+    tmp_gbk = INPUT_GBK.with_suffix(".tmp.gbk")
+    SeqIO.write(kept, str(tmp_gbk), "genbank")
+    tmp_gbk.replace(INPUT_GBK)
+    print(f"Written: {INPUT_GBK}  ({len(kept)} records)")
+
+    if NOVEL_SUMMARY.exists():
+        lines = NOVEL_SUMMARY.read_text().splitlines()
+        header = lines[0]
+        kept_lines = [l for l in lines[1:] if l.split("\t")[0] not in to_remove]
+        NOVEL_SUMMARY.write_text("\n".join([header] + kept_lines) + "\n")
+        print(f"Updated: {NOVEL_SUMMARY}  ({len(kept_lines)} entries)")
+
+    if NOVEL_MAP.exists():
+        lines = NOVEL_MAP.read_text().splitlines()
+        header = lines[0]
+        kept_lines = [l for l in lines[1:] if l.split("\t")[0] not in to_remove]
+        NOVEL_MAP.write_text("\n".join([header] + kept_lines) + "\n")
+        print(f"Updated: {NOVEL_MAP}  ({len(kept_lines)} entries)")
+
+    if NOVEL_FASTAS.exists():
+        kept_accs = set()
+        if NOVEL_MAP.exists():
+            for line in NOVEL_MAP.read_text().splitlines()[1:]:
+                parts = line.split("\t")
+                if len(parts) >= 2:
+                    kept_accs.add(parts[1].strip())
+        for fa in NOVEL_FASTAS.glob("*.fa"):
+            stem = fa.stem
+            if stem not in kept_accs:
+                print(f"  Orphaned FASTA (not in map): {fa.name} — NOT deleted (manual check needed)")
+    print("Done.")
+
+
+if __name__ == "__main__":
+    main()
+```
+
 Novel ATB extractions with >60 predicted CDS captured extensive flanking
 chromosomal sequence. These loci universally outscored legitimate loci
 because their conserved chromosomal genes are present in every assembly.
@@ -866,6 +4708,11 @@ python3 scripts/type_normalized.py \
     --db DB/EC-K-typing_group1and4_v0.9.gbk \
     --suffix v0.9norm_full
 ```
+
+::: callout-note
+The full `type_normalized.py` script is shown as a collapsible block in
+**Phase 11, Step 11.1** above.
+:::
 
 The script loads representative assemblies from three sources:
 
@@ -932,6 +4779,199 @@ python3 scripts/kpsm_screen.py \
     --output-dir results/kpsm_screen/
 ```
 
+```{python}
+#| code-fold: true
+#| code-summary: "Show full script: kpsm_screen.py"
+#!/usr/bin/env python3
+"""
+kpsm_screen.py — Group 2/3 pre-screen for E. coli G1/G4 K-locus typing.
+
+kpsM encodes an inner membrane component of the Group 2/3 ABC-transporter
+capsule export system. It is present in all Group 2/3 strains and absent
+from Group 1/4 strains. kpsM_3 is the Group 3-specific paralogue. Detection
+of either gene (>=90% identity, >=80% coverage) identifies a Group 2/3
+organism for which G1/G4 typing should be suppressed.
+
+Usage:
+    python kpsm_screen.py --assembly genome.fa --kpsm-ref DB/kpsM_reference.fasta
+
+    python kpsm_screen.py \\
+        --assembly-dir assemblies/ \\
+        --kpsm-ref DB/kpsM_reference.fasta \\
+        --kaptive-db DB/EC-K-typing_group1and4_v0.9.gbk \\
+        --output-dir results/ \\
+        --run-kaptive
+"""
+
+import argparse
+import os
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+KPSM_PIDENT_THRESH = 90.0
+KPSM_QCOV_THRESH   = 80.0
+BLAST_EVALUE       = 1e-10
+
+
+def make_blast_db(fasta: Path, tmpdir: str) -> str:
+    db = os.path.join(tmpdir, "query_db")
+    subprocess.run(
+        ["makeblastdb", "-in", str(fasta), "-dbtype", "nucl", "-out", db],
+        check=True, capture_output=True
+    )
+    return db
+
+
+def blast_kpsm(assembly: Path, kpsm_ref: Path, tmpdir: str):
+    db = make_blast_db(assembly, tmpdir)
+    result = subprocess.run(
+        [
+            "blastn",
+            "-query", str(kpsm_ref),
+            "-db", db,
+            "-evalue", str(BLAST_EVALUE),
+            "-outfmt", "6 qseqid sseqid pident length qstart qend sstart send qlen",
+            "-max_target_seqs", "5",
+        ],
+        capture_output=True, text=True
+    )
+    best_pident, best_qcov = None, None
+    for line in result.stdout.strip().splitlines():
+        parts = line.split("\t")
+        if len(parts) < 9:
+            continue
+        pident  = float(parts[2])
+        aln_len = int(parts[3])
+        qlen    = int(parts[8])
+        qcov    = 100.0 * aln_len / qlen
+        if best_pident is None or pident > best_pident:
+            best_pident = pident
+            best_qcov   = qcov
+    if best_pident is None:
+        return False, None, None
+    hit = (best_pident >= KPSM_PIDENT_THRESH) and (best_qcov >= KPSM_QCOV_THRESH)
+    return hit, best_pident, best_qcov
+
+
+def run_kaptive(assemblies: list, kaptive_db: Path, output_dir: Path):
+    kaptive_out = output_dir / "kaptive_output.tsv"
+    cmd = [
+        "kaptive", "assembly",
+        "-a", *[str(a) for a in assemblies],
+        "-k", str(kaptive_db),
+        "-o", str(kaptive_out),
+    ]
+    print(f"  Running Kaptive on {len(assemblies)} assembly/assemblies...")
+    subprocess.run(cmd, check=True)
+    return kaptive_out
+
+
+def screen_assemblies(assemblies: list, kpsm_ref: Path):
+    results = []
+    with tempfile.TemporaryDirectory() as tmpdir:
+        for i, asm in enumerate(assemblies, 1):
+            asm = Path(asm)
+            print(f"  [{i}/{len(assemblies)}] {asm.name} ...", end=" ", flush=True)
+            hit, pident, qcov = blast_kpsm(asm, kpsm_ref, tmpdir)
+            if hit:
+                group = "Group2_3"
+                print(f"kpsM+ (pident={pident:.1f}%, qcov={qcov:.1f}%) -> Group 2/3")
+            elif pident is not None:
+                group = "G1_G4_candidate"
+                print(f"kpsM- (best pident={pident:.1f}%) -> G1/G4 candidate")
+            else:
+                group = "G1_G4_candidate"
+                print("no kpsM hit -> G1/G4 candidate")
+            results.append({
+                "assembly":   str(asm),
+                "kpsM_hit":   hit,
+                "kpsM_pident": f"{pident:.1f}" if pident is not None else "NA",
+                "kpsM_qcov":   f"{qcov:.1f}"   if qcov   is not None else "NA",
+                "group":       group,
+            })
+    return results
+
+
+def write_tsv(results: list, path: Path):
+    cols = ["assembly", "kpsM_hit", "kpsM_pident", "kpsM_qcov", "group", "kaptive_run"]
+    with open(path, "w") as f:
+        f.write("\t".join(cols) + "\n")
+        for r in results:
+            kaptive_run = r.get("kaptive_run", False)
+            f.write("\t".join([
+                r["assembly"], str(r["kpsM_hit"]),
+                r["kpsM_pident"], r["kpsM_qcov"], r["group"], str(kaptive_run),
+            ]) + "\n")
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Screen assemblies for kpsM (Group 2/3 marker) before G1/G4 Kaptive typing."
+    )
+    src = parser.add_mutually_exclusive_group(required=True)
+    src.add_argument("--assembly", type=Path)
+    src.add_argument("--assembly-dir", type=Path)
+    src.add_argument("--assembly-list", type=Path)
+
+    parser.add_argument("--kpsm-ref", type=Path,
+                        default=Path(__file__).parent.parent / "DB" / "kpsM_reference.fasta")
+    parser.add_argument("--kaptive-db", type=Path)
+    parser.add_argument("--output-dir", type=Path, default=Path("kpsm_screen_results"))
+    parser.add_argument("--run-kaptive", action="store_true")
+    parser.add_argument("--pident", type=float, default=KPSM_PIDENT_THRESH)
+    parser.add_argument("--qcov",   type=float, default=KPSM_QCOV_THRESH)
+    args = parser.parse_args()
+
+    global KPSM_PIDENT_THRESH, KPSM_QCOV_THRESH
+    KPSM_PIDENT_THRESH = args.pident
+    KPSM_QCOV_THRESH   = args.qcov
+
+    if args.assembly:
+        assemblies = [args.assembly]
+    elif args.assembly_dir:
+        assemblies = sorted(
+            list(args.assembly_dir.glob("*.fa")) +
+            list(args.assembly_dir.glob("*.fasta")) +
+            list(args.assembly_dir.glob("*.fna"))
+        )
+        if not assemblies:
+            sys.exit(f"No FASTA files found in {args.assembly_dir}")
+    else:
+        assemblies = [Path(l.strip()) for l in args.assembly_list.read_text().splitlines() if l.strip()]
+
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+
+    print(f"\nkpsM pre-screen: {len(assemblies)} assembly/assemblies")
+    results = screen_assemblies(assemblies, args.kpsm_ref)
+
+    candidates = [r["assembly"] for r in results if r["group"] == "G1_G4_candidate"]
+    if args.run_kaptive:
+        if not args.kaptive_db:
+            sys.exit("--kaptive-db required when using --run-kaptive")
+        if candidates:
+            run_kaptive([Path(a) for a in candidates], args.kaptive_db, args.output_dir)
+        else:
+            print("No G1/G4 candidates — Kaptive not run.")
+        for r in results:
+            r["kaptive_run"] = r["group"] == "G1_G4_candidate"
+
+    tsv_out = args.output_dir / "kpsm_screen_results.tsv"
+    write_tsv(results, tsv_out)
+
+    n_g23  = sum(1 for r in results if r["group"] == "Group2_3")
+    n_cand = sum(1 for r in results if r["group"] == "G1_G4_candidate")
+    print(f"\nSummary")
+    print(f"  Group 2/3 (kpsM+, G1/G4 suppressed) : {n_g23}")
+    print(f"  G1/G4 candidates (kpsM-)             : {n_cand}")
+    print(f"  Results written to                   : {tsv_out}")
+
+
+if __name__ == "__main__":
+    main()
+```
+
 **Output:** `kpsm_screen_results/kpsm_screen_results.tsv` — one row per
 assembly with columns `assembly`, `kpsM_hit`, `pident`, `qcov`, `group`
 (`Group2_3` or `G1_G4_candidate`).
@@ -949,6 +4989,169 @@ python3 scripts/validate_kpsm_screen.py \
     --kpsm-ref DB/kpsM_reference.fasta \
     --output results/kpsm_validation.tsv \
     --workers 8
+```
+
+```{python}
+#| code-fold: true
+#| code-summary: "Show full script: validate_kpsm_screen.py"
+#!/usr/bin/env python3
+"""
+validate_kpsm_screen.py — Batch kpsM screen for validation.
+
+Runs a fast kpsM BLAST screen across a directory of genome assemblies
+(plain FASTA or .gz) using blastn -subject (no makeblastdb needed per
+genome). Parallelised with multiprocessing.
+
+Usage:
+    python validate_kpsm_screen.py \\
+        --genome-dir /path/to/genomes/ \\
+        --kpsm-ref DB/kpsM_reference.fasta \\
+        --output results/kpsm_validation.tsv \\
+        --workers 8
+"""
+
+import argparse
+import gzip
+import multiprocessing
+import os
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+KPSM_PIDENT_THRESH = 90.0
+KPSM_QCOV_THRESH   = 80.0
+BLAST_EVALUE       = 1e-10
+BLAST_BIN          = os.path.expanduser("~/.local/bin/blastn")
+
+
+def decompress_to_tmp(gz_path: Path, tmpdir: str) -> str:
+    if str(gz_path).endswith('.gz'):
+        out = os.path.join(tmpdir, gz_path.stem)
+        with gzip.open(gz_path, 'rb') as fin, open(out, 'wb') as fout:
+            fout.write(fin.read())
+        return out
+    return str(gz_path)
+
+
+def screen_one(args):
+    genome_path, kpsm_ref, pident_thresh, qcov_thresh = args
+    genome_path = Path(genome_path)
+    name = genome_path.name.replace('.fa.gz', '').replace('.fasta.gz', '').replace('.fna.gz', '')
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        try:
+            fa = decompress_to_tmp(genome_path, tmpdir)
+        except Exception as e:
+            return {"assembly": name, "kpsM_hit": False,
+                    "gene": "ERROR", "pident": "NA", "qcov": "NA",
+                    "group": f"ERROR:{e}"}
+
+        result = subprocess.run(
+            [
+                BLAST_BIN,
+                "-query", str(kpsm_ref),
+                "-subject", fa,
+                "-evalue", str(BLAST_EVALUE),
+                "-outfmt", "6 qseqid sseqid pident length qstart qend sstart send qlen",
+                "-max_target_seqs", "5",
+                "-perc_identity", "70",
+            ],
+            capture_output=True, text=True, timeout=60
+        )
+
+    best_pident, best_qcov, best_gene = None, None, None
+    for line in result.stdout.strip().splitlines():
+        parts = line.split("\t")
+        if len(parts) < 9:
+            continue
+        gene    = parts[0]
+        pident  = float(parts[2])
+        aln_len = int(parts[3])
+        qlen    = int(parts[8])
+        qcov    = 100.0 * aln_len / qlen
+        if best_pident is None or pident > best_pident:
+            best_pident = pident
+            best_qcov   = qcov
+            best_gene   = gene
+
+    if best_pident is None:
+        return {"assembly": name, "kpsM_hit": False,
+                "gene": "NA", "pident": "NA", "qcov": "NA", "group": "G1_G4_candidate"}
+
+    hit = (best_pident >= pident_thresh) and (best_qcov >= qcov_thresh)
+    return {
+        "assembly": name,
+        "kpsM_hit": hit,
+        "gene":     best_gene,
+        "pident":   f"{best_pident:.1f}",
+        "qcov":     f"{best_qcov:.1f}",
+        "group":    "Group2_3" if hit else "G1_G4_candidate",
+    }
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Batch kpsM screen for validation against large assembly collections."
+    )
+    parser.add_argument("--genome-dir", type=Path, required=True)
+    parser.add_argument("--kpsm-ref", type=Path,
+                        default=Path(__file__).parent.parent / "DB" / "kpsM_reference.fasta")
+    parser.add_argument("--output", type=Path, default=Path("kpsm_validation.tsv"))
+    parser.add_argument("--workers", type=int, default=8)
+    parser.add_argument("--pident", type=float, default=KPSM_PIDENT_THRESH)
+    parser.add_argument("--qcov",   type=float, default=KPSM_QCOV_THRESH)
+    args = parser.parse_args()
+
+    pident_thresh = args.pident
+    qcov_thresh   = args.qcov
+
+    exts = ('.fa', '.fa.gz', '.fasta', '.fasta.gz', '.fna', '.fna.gz')
+    genomes = [p for p in sorted(args.genome_dir.iterdir())
+               if p.name.endswith(exts) and not p.name.startswith('.')]
+
+    if not genomes:
+        sys.exit(f"No genome files found in {args.genome_dir}")
+
+    print(f"kpsM batch validation")
+    print(f"  Genomes      : {len(genomes)}")
+    print(f"  kpsM ref     : {args.kpsm_ref}")
+    print(f"  Workers      : {args.workers}")
+
+    tasks = [(str(g), str(args.kpsm_ref), pident_thresh, qcov_thresh) for g in genomes]
+
+    results = []
+    done = 0
+    with multiprocessing.Pool(processes=args.workers) as pool:
+        for res in pool.imap_unordered(screen_one, tasks, chunksize=20):
+            results.append(res)
+            done += 1
+            if done % 500 == 0 or done == len(genomes):
+                n_pos = sum(1 for r in results if r["kpsM_hit"])
+                print(f"  [{done}/{len(genomes)}] kpsM+ so far: {n_pos}", flush=True)
+
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    cols = ["assembly", "kpsM_hit", "gene", "pident", "qcov", "group"]
+    with open(args.output, "w") as f:
+        f.write("\t".join(cols) + "\n")
+        for r in sorted(results, key=lambda x: x["assembly"]):
+            f.write("\t".join(str(r[c]) for c in cols) + "\n")
+
+    n_pos = sum(1 for r in results if r["kpsM_hit"])
+    n_neg = len(results) - n_pos
+    print(f"\n  Total screened   : {len(results)}")
+    print(f"  kpsM+ (Group 2/3): {n_pos}  {'<-- UNEXPECTED' if n_pos > 0 else '(expected: 0)'}")
+    print(f"  kpsM- (G1/G4)    : {n_neg}")
+    print(f"  Results          : {args.output}")
+
+    if n_pos > 0:
+        for r in results:
+            if r["kpsM_hit"]:
+                print(f"    {r['assembly']}  gene={r['gene']}  pident={r['pident']}  qcov={r['qcov']}")
+
+
+if __name__ == "__main__":
+    main()
 ```
 
 ::: callout-note
@@ -1016,6 +5219,134 @@ types improved coverage. The direct AS_norm + raw AS sort eliminates
 this: when both AS_norm values are equal (e.g. both 2.000), the locus
 with more total aligned evidence (higher raw AS, i.e. more genes) wins.
 :::
+
+**Standalone script:** `normalise_kaptive_scores.py` applies the same
+normalisation to any Kaptive `--scores` output and can be used independently
+of the build pipeline:
+
+```bash
+python3 scripts/normalise_kaptive_scores.py \
+    --db  DB/EC-K-typing_group1and4_v0.9.gbk \
+    --in  results_G14/kaptive_scores.tsv \
+    --out results_G14/kaptive_results_norm.tsv
+```
+
+```{python}
+#| code-fold: true
+#| code-summary: "Show full script: normalise_kaptive_scores.py"
+#!/usr/bin/env python3
+"""
+normalise_kaptive_scores.py — Re-rank Kaptive scores by AS / total_expected_gene_bp.
+
+Kaptive's raw alignment score (AS) accumulates across all reference genes, so
+large loci always score higher than small ones even at identical per-base identity.
+This script corrects for that by dividing AS by the total expected CDS length of
+each reference locus, producing a size-independent per-base identity metric
+(Norm AS). A value of ~2.0 indicates a perfect 100% identity match.
+
+Usage:
+    python3 normalise_kaptive_scores.py \\
+        --db  DB/EC-K-typing_group1and4_v0.9.gbk \\
+        --in  results_G14/kaptive_scores.tsv \\
+        --out results_G14/kaptive_results_norm.tsv
+
+Arguments:
+    --db            Path to the G1/G4 Kaptive GenBank database
+    --in            Kaptive --scores output TSV (locus × assembly score matrix)
+    --out           Output TSV path for normalised results
+    --min-coverage  Minimum fraction of expected genes to call Typeable (default: 0.50)
+"""
+
+import argparse
+import re
+
+import pandas as pd
+from Bio import SeqIO
+
+
+def load_locus_bp(db_path: str) -> dict:
+    """Return {locus_name: total_CDS_bp} from a Kaptive GenBank database."""
+    bp = {}
+    for rec in SeqIO.parse(db_path, "genbank"):
+        lname = rec.name.split("_")[0]
+        for f in rec.features:
+            if f.type == "source":
+                for note in f.qualifiers.get("note", []):
+                    m = re.search(r"K locus:\s*(\S+)", note)
+                    if m:
+                        lname = m.group(1)
+        cds = [f for f in rec.features if f.type == "CDS"]
+        bp[lname] = sum(len(f) for f in cds)
+    return bp
+
+
+def normalise(scores_tsv: str, bp: dict, min_coverage: float) -> pd.DataFrame:
+    df = pd.read_csv(scores_tsv, sep="\t")
+    asm_col = df.columns[0]
+
+    df["total_bp"] = df["Locus"].map(bp).fillna(df["q_len"])
+    df["AS_norm"]  = df["AS"] / df["total_bp"].clip(lower=1)
+
+    rows = []
+    for asm, grp in df.groupby(asm_col):
+        active = grp[grp["AS"] > 0]
+        if active.empty:
+            rows.append({
+                "Assembly": asm, "Best match locus": "none",
+                "Best match confidence": "Untypeable",
+                "Genes found": 0, "Genes expected": 0,
+                "Gene coverage": "0.0%", "Raw AS": 0, "Norm AS": 0.0,
+            })
+            continue
+        best = active.sort_values(["AS_norm", "AS"], ascending=[False, False]).iloc[0]
+        gf   = int(best["genes_found"])
+        ge   = int(best["genes_expected"])
+        cov  = gf / ge if ge > 0 else 0
+        conf = "Typeable" if cov >= min_coverage else "Untypeable"
+        rows.append({
+            "Assembly": asm,
+            "Best match locus": best["Locus"],
+            "Best match confidence": conf,
+            "Genes found": gf,
+            "Genes expected": ge,
+            "Gene coverage": f"{100 * cov:.1f}%",
+            "Raw AS": int(best["AS"]),
+            "Norm AS": round(best["AS_norm"], 4),
+        })
+    return pd.DataFrame(rows)
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--db",  required=True, metavar="PATH",
+                    help="Kaptive GenBank database (.gbk)")
+    ap.add_argument("--in",  required=True, dest="scores_tsv", metavar="PATH",
+                    help="Kaptive --scores output TSV")
+    ap.add_argument("--out", required=True, metavar="PATH",
+                    help="Output TSV for normalised results")
+    ap.add_argument("--min-coverage", type=float, default=0.50, metavar="FLOAT",
+                    help="Min gene coverage to call Typeable (default: 0.50)")
+    args = ap.parse_args()
+
+    print(f"Loading locus stats from {args.db}...")
+    bp = load_locus_bp(args.db)
+    print(f"  {len(bp)} loci loaded")
+
+    print(f"Normalising scores from {args.scores_tsv}...")
+    results = normalise(args.scores_tsv, bp, args.min_coverage)
+
+    n_typeable   = (results["Best match confidence"] == "Typeable").sum()
+    n_untypeable = (results["Best match confidence"] == "Untypeable").sum()
+    print(f"  {len(results)} assemblies: {n_typeable} Typeable, {n_untypeable} Untypeable")
+
+    results.to_csv(args.out, sep="\t", index=False)
+    print(f"Written: {args.out}")
+
+
+if __name__ == "__main__":
+    main()
+```
 
 ### Key Design Decisions
 
