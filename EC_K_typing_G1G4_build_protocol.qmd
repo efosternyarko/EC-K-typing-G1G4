@@ -1,0 +1,1054 @@
+---
+title: "EC K-typing G1/G4 Database Build Protocol"
+subtitle: "From bloodstream genome screening to AllTheBacteria expansion"
+author: "Dr Ebenezer Foster-Nyarko"
+date: today
+date-format: "D MMMM YYYY"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    toc-title: "Contents"
+    number-sections: true
+    theme: cosmo
+    code-fold: false
+    code-copy: true
+    highlight-style: github
+    self-contained: true
+  pdf:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    colorlinks: true
+    geometry: margin=2.5cm
+    fontsize: 11pt
+execute:
+  eval: false
+  echo: true
+---
+
+## Overview {.unnumbered}
+
+This protocol describes the complete construction and validation of a
+[Kaptive](https://github.com/klebgenomics/Kaptive)-compatible reference
+database for typing *Escherichia coli* Group 1 and Group 4 (G1/G4) capsular
+polysaccharide (K) loci. G1/G4 loci use the Wzy-dependent biosynthesis
+pathway and are flanked by the conserved chromosomal genes *galF* (upstream)
+and *gnd* (downstream).
+
+**Repository:** <https://github.com/efosternyarko/EC-K-typing-G1G4>
+
+::: callout-important
+## Sequential typing is mandatory
+
+This database must be used **after** screening with the G2/G3 database.
+Run G2/G3 first; apply the G1/G4 database only to untypeable assemblies.
+
+A combined all-groups database causes **wzy-interference**: G1/G4 (wzy-based)
+loci consistently outscore G2/G3 (kps-based) loci in direct competition,
+rendering genuine G2/G3 loci untypeable. Validated in the Malawi dataset:
+82/100 correctly G2/G3-typed assemblies became untypeable with the combined
+database.
+:::
+
+### Version history
+
+| Version | Loci | Notes |
+|---------|------|-------|
+| v0.1–v0.3.1 | 93 | Initial BSI isolate set; iterative representative swapping and annotation fixes |
+| v0.4 | 93 | Conserved genes stripped (galF, gnd, ugd, wza, wzb, wzc) from all records |
+| v0.5 | 93 | KL306 and KL307 replaced with NCBI representatives |
+| v0.6 | 93 | Conserved genes restored to 91 loci; KL301 stays stripped |
+| v0.7 | — | Deprecated: combined all-groups DB (wzy-interference artefact) |
+| v0.8 | 667 | + 574 ATB-derived novel loci (KL392–KL968); KL486/562/812 removed |
+| v0.9 | 651 | KL303 rep replaced; 16 further loci removed (12 oversized, KL337 unresolvable, KL446/843/968 merged); 651/651 self-typing, 1126/1126 typeability |
+
+---
+
+## Prerequisites
+
+### Software
+
+| Tool | Version | Purpose |
+|------|---------|---------|
+| Kaptive | ≥ 3.2.1 | K-locus typing |
+| FastKaptive | — | High-throughput typing of large genome collections |
+| minimap2 | ≥ 2.22 | Sequence alignment |
+| BLAST+ | ≥ 2.2.31 | Flanking gene screening, BLASTp annotation |
+| MMseqs2 | 17-b804f | Clustering novel loci |
+| pyrodigal | ≥ 3.0 | Gene prediction |
+| Biopython | ≥ 1.81 | GenBank parsing/writing |
+| LexicMap | 0.8.1 | Targeted genome search (AllTheBacteria) |
+
+Install Python dependencies:
+
+```bash
+pip install kaptive pyrodigal biopython pandas
+```
+
+### Data resources
+
+- **AllTheBacteria (ATB) v202408** — 888 batch archives at
+  `/scratch2/js66/atb_archives/` on M3 HPC (Monash).
+  Each archive: `atb.assembly.incr_release.202408.batch.NNN.tar.xz`,
+  containing FASTA assemblies named `<BioSample_accession>.fa`.
+- **ATB LexicMap index** — `s3://allthebacteria-lexicmap/202408/` (public,
+  AWS eu-west-2).
+- **Klebsiella K-locus primary reference** — bundled with Kaptive at
+  `kaptive/data/Klebsiella_k_locus_primary_reference.gbk`. Used for BLASTp
+  gene name transfer.
+
+### Compute infrastructure
+
+- **M3 HPC (Monash):** `ebenezef@m3.massive.org.au`
+  Scratch: `/home/ebenezef/js66_scratch/ebenn/`
+  SLURM partition: `comp`
+- **AWS:** eu-west-2 region, credentials via `aws configure`
+
+### Local paths (Mac)
+
+```python
+BLASTP      = "/Users/lshef4/lshef4_to_copy/anaconda3/envs/my_python.env/bin/blastp"
+MAKEBLASTDB = "/Users/lshef4/lshef4_to_copy/anaconda3/envs/my_python.env/bin/makeblastdb"
+MINIMAP2    = "/Users/lshef4/lshef4_to_copy/anaconda3/envs/kleborate_test/bin/minimap2"
+KLEB_REF_GBK = "/Users/lshef4/Library/Python/3.9/lib/python/site-packages/kaptive/data/Klebsiella_k_locus_primary_reference.gbk"
+```
+
+::: callout-warning
+## BLAST version compatibility
+Use the same `makeblastdb` and `blastp` binary from the same installation.
+Mixing versions (e.g. `makeblastdb` 2.17 with `blastp` 2.2.31) causes
+database format errors. Both binaries at the path above are v2.2.31.
+:::
+
+### Repository layout
+
+```
+EC-K-typing-G1G4/
+├── DB/
+│   ├── EC-K-typing_group1and4_v0.9.gbk         # current G1/G4 database (651 loci)
+│   ├── EC-K-typing_group2and3_v3.0.0.gbk        # Gladstone G2/G3 database
+│   ├── KL_G1G4_mapping.tsv                      # all 651 KL → source assembly
+│   ├── novel_kl_summary.tsv                     # KL type, accession, cluster size
+│   ├── kaptive_validation_results_v0.9norm.tsv  # intermediate BSI-only validation
+│   ├── kaptive_validation_summary_v0.9norm.tsv
+│   ├── kl300_303_fastas/                        # validated ATB assemblies for KL300/303
+│   ├── atb_lexicmap_results/                    # LexicMap output (raw)
+│   ├── blast_ncbi_results/                      # NCBI candidate genome FASTAs
+│   └── novel_rep_fastas/                        # ATB rep FASTAs for 559 novel loci
+├── flanking_genes/
+│   └── flanking_genes.fasta              # galF + gnd reference sequences
+└── scripts/                              # All pipeline scripts
+```
+
+---
+
+## Part A — Building the Initial Database from Bloodstream Isolates (v0.1–v0.6)
+
+### Background
+
+The initial database was built from 6,673 bloodstream infection (BSI)
+*E. coli* genomes obtained from EnteroBase. These isolates produced no hit
+against the existing Gladstone G2/G3 Kaptive database (kps-based loci), and
+were hypothesised to carry G1/G4 (wzy-based) capsular loci. The working
+directory for this phase is:
+
+```
+/Users/lshef4/Documents/dropbox/work_2025/e_coli_db/db_build_v2/
+├── nohits_genomes/     # 1,112 G2/G3 no-hit assemblies (FASTA)
+├── extracted_loci/     # locus sequences extracted per assembly
+├── extraction_summary.tsv
+└── G1_and_G4_fastkaptive_summary.csv
+```
+
+---
+
+### Phase 1 — FastKaptive Screening and Candidate Selection
+
+**Objective:** Identify the subset of 6,673 BSI genomes carrying G1/G4 loci.
+
+1. All 6,673 assemblies were typed with FastKaptive against the G2/G3
+   reference database.
+2. Assemblies returning no confident G2/G3 type were retained as G1/G4
+   candidates: **1,112 assemblies** (`nohits_genomes/`).
+3. FastKaptive KX type assignments were recorded in
+   `G1_and_G4_fastkaptive_summary.csv`, mapping each assembly to a preliminary
+   KX locus type.
+
+---
+
+### Phase 2 — Locus Extraction and Initial Clustering (v0.1)
+
+**Script:** `build_G1G4_db.py`
+
+```bash
+python3 scripts/build_G1G4_db.py
+```
+
+For each of the 1,112 candidate assemblies:
+
+1. **BLASTn flanking genes** (*galF*, *gnd*, *ugd*, *wza*, *wzb*, *wzc*)
+   against the assembly (e-value ≤1×10^-10^)
+2. **Extract the cps locus region** between *galF* and *gnd*, handling both
+   same-contig and cross-contig cases
+3. Filter extractions: 5,000–60,000 bp retained
+
+Extracted loci then clustered at **95% identity / 80% coverage** using
+CD-HIT-EST (later replaced by MMseqs2 for the ATB phase). The longest
+sequence per cluster was selected as the cluster representative.
+
+**Result:** 125 initial loci (KX01–KX125). Of these, **93 were retained**
+in the filtered database based on validation performance and biological
+evidence; the remaining 32 were excluded as redundant or ambiguous types.
+
+---
+
+### Phase 3 — Annotation and Iterative Validation (v0.1–v0.3.1)
+
+**Script:** `annotate_loci.py`
+
+CDS prediction used pyrodigal (metagenomic mode), with gene names transferred
+by BLASTp against the Klebsiella K-locus primary reference.
+
+GenBank records were constructed in Kaptive-compatible format (see
+@sec-gbk-format) and validated by self-typing: each representative assembly
+must type to its expected KL when the full database is used as the reference.
+
+Across v0.1→v0.3.1, representative assemblies were iteratively swapped for
+better alternatives (`swap_reps_v04.py`) and annotation coordinates corrected.
+By v0.3.1, **88/93 loci** correctly self-typed.
+
+Remaining failures at v0.3.1: **KL300, KL301, KL303, KL306, KL307** — all
+members of the KX01 clade, which shares identical conserved flanking/export
+genes (*wza*, *wzb*, *wzc*, *galF*, *gnd*, *ugd*) with KL302. These shared
+genes contribute equal bitscore to every KX01 reference, masking the
+discriminating variable-region signal.
+
+---
+
+### Phase 4 — Conserved Gene Stripping (v0.4)
+
+**Script:** `make_v04_db.py`
+
+```bash
+python3 scripts/make_v04_db.py
+```
+
+All conserved CDS features (*wza*, *wzb*, *wzc*, *galF*, *galF_2*, *gnd*,
+*ugd*) were removed from all 93 G1/G4 GenBank records. Kaptive then scored
+exclusively on discriminating biosynthetic genes.
+
+**Result:** KL301 now correctly self-typed (88 → **89/93**). KL300, KL303,
+KL306, and KL307 remained failures.
+
+---
+
+### Phase 5 — KL306/KL307 Replacement with NCBI Representatives (v0.5)
+
+**Script:** `make_v05_db.py`
+
+```bash
+python3 scripts/make_v05_db.py
+```
+
+`blast_ncbi_candidates.py` was used to identify NCBI chromosome sequences
+that type unambiguously as KL306 or KL307:
+
+| Locus | Old rep | New rep | Result |
+|-------|---------|---------|--------|
+| KL306 | ESC_CC8109AA_AS | CP099041 | 31/31 CDS, Norm AS 2.000 ✓ |
+| KL307 | ESC_NB5901AA_AS | CP070103 | 34/34 CDS, Norm AS 2.000 ✓ |
+
+A KL300 replacement (CP135488) was evaluated but **reverted**: the candidate
+pulled many assemblies incorrectly to KL300 due to high similarity with other
+KX01 variable regions, causing net regressions in typeability.
+
+KL303 was left unchanged — no NCBI candidate typed unambiguously as KL303;
+the variable region was indistinguishable from KL302/KL352 across all tested
+assemblies.
+
+**Result:** 89 → **91/93** correctly self-typed.
+
+---
+
+### Phase 6 — Conserved Gene Restoration (v0.6)
+
+**Script:** `make_v06_db.py`
+
+```bash
+python3 scripts/make_v06_db.py
+```
+
+Conserved genes were restored to 91 of the 93 loci by copying CDS features
+from v0.3.1 (coordinates are identical for 91 loci; BLASTn liftover used for
+the two loci with new sequences: KL306 and KL307).
+
+| Locus | Action |
+|-------|--------|
+| KL301 | Conserved genes **kept stripped** — their removal is what fixed KL301 |
+| KL306, KL307 | Conserved genes restored via BLASTn liftover onto new sequences |
+| All others (91) | Conserved genes restored directly from v0.3.1 |
+
+**Final v0.6 result:** **91/93 correctly self-typed.** Remaining failures:
+KL300 and KL303 only.
+
+Output: `DB/EC-K-typing_group1and4_v0.6.gbk` (93 loci, G1/G4 only)
+
+---
+
+## Part B — AllTheBacteria Expansion (v0.6 → v0.8)
+
+### Phase 7 — ATB Screening for G1/G4 Candidates
+
+**Objective:** Identify ATB assemblies containing G1/G4 *cps* loci by
+detecting the conserved flanking genes *galF* and *gnd*.
+
+**HPC working directory:**
+```
+/home/ebenezef/js66_scratch/ebenn/atb_screen/
+├── results/          # batch_N_hits.tsv files
+├── novel_loci/       # extracted novel locus FASTAs
+├── logs/
+├── atb_g1g4_candidates.tsv
+└── batches_with_candidates.txt
+```
+
+#### Step 7.1 — Screen all 888 ATB batches (SLURM array)
+
+**Scripts:** `submit_atb_screen.sh` → `atb_screen_batch.py`
+
+```bash
+# On M3:
+cd /home/ebenezef/js66_scratch/ebenn/atb_screen
+sbatch /home/ebenezef/js66_scratch/ebenn/EC-K-typing-G1G4/scripts/submit_atb_screen.sh
+```
+
+Each array task (`1–888`, max 50 concurrent):
+
+1. Extracts all assemblies from the `.tar.xz` archive into a temp directory
+2. Builds a combined FASTA
+3. BLASTn against `flanking_genes/flanking_genes.fasta` (*galF* + *gnd*)
+4. Writes `results/batch_N_hits.tsv`
+
+**BLASTn thresholds:** ≥80% nucleotide identity, ≥70% query coverage,
+e-value ≤1×10^-10^.
+
+```bash
+# Monitor:
+squeue -u ebenezef
+ls results/batch_*_hits.tsv | wc -l   # expect 665 with candidates
+```
+
+#### Step 7.2 — Combine screening results
+
+**Script:** `combine_atb_hits.py`
+
+```bash
+python3 /home/ebenezef/js66_scratch/ebenn/EC-K-typing-G1G4/scripts/combine_atb_hits.py
+```
+
+Filters for genomes with **both** *galF* AND *gnd* hits on the **same contig**.
+Outputs:
+
+- `atb_g1g4_candidates.tsv` — genomes to extract loci from
+- `batches_with_candidates.txt` — batch numbers containing ≥1 candidate
+
+---
+
+### Phase 8 — Novel Locus Extraction
+
+**Objective:** Extract locus sequences between *galF* and *gnd*, discarding
+sequences that match the existing reference database.
+
+#### Step 8.1 — Build novelty-screening BLAST database
+
+**Script:** `setup_novelty_db.sh` *(run once)*
+
+```bash
+bash /home/ebenezef/js66_scratch/ebenn/EC-K-typing-G1G4/scripts/setup_novelty_db.sh
+```
+
+Builds a BLAST nucleotide database from `DB/reference_loci_v0.6.fasta`
+(93 existing loci) at:
+`/home/ebenezef/js66_scratch/ebenn/atb_screen/novelty_db/g1g4_refs`
+
+#### Step 8.2 — Extract novel loci (SLURM array)
+
+**Scripts:** `submit_extract_novel.sh` → `extract_novel_loci.py`
+
+```bash
+sbatch /home/ebenezef/js66_scratch/ebenn/EC-K-typing-G1G4/scripts/submit_extract_novel.sh
+```
+
+Each array task (`1–268`, max 50 concurrent):
+
+1. Loads same-contig candidates for the batch
+2. BLASTn each candidate contig against the novelty DB:
+   - ≥95% identity AND ≥80% coverage → **known type, skip**
+   - Otherwise → **novel candidate**
+3. BLASTn *galF* and *gnd* against the contig to get precise coordinates
+4. Extracts the region between *galF* end and *gnd* start, ±500 bp flanking
+5. Discards extractions <15,000 bp (likely partial/fragmented)
+
+**Result:** 347,524 novel locus sequences across 268 batches.
+
+---
+
+### Phase 9 — Clustering Novel Loci
+
+**Objective:** Collapse 347,524 raw sequences into unique KL types.
+
+#### Step 9.1 — Run MMseqs2 clustering
+
+**Script:** `cluster_novel_loci.sh`
+
+```bash
+sbatch /home/ebenezef/js66_scratch/ebenn/EC-K-typing-G1G4/scripts/cluster_novel_loci.sh
+```
+
+MMseqs2 parameters:
+
+```bash
+mmseqs cluster \
+    "$MMSEQS_DB" "$MMSEQS_CLUDB" "$MMSEQS_TMP" \
+    --min-seq-id 0.95 \    # 95% nucleotide identity
+    -c 0.80 \              # 80% coverage
+    --cov-mode 0 \         # bidirectional coverage
+    --cluster-mode 0 \     # greedy set cover
+    --threads 16
+```
+
+#### Step 9.2 — Assign KL type numbers
+
+Cluster representatives sorted by descending cluster size (most prevalent
+types receive the lowest KL numbers):
+
+```python
+# assign_novel_kl_types.py (run on M3)
+KL_START = 392   # v0.6 highest existing locus is KL391
+```
+
+::: callout-warning
+## KL numbering correction
+
+The `cluster_novel_loci.sh` script header references KL344 as the start.
+This is incorrect — the v0.6 database already contains loci up to **KL391**.
+New types must start at **KL392**. The `assign_novel_kl_types.py` script
+used `KL_START = 392`.
+:::
+
+**Result:** 577 novel KL types assigned (KL392–KL968).
+
+Output files (M3):
+```
+atb_screen/clustering/
+├── novel_kl_types.fasta       # representative sequences
+└── novel_kl_summary.tsv       # KL type, accession, size, cluster count
+```
+
+---
+
+### Phase 10 — Annotation and Database Build (v0.8)
+
+**Objective:** Predict and annotate CDS in novel loci; merge with v0.6 → v0.8.
+
+**Script:** `annotate_and_merge_atb_loci.py`
+
+```bash
+python3 scripts/annotate_and_merge_atb_loci.py 2>&1 | tee /tmp/annotate_v08.log
+```
+
+Pipeline steps:
+
+1. **Partial-capture screening:** BLASTn each novel locus against v0.6.
+   Reject if ≥80% of the novel sequence aligns at ≥95% identity to any
+   existing locus.
+2. **CDS prediction:** pyrodigal in metagenomic mode (`meta=True`)
+3. **BLASTp annotation:** predicted proteins vs Klebsiella K-locus primary
+   reference; transfer gene names at ≥30% identity, ≥50% query coverage
+4. **GenBank record construction** (Kaptive-compatible format; see @sec-gbk-format)
+5. **Merge:** annotated novel records appended to v0.6 GenBank → v0.8
+
+**Result:** 670 records (93 + 577), 57.2% CDS annotated, all passed
+Kaptive format validation.
+
+---
+
+### Phase 11 — Self-typing Validation (Original 93 Loci)
+
+**Objective:** Confirm each of the original 93 BSI loci correctly types
+to its expected KL against the complete v0.8 database.
+
+#### Step 11.1 — Run normalised scoring validation
+
+**Script:** `type_normalized.py`
+
+```bash
+python3 scripts/type_normalized.py \
+    --db DB/EC-K-typing_group1and4_v0.8.gbk \
+    --suffix v0.8norm
+```
+
+::: callout-note
+## Deleting stale scores files
+
+Kaptive `--scores` **appends** to an existing TSV. Always delete the
+scores file before re-running:
+
+```bash
+rm -f DB/kaptive_scores_v0.8norm.tsv
+```
+:::
+
+**Initial result:** 88/93 correctly typed.
+Failures: KL300, KL303, KL312, KL388, KL391.
+
+#### Step 11.2 — Diagnose and fix regressions
+
+BLASTn analysis revealed three novel loci were partial captures of
+existing reference loci:
+
+| Novel locus removed | Identity | Coverage | Duplicate of |
+|---------------------|----------|----------|--------------|
+| KL486 | 100% | 97% | KL312 |
+| KL562 | 99.8% | 100% | KL391 |
+| KL812 | 99.2% | 100% | KL388 |
+
+These were removed from the v0.8 GenBank (667 records). The partial-capture
+screening step in `annotate_and_merge_atb_loci.py` was updated to catch these
+cases in future runs.
+
+**Final v0.8 result:** **91/93 correctly typed, 100% typeability** (567/567
+assemblies typeable). Remaining failures: KL300 and KL303 only.
+
+---
+
+### Phase 12 — Novel Loci Self-typing Validation on M3
+
+**Objective:** Validate that each of the 574 novel loci (KL392–KL968) can
+be correctly typed from its ATB representative assembly against the complete
+v0.8 database.
+
+#### Step 12.1 — Upload files to M3
+
+```bash
+scp DB/EC-K-typing_group1and4_v0.8.gbk \
+    ebenezef@m3.massive.org.au:~/EC-K-typing-G1G4/DB/
+
+scp atb_clustering/novel_kl_summary.tsv \
+    ebenezef@m3.massive.org.au:~/EC-K-typing-G1G4/DB/
+
+scp scripts/validate_novel_loci_m3.sh \
+    scripts/normalise_novel_scores.py \
+    ebenezef@m3.massive.org.au:~/EC-K-typing-G1G4/scripts/
+```
+
+#### Step 12.2 — Submit validation job
+
+**Script:** `validate_novel_loci_m3.sh`
+
+```bash
+sbatch ~/EC-K-typing-G1G4/scripts/validate_novel_loci_m3.sh
+```
+
+The script:
+
+1. Installs Kaptive v3 (`pip install --user "kaptive>=3.0"`)
+2. Loads `module load minimap2/2.28`
+3. Scans candidate archives (`tar tf`) to locate representative accessions
+4. Extracts FASTAs grouped by archive for efficiency into `DB/novel_rep_fastas/`
+5. Runs `kaptive assembly --scores` against v0.8
+6. Runs `normalise_novel_scores.py` to assess self-typing correctness
+
+```bash
+# Monitor:
+tail -f ~/EC-K-typing-G1G4/logs/val_novel_JOBID.log
+```
+
+#### Step 12.3 — Retrieve results and rep FASTAs
+
+To enable full 667-loci self-validation locally, download the novel
+representative FASTAs from M3 after the job completes:
+
+```bash
+mkdir -p DB/novel_rep_fastas
+
+scp -r ebenezef@m3.massive.org.au:\
+~/EC-K-typing-G1G4/DB/novel_rep_fastas/ \
+    DB/
+
+scp ebenezef@m3.massive.org.au:\
+~/EC-K-typing-G1G4/DB/novel_validation_summary_v0.8norm.tsv \
+    DB/
+```
+
+---
+
+## Part C — Resolving KL300 and KL303 (v0.8 → v0.9)
+
+**Background:** KL300 and KL303 share the KX01 polysaccharide gene cluster
+with KL302. The original BSI representative assemblies for these two loci
+type to KL302 (or related loci) under normalised scoring. A targeted LexicMap
+search across all of ATB was required to find assemblies that unambiguously
+carry KL300 or KL303.
+
+---
+
+### Phase 13 — LexicMap Search on EC2
+
+**Script:** `run_atb_lexicmap_ec2.sh`
+
+```bash
+bash scripts/run_atb_lexicmap_ec2.sh
+```
+
+Launches an `r7g.4xlarge` on-demand EC2 instance (16 vCPU, 128 GB RAM,
+ARM64, eu-west-2) and runs LexicMap against the ATB S3 index:
+
+```bash
+lexicmap search \
+    -d /mnt/atb_index \
+    /home/ec2-user/query.fasta \
+    -o /home/ec2-user/results.tsv.gz \
+    --align-min-match-pident 90 \
+    --min-qcov-per-genome 70 \
+    --top-n-genomes 0 \
+    -j 16
+```
+
+Query: `DB/kl_failing_query.fasta` (KL300: 45,380 bp; KL303: 40,992 bp).
+Runtime: ~5h52min. Cost: ~$0.80 total.
+
+**Check progress:**
+
+```bash
+ssh -i ~/.ssh/atb_search_key ec2-user@<PUBLIC_IP> \
+    'tail -20 /home/ec2-user/lexicmap_run.log'
+
+ssh -i ~/.ssh/atb_search_key ec2-user@<PUBLIC_IP> \
+    'test -f /home/ec2-user/DONE && echo DONE || echo "Still running"'
+```
+
+**Fetch results:**
+
+```bash
+bash scripts/fetch_atb_results.sh <INSTANCE_ID> <PUBLIC_IP>
+```
+
+::: callout-note
+## EC2 troubleshooting notes
+
+- Spot quota = 0 on new AWS accounts → use on-demand
+- Default vCPU limit = 16 → use `r7g.4xlarge` not `c7g.8xlarge`
+- User-data 25,600 byte limit → do not embed large FASTA; SCP after instance boots
+- FUSE mount (`/mnt/atb_index`) owned by root → run LexicMap via `sudo nohup bash`
+- `fetch_atb_results.sh`: pass INSTANCE_ID and PUBLIC_IP as arguments directly
+:::
+
+**Analyse results:**
+
+```bash
+python3 scripts/analyse_atb_results.py
+```
+
+**Results:** 16,324,589 alignment rows processed.
+
+| Locus | Candidates | Top candidates (99.8% qcov, 100% pident) |
+|-------|-----------|------------------------------------------|
+| KL300 | 329,240 | SAMD00053151, SAMEA103908486, SAMN12532904 |
+| KL303 | 221,599 | SAMEA6656333, SAMEA6656328, SAMN20959615 |
+
+---
+
+### Phase 14 — Validate KL300/KL303 Candidates on M3
+
+**Script:** `validate_kl300_kl303_m3.sh`
+
+```bash
+scp scripts/validate_kl300_kl303_m3.sh \
+    ebenezef@m3.massive.org.au:~/EC-K-typing-G1G4/scripts/
+
+# On M3:
+sbatch ~/EC-K-typing-G1G4/scripts/validate_kl300_kl303_m3.sh
+```
+
+The script downloads assemblies for the 6 top candidates directly from ENA
+portal API, NCBI datasets, and ATB S3 (in order of priority) — extracting
+from M3 archives is not possible as only 223 of 888 ATB batches are downloaded.
+
+```bash
+# Monitor:
+tail -f ~/EC-K-typing-G1G4/logs/val_kl300_303_JOBID.log
+```
+
+**Validation results (job 52816827):**
+
+| Accession | Expected | Result | Status |
+|-----------|----------|--------|--------|
+| SAMD00053151 | KL300 | KL957 | ✗ |
+| SAMEA103908486 | KL300 | KL668 | ✗ |
+| SAMN12532904 | KL300 | KL957 | ✗ |
+| SAMEA6656333 | KL303 | KL303 | ✓ |
+| SAMEA6656328 | KL303 | KL303 | ✓ |
+| SAMN20959615 | KL303 | KL570 | ✗ |
+
+::: callout-important
+## KL300 unresolved
+
+All three KL300 candidates typed to different novel loci (KL957 ×2, KL668 ×1).
+The LexicMap hits were driven by sequence shared between the v0.8 KL300
+reference and these novel loci (likely conserved biosynthetic genes), not
+by a specific KL300 match. The v0.8 KL300 GenBank record remains in place
+but its sequence origin requires further investigation. A wzy-targeted
+LexicMap search is recommended as a next step.
+:::
+
+---
+
+### Phase 15 — Build v0.9
+
+#### Step 15.1 — Fetch validated KL303 FASTA from M3
+
+```bash
+mkdir -p DB/kl300_303_fastas
+
+scp ebenezef@m3.massive.org.au:\
+~/EC-K-typing-G1G4/DB/kl300_303_fastas/SAMEA6656333.fa \
+    DB/kl300_303_fastas/
+```
+
+Only SAMEA6656333 is fetched; no valid KL300 assembly was identified.
+
+#### Step 15.2 — Extract locus and replace KL303 in GenBank
+
+**Script:** `replace_kl300_kl303.py`
+
+```bash
+python3 scripts/replace_kl300_kl303.py \
+    --kl303_fasta DB/kl300_303_fastas/SAMEA6656333.fa
+```
+
+The script accepts either or both loci (`--kl300_fasta`, `--kl303_fasta`,
+or `--auto`). With only KL303 specified, only KL303 is replaced.
+
+Steps performed:
+
+1. Loads existing KL303 sequence from v0.8 as minimap2 query (`asm5` preset)
+2. Aligns to SAMEA6656333; extracts best-covered region ±500 bp
+3. Re-annotates with pyrodigal + BLASTp vs Klebsiella reference
+4. Replaces KL303 record; writes `DB/EC-K-typing_group1and4_v0.9.gbk`
+
+**Result:** KL303 replaced with 34,424 bp from `SAMEA6656333.contig00015`
+(38 CDS predicted, 5 annotated against Klebsiella reference).
+
+::: callout-note
+## Script fixes applied (Python 3.9 compatibility)
+
+- `str | None` union syntax replaced with `Optional[str]` (requires 3.10+)
+- `MINIMAP2` path hardcoded to conda env binary
+- `MAKEBLASTDB` path hardcoded to match `BLASTP` version (both v2.2.31)
+:::
+
+#### Step 15.3 — Update canonical representative mapping
+
+The original mapping files (`KL_G1G4_mapping.tsv`, `KL_G1G4_mapping_filtered.tsv`)
+listed representatives that type to incorrect loci:
+
+| Locus | Old rep | Typed as | New rep | Typed as |
+|-------|---------|----------|---------|----------|
+| KL300 | ESC_GC2276AA_AS | KL302 | ESC_CC1364AA_AS | KL300 ✓ |
+| KL303 | ESC_JB0772AA_AS | KL570 | ESC_UB1439AA_AS | KL303 ✓ |
+
+Both mapping files updated manually. The old representatives are genuine
+members of other locus types, not mistyped KL300/KL303 assemblies.
+
+#### Step 15.4 — Intermediate validation (BSI loci only)
+
+```bash
+python3 scripts/type_normalized.py \
+    --db DB/EC-K-typing_group1and4_v0.9.gbk \
+    --suffix v0.9norm
+```
+
+This step validated the original 92 BSI loci to confirm the KL303
+replacement had no regressions. Novel ATB loci are not yet included
+(representative FASTAs not yet available locally at this point).
+
+| Metric | Value |
+|--------|-------|
+| Filtered BSI loci self-typing | **92/92 (100%)** |
+| Typeability (567 BSI assemblies) | 567/567 (100%) |
+
+::: callout-note
+## Novel loci partially visible at this stage
+
+The `KL_G1G4_mapping.tsv` at this stage included the original 93 BSI
+loci plus any ATB reps that had been downloaded for KL300/KL303
+investigation. The 559 novel ATB loci were not yet in the mapping file
+and were not validated here.
+:::
+
+---
+
+### Phase 15.5 — Remove Problematic Loci (v0.8 → v0.9 cleanup)
+
+**Objective:** Remove novel loci that caused cross-typing interference
+or were indistinguishable from other types, reducing the database from
+667 to 651 records.
+
+#### Step 15.5.1 — Remove oversized loci (>60 CDS)
+
+**Script:** `remove_oversized_loci.py`
+
+```bash
+python3 scripts/remove_oversized_loci.py --cds-threshold 60
+```
+
+Novel ATB extractions with >60 predicted CDS captured extensive flanking
+chromosomal sequence. These loci universally outscored legitimate loci
+because their conserved chromosomal genes are present in every assembly.
+The original 93 BSI loci have a maximum of 53 CDS (KL308), so 60 is a
+clean cut-off.
+
+**12 loci removed:** KL649, KL694, KL731, KL828, KL837, KL840, KL851,
+KL869, KL879, KL880, KL930, KL957.
+
+#### Step 15.5.2 — Remove unresolvable and merged loci (manual)
+
+The following four further loci were removed from the GenBank by direct
+deletion of their records:
+
+| Locus | Reason |
+|-------|--------|
+| KL337 | No assembly in the validation set types uniquely to KL337; `ESC_IA2252AA_AS` (the representative) scores marginally higher for KL389 (both are KX36 loci with near-identical gene sets) |
+| KL446 | Merged into KL443 — both cluster representatives produced identical AS scores across the full validation set; KL446 gene set is a subset of KL443 |
+| KL843 | Merged into KL830 — same reason as KL446/KL443 |
+| KL968 | Merged into KL716 — same reason as KL446/KL443 |
+
+::: callout-note
+## Subset-locus merging rationale
+
+Where two loci have identical gene sets (one being a strict subset of
+the other), Kaptive cannot distinguish them. Retaining both causes
+unpredictable assignment depending on assembly completeness. The correct
+action is to keep the locus with the larger, more complete reference and
+remove the subset locus from the database.
+:::
+
+**Total removed in Phase 15.5:** 16 loci (667 → 651).
+
+---
+
+### Phase 16 — Full 651-Loci Self-typing Validation
+
+**Objective:** Validate all 651 loci (92 BSI + 559 novel ATB) using
+representative assemblies for the novel loci, which were downloaded from
+M3 after the `validate_novel_loci_m3.sh` job completed.
+
+#### Step 16.1 — Download novel rep FASTAs from M3
+
+```bash
+mkdir -p DB/novel_rep_fastas
+
+scp -r ebenezef@m3.massive.org.au:\
+~/EC-K-typing-G1G4/DB/novel_rep_fastas/ \
+    DB/
+```
+
+#### Step 16.2 — Run full validation
+
+**Script:** `type_normalized.py`
+
+```bash
+rm -f DB/kaptive_scores_v0.9norm_full.tsv
+
+python3 scripts/type_normalized.py \
+    --db DB/EC-K-typing_group1and4_v0.9.gbk \
+    --suffix v0.9norm_full
+```
+
+The script loads representative assemblies from three sources:
+
+- `db_build_v2/nohits_genomes/` — original 92 BSI representative assemblies
+- `DB/blast_ncbi_results/candidate_genomes/` — NCBI-sourced reps (KL306, KL307, KL303)
+- `DB/novel_rep_fastas/` — ATB representative FASTAs for 559 novel loci
+
+The `KL_G1G4_mapping.tsv` and `novel_rep_kl_map.tsv` were extended to
+include the novel ATB loci, enabling the script to locate the correct
+FASTA for each.
+
+#### Step 16.3 — Results
+
+| Metric | Value |
+|--------|-------|
+| **All 651 loci self-typing** | **651/651 (100%)** |
+| BSI loci (92) | 92/92 (100%) |
+| Novel ATB loci (559) | 559/559 (100%) |
+| **Typeability (1,126 assemblies)** | **1,126/1,126 (100%)** |
+
+Validation against the [Gladstone et al. 2024](https://www.medrxiv.org/content/10.1101/2024.11.22.24317484v1)
+Malawi dataset confirmed these results on an independent collection.
+
+Output files:
+
+```
+DB/kaptive_validation_results_v0.9norm_full.tsv
+DB/kaptive_validation_summary_v0.9norm_full.tsv
+```
+
+---
+
+## Technical Appendices
+
+### kpsM Pre-screen (Alternative to Sequential G2/G3 Kaptive) {#sec-kpsm}
+
+**Scripts:** `kpsm_screen.py`, `validate_kpsm_screen.py`
+
+The standard workflow runs the full Gladstone G2/G3 Kaptive database on all
+assemblies first and passes untypeables to the G1/G4 database. For large
+collections, a faster pre-screen uses `kpsM` as a Group 2/3 marker gene:
+
+- `kpsM` encodes an inner membrane ABC-transporter component present in all
+  Group 2 strains; `kpsM_3` is the Group 3 paralogue. Both are absent from
+  Group 1/4 strains.
+- Detection of either gene (≥90% identity, ≥80% coverage by BLASTn) identifies
+  a Group 2/3 assembly; G1/G4 Kaptive typing is suppressed for these.
+
+#### Usage
+
+```bash
+# Screen a directory of assemblies and pass kpsM-negative ones to Kaptive:
+python3 scripts/kpsm_screen.py \
+    --assembly-dir assemblies/ \
+    --kpsm-ref DB/kpsM_reference.fasta \
+    --kaptive-db DB/EC-K-typing_group1and4_v0.9.gbk \
+    --output-dir results/kpsm_screen/ \
+    --run-kaptive
+
+# Screen only (no Kaptive):
+python3 scripts/kpsm_screen.py \
+    --assembly-dir assemblies/ \
+    --kpsm-ref DB/kpsM_reference.fasta \
+    --output-dir results/kpsm_screen/
+```
+
+**Output:** `kpsm_screen_results/kpsm_screen_results.tsv` — one row per
+assembly with columns `assembly`, `kpsM_hit`, `pident`, `qcov`, `group`
+(`Group2_3` or `G1_G4_candidate`).
+
+#### Validation
+
+`validate_kpsm_screen.py` runs a batch kpsM screen over a directory of
+assemblies using `blastn -subject` (no `makeblastdb` step per genome),
+parallelised with `multiprocessing`. Used during development to confirm
+that all 1,112 BSI no-hit assemblies were kpsM-negative:
+
+```bash
+python3 scripts/validate_kpsm_screen.py \
+    --genome-dir db_build_v2/nohits_genomes/ \
+    --kpsm-ref DB/kpsM_reference.fasta \
+    --output results/kpsm_validation.tsv \
+    --workers 8
+```
+
+::: callout-note
+## kpsM screen vs sequential Kaptive
+
+The kpsM screen is faster than running the full G2/G3 Kaptive database
+(BLASTn vs minimap2 whole-locus alignment) but provides less information —
+it identifies Group 2/3 organisms without assigning a K-locus type.
+Use kpsM pre-screening when you need to segregate G1/G4 candidates quickly
+before running the G1/G4 Kaptive database. Use sequential Kaptive when you
+also need G2/G3 K-locus assignments.
+:::
+
+---
+
+### Kaptive GenBank Format Requirements {#sec-gbk-format}
+
+Each record must follow Kaptive's expected format exactly:
+
+```
+LOCUS       KL392_ATB    45123 bp    DNA
+...
+FEATURES
+  source    1..45123
+            /note="K locus: KL392"
+            /organism="Escherichia coli"
+            /mol_type="genomic DNA"
+  CDS       complement(100..1200)
+            /gene="wzy"
+            /product="Wzy polymerase"
+            /translation="MAST..."
+```
+
+The `source` feature **must** contain `/note="K locus: KLxxx"` — this is
+how Kaptive identifies the locus name at runtime.
+
+### Normalised Scoring
+
+**Script:** `type_normalized.py`
+
+Raw Kaptive `--scores` output provides, per assembly per locus: `AS`
+(alignment score), `genes_found`, `genes_expected`, `q_len`.
+
+**Rationale:** Raw AS is proportional to locus size. A large locus always
+outscores a small one even at lower fractional coverage. Normalising by
+total expected CDS length gives a size-independent comparison:
+
+$$\text{AS\_norm} = \frac{\text{AS}}{\sum \text{CDS length for locus}}$$
+
+**Assignment algorithm (v0.9):**
+
+1. Compute AS_norm for all loci with AS > 0
+2. Sort loci by AS_norm descending; use raw AS as tiebreaker (descending)
+3. Assign the top-ranked locus as the best match
+4. Mark **Typeable** if `genes_found / genes_expected ≥ 0.50`
+
+::: callout-note
+## Algorithm change from v0.8 to v0.9
+
+Earlier versions used a 0.5 % shortlist window (AS_norm ≥ top × 0.995)
+and resolved ties by `genes_found`. This caused pathological behaviour
+with subset loci — a locus that finds all its (fewer) genes at 100 %
+identity could outscore a larger correct locus after removing subset
+types improved coverage. The direct AS_norm + raw AS sort eliminates
+this: when both AS_norm values are equal (e.g. both 2.000), the locus
+with more total aligned evidence (higher raw AS, i.e. more genes) wins.
+:::
+
+### Key Design Decisions
+
+**Why G1/G4 only, not combined?**
+A combined all-groups database was tested (v0.7) but deprecated due to
+wzy-interference. Confirmed in three independent datasets (Malawi, Norway,
+UK). Sequential typing (G2/G3 first) is mandatory.
+
+**KL numbering start: KL392, not KL344.**
+The `cluster_novel_loci.sh` script header incorrectly states KL344 as the
+start. The v0.6 database contains loci up to KL391; new loci must start
+at KL392.
+
+**Bidirectional clustering (--cov-mode 0).**
+Ensures both query and target meet the 80% coverage threshold. Prevents
+short sequences from clustering into larger, unrelated loci. Partial
+captures shorter than the reference can still pass — handled by the
+additional BLASTn screening step in `annotate_and_merge_atb_loci.py`.
+
+**Minimum locus length: 15,000 bp.**
+Novel extractions below this threshold are discarded as likely partial due
+to contig breaks within the locus.
+
+**KL300 status.**
+KL300 remains unresolved. The LexicMap candidates typed to novel loci
+(KL957, KL668), indicating the v0.8 KL300 reference shares substantial
+sequence with these loci. Recommended next step: extract only the *wzy*
+gene from the KL300 record and use it as the LexicMap query to find
+assemblies with a KL300-specific *wzy*, avoiding hits driven by conserved
+flanking or biosynthetic genes shared with other loci.
+
+**KL303 replacement.**
+ATB assembly SAMEA6656333 was validated as a true KL303 representative
+(Kaptive normalised score 2.000, 38/38 CDS). The locus was extracted from
+`SAMEA6656333.contig00015` (34,424 bp) using minimap2 with the v0.8 KL303
+sequence as query.
