@@ -36,7 +36,7 @@ Usage
 
 Outputs (written to DB/)
 ------------------------
-    kaptive_scores_{suffix}.tsv          — raw Kaptive scores matrix (183 loci × N assemblies)
+    kaptive_scores_{suffix}.tsv          — raw Kaptive scores matrix (loci × N assemblies)
     kaptive_validation_results_{suffix}.tsv — normalised typing results (Kaptive-format)
     kaptive_validation_summary_{suffix}.tsv — per-assembly comparison table
 """
@@ -67,6 +67,9 @@ GENOMES_DIR        = Path(
 )
 # NCBI candidate genomes: checked when a mapping entry stem isn't in GENOMES_DIR
 NCBI_GENOMES_DIR   = REPO_DIR / "DB" / "blast_ncbi_results" / "candidate_genomes"
+# ATB novel loci representative FASTAs and their KL mapping
+NOVEL_FASTAS_DIR   = DB_DIR / "novel_rep_fastas"
+NOVEL_MAPPING_FILE = DB_DIR / "novel_rep_kl_map.tsv"
 
 # Typeable threshold: fraction of expected genes that must be found
 MIN_GENE_COVERAGE = 0.50
@@ -106,6 +109,9 @@ def run_kaptive_scores(db: Path, genome_files: list, scores_tsv: Path, threads: 
         + [str(g) for g in genome_files]
         + ["--scores", str(scores_tsv), "-t", str(threads)]
     )
+    # Kaptive appends to existing scores files — always remove first
+    if scores_tsv.exists():
+        scores_tsv.unlink()
     print(f"\n[kaptive] Running --scores on {len(genome_files)} assemblies → {scores_tsv.name}")
     result = subprocess.run(cmd, capture_output=True, text=True, env=env)
     if result.returncode != 0:
@@ -155,15 +161,13 @@ def normalise_and_rank(scores_tsv: Path, locus_total_bp: dict) -> pd.DataFrame:
             })
             continue
 
-        # Primary rank: AS_norm descending.
-        # Near-tie tiebreaker: among loci scoring within 0.5 % of the best
-        # normalised score, prefer the one with more genes found (more absolute
-        # evidence of a correct match), then fall back to AS_norm.
-        top_norm = active["AS_norm"].max()
-        candidates = active[active["AS_norm"] >= top_norm * 0.995]
-        best = candidates.sort_values(
-            ["genes_found", "AS_norm"], ascending=[False, False]
-        ).iloc[0]
+        # Primary rank: AS_norm descending (AS / total_expected_gene_bp).
+        # Tiebreaker: raw AS descending — when multiple loci all have AS_norm=2.0
+        # (all genes found at 100 % identity), the one with the highest total
+        # aligned score (most genes, most evidence) is preferred.  This resolves
+        # subset-locus conflicts (e.g. KL798 ⊂ KL889) without the pathological
+        # behaviour of the old 0.5 % window + genes_found rule.
+        best = active.sort_values(["AS_norm", "AS"], ascending=[False, False]).iloc[0]
         genes_found    = int(best["genes_found"])
         genes_expected = int(best["genes_expected"])
         coverage       = genes_found / genes_expected if genes_expected > 0 else 0
@@ -204,7 +208,8 @@ def parse_results(results_df: pd.DataFrame, expected_kl: dict, filtered_kls: set
 
 def print_summary(df: pd.DataFrame) -> None:
     reps          = df[df["is_representative"]]
-    reps_filtered = df[df["in_filtered_set"]]
+    reps_filtered = df[df["in_filtered_set"]]   # original 93 BSI loci only
+    reps_novel    = reps[~reps["in_filtered_set"]]
 
     print("\n" + "=" * 60)
     print("NORMALISED TYPING SUMMARY  (AS / total_expected_gene_bp)")
@@ -214,12 +219,17 @@ def print_summary(df: pd.DataFrame) -> None:
     n_all_ok  = int(reps["correct_type"].sum())
     n_filt    = len(reps_filtered)
     n_filt_ok = int(reps_filtered["correct_type"].sum())
+    n_novel   = len(reps_novel)
+    n_nov_ok  = int(reps_novel["correct_type"].sum())
 
     print(f"\n1. Self-typing (representative assemblies)")
-    print(f"   All 125 loci:          {n_all_ok}/{n_all}  "
+    print(f"   All {n_all} loci:          {n_all_ok}/{n_all}  "
           f"({100*n_all_ok/n_all:.1f}%)")
-    print(f"   Filtered 93 loci:      {n_filt_ok}/{n_filt}  "
+    print(f"   Original 93 BSI loci:  {n_filt_ok}/{n_filt}  "
           f"({100*n_filt_ok/n_filt:.1f}%)")
+    if n_novel > 0:
+        print(f"   Novel ATB loci:        {n_nov_ok}/{n_novel}  "
+              f"({100*n_nov_ok/n_novel:.1f}%)")
 
     wrong = reps[reps["correct_type"] == False][
         ["assembly_stem", "expected_KL", "best_match_locus"]
@@ -236,13 +246,22 @@ def print_summary(df: pd.DataFrame) -> None:
     print(f"   Typeable:              {n_typeable}/{n_total}  "
           f"({100*n_typeable/n_total:.1f}%)")
 
-    utilised = set(reps_filtered[reps_filtered["correct_type"] == True]["expected_KL"])
-    not_util = set(reps_filtered["expected_KL"]) - utilised
-    n_filt   = len(set(reps_filtered["expected_KL"]))
-    print(f"\n3. Locus utilisation (filtered {n_filt}-locus set)")
-    print(f"   Correctly self-typed:  {len(utilised)}/{n_filt}")
-    if not_util:
-        print(f"   Not self-typed ({len(not_util)}):  {', '.join(sorted(not_util))}")
+    # BSI loci utilisation
+    bsi_util     = set(reps_filtered[reps_filtered["correct_type"] == True]["expected_KL"])
+    bsi_not_util = set(reps_filtered["expected_KL"]) - bsi_util
+    n_bsi        = len(set(reps_filtered["expected_KL"]))
+    print(f"\n3. Locus utilisation")
+    print(f"   BSI loci ({n_bsi}):  {len(bsi_util)}/{n_bsi} correctly self-typed")
+    if bsi_not_util:
+        print(f"   Not self-typed ({len(bsi_not_util)}):  {', '.join(sorted(bsi_not_util))}")
+
+    if n_novel > 0:
+        nov_util     = set(reps_novel[reps_novel["correct_type"] == True]["expected_KL"])
+        nov_not_util = set(reps_novel["expected_KL"]) - nov_util
+        n_nov_uniq   = len(set(reps_novel["expected_KL"]))
+        print(f"   Novel ATB loci ({n_nov_uniq}):  {len(nov_util)}/{n_nov_uniq} correctly self-typed")
+        if nov_not_util:
+            print(f"   Not self-typed ({len(nov_not_util)}):  {', '.join(sorted(nov_not_util))}")
 
 
 # ---------------------------------------------------------------------------
@@ -308,6 +327,27 @@ def main():
                     break
     if ncbi_added:
         print(f"[2] Added {len(ncbi_added)} NCBI representative genome(s): {', '.join(ncbi_added)}")
+
+    # Load novel ATB loci representatives
+    novel_added = 0
+    if NOVEL_MAPPING_FILE.exists() and NOVEL_FASTAS_DIR.exists():
+        novel_mapping = pd.read_csv(NOVEL_MAPPING_FILE, sep="\t")
+        for _, row in novel_mapping.iterrows():
+            kl  = row["KL"]
+            acc = row["source_assembly"]
+            if acc not in found_stems:
+                for ext in (".fa", ".fasta", ".fna"):
+                    fa = NOVEL_FASTAS_DIR / f"{acc}{ext}"
+                    if fa.exists():
+                        genome_files.append(fa)
+                        found_stems.add(acc)
+                        expected_kl[acc] = kl
+                        # Note: do NOT add to filtered_kls — that set is only the
+                        # original 93 BSI loci from KL_G1G4_mapping_filtered.tsv
+                        novel_added += 1
+                        break
+    if novel_added:
+        print(f"[2] Added {novel_added} novel ATB representative genome(s)")
     print(f"[2] Genome files: {len(genome_files)}")
 
     # Run Kaptive --scores (or skip)
