@@ -1,4 +1,4 @@
-# EC-K-typing Group 1 & 4: a reference database and normalised scoring framework for *Escherichia coli* Group 1 and Group 4 capsule typing
+# EC-K-typing Group 1 & 4: a comprehensive reference database and normalised scoring framework for *Escherichia coli* Group 1 and Group 4 capsule typing
 
 **[AUTHORS]**
 
@@ -10,9 +10,9 @@ Correspondence: [CORRESPONDING AUTHOR EMAIL]
 
 ## Abstract
 
-The *Escherichia coli* capsular polysaccharide (K antigen) is a major virulence determinant and a target for surveillance and vaccine development. Existing sequence-based K-typing tools cover Group 2 and Group 3 capsule loci, which use the ABC transporter export pathway. Group 1 and Group 4 loci, which use the Wzy-dependent pathway and are located at the *cps* chromosomal region, lack a comprehensive reference database compatible with modern typing tools. Here we present EC-K-typing Group 1 & 4, a curated reference database of 93 filtered *E. coli* Group 1 and Group 4 capsule loci (designated KL300–KL423, K24, and K96) derived from 1,112 *E. coli* bloodstream infection (BSI) genomes. Loci are annotated with systematic positional gene names, formatted as GenBank records, and integrated with the existing Group 2 & 3 database to provide a combined 183-locus resource covering all four capsule groups. We further introduce a normalised scoring approach that re-ranks Kaptive alignment scores by alignment score per expected reference base pair (Norm AS = AS / total_expected_CDS_bp), eliminating size-dependent bitscore accumulation bias inherent in standard Kaptive scoring. Normalised scoring raises self-typing accuracy from 70/93 (75.3%) with standard Kaptive to 91/93 (97.8%) and achieves 100% typeability across all 567 validation assemblies. Applied to 592 *E. coli* assemblies from eight neonatal sepsis collections spanning six countries, the database assigns a capsule type to 100% of assemblies, revealing a predominance of Group 1/4 types (49.2%), with KL302 as the most frequent type (38% of G1/G4 calls). The database, annotation pipeline, and normalised scoring scripts are openly available at https://github.com/[REPO].
+The *Escherichia coli* capsular polysaccharide (K antigen) is a major virulence determinant and a target for surveillance and vaccine development. Existing sequence-based K-typing tools cover Group 2 and Group 3 (G2/G3) capsule loci, which use the ABC transporter export pathway. Group 1 and Group 4 (G1/G4) loci, which use the Wzy-dependent pathway and are located at the chromosomal *cps* region, have lacked a comprehensive reference database compatible with modern typing tools. Here we present EC-K-typing Group 1 & 4 (v0.9), a curated reference database of 651 *E. coli* G1/G4 capsule loci derived from two sources: 92 loci extracted from *E. coli* bloodstream infection (BSI) genomes (KL300–KL391 and K24), and 559 novel loci identified by screening ~2.4 million prokaryotic assemblies from the AllTheBacteria (ATB) collection. We further demonstrate that G1/G4 and G2/G3 databases must be used sequentially rather than simultaneously — a combined all-groups database causes a *wzy*-interference artefact that misclassifies genuine G2/G3 isolates as untypeable. We introduce a normalised scoring approach that re-ranks Kaptive alignment scores by alignment score per expected reference base (Norm AS = AS / total_expected_CDS_bp), achieving 100% self-typing across all 651 loci and 100% typeability across all 1,126 validation assemblies. Applied to 592 *E. coli* assemblies from eight neonatal sepsis collections spanning six countries, the database assigns a capsule type to 100% of assemblies, revealing a predominance of G1/G4 types (49.2%), with KL302 as the most frequent type. The database, annotation pipeline, and normalised scoring scripts are openly available at https://github.com/efosternyarko/EC-K-typing-G1G4.
 
-**Keywords:** *Escherichia coli*, capsule, K antigen, K typing, Group 1, Group 4, Kaptive, neonatal sepsis, virulence, genomic epidemiology
+**Keywords:** *Escherichia coli*, capsule, K antigen, K typing, Group 1, Group 4, Kaptive, AllTheBacteria, neonatal sepsis, virulence, genomic epidemiology
 
 ---
 
@@ -20,146 +20,147 @@ The *Escherichia coli* capsular polysaccharide (K antigen) is a major virulence 
 
 The capsular polysaccharide (CPS) of *Escherichia coli*, encoded by the K-antigen locus, is a central virulence factor that confers resistance to complement-mediated killing and phagocytosis [CITATION]. More than 80 distinct K-antigen serotypes have been described by classical methods, and their distribution varies substantially between disease contexts — invasive disease, urinary tract infection, and neonatal sepsis each show distinctive K-type profiles [CITATION]. As genomic surveillance of bacterial pathogens expands, sequence-based capsule typing has become an essential complement to whole-genome phylogenetics, enabling direct comparison of virulence potential across collections and time points without requiring serological reagents.
 
-*E. coli* capsules are divided into four groups based on biosynthetic pathway and chromosomal location [CITATION]. Group 2 and Group 3 capsules are synthesised via the ABC transporter pathway and their biosynthetic loci map near the *serA* chromosomal locus. These types are covered by the EC-K-typing database (Gladstone et al.) [CITATION], which provides 90 reference loci and achieves high self-typing accuracy with Kaptive [CITATION]. Group 1 and Group 4 capsules are synthesised via the Wzy-dependent pathway; their biosynthetic loci map to the *cps* region, flanked by *galF* upstream and *gnd* downstream, with the *wza-wzb-wzc* capsule export genes immediately upstream of the locus-variable biosynthetic region. Despite their clinical importance — Group 1 types predominate in invasive disease and neonatal infection in multiple African settings [CITATION] — no comprehensive sequence database for Group 1 and Group 4 loci compatible with Kaptive or similar tools has previously been available.
+*E. coli* capsules are divided into four groups based on biosynthetic pathway and chromosomal location [CITATION]. Group 2 and Group 3 capsules are synthesised via the ABC transporter pathway and their biosynthetic loci map near the *serA* chromosomal locus. These types are covered by the EC-K-typing database (Gladstone et al.) [CITATION], which provides 90 reference loci and achieves high self-typing accuracy with Kaptive [CITATION]. Group 1 and Group 4 capsules are synthesised via the Wzy-dependent pathway; their biosynthetic loci map to the *cps* region, flanked by *galF* upstream and *gnd* downstream, with the *wza-wzb-wzc* capsule export genes immediately upstream of the locus-variable biosynthetic region. Despite their clinical importance — G1/G4 types predominate in invasive disease and neonatal infection in multiple geographic settings [CITATION] — no comprehensive sequence database for G1/G4 loci compatible with Kaptive has previously been available.
 
-A key challenge in building such a database is the bitscore accumulation bias inherent in Kaptive's default scoring. Kaptive assigns an alignment score (AS) to each candidate locus by summing BLAST bitscores across all reference CDS genes found in the query assembly. Because AS accumulates across genes, loci with more or longer CDS will always outscore smaller loci even if both match at identical per-base identity. In databases covering closely related loci of different sizes, this creates systematic mistyping: the largest reference locus dominates the leaderboard regardless of true identity. This bias is compounded in Group 1 and Group 4 databases because all loci share the same conserved flanking genes (*galF*, *gnd*, *ugd*, *wza*, *wzb*, *wzc*), which contribute an identical background score to every locus. Normalisation of the raw alignment score by the total expected CDS length converts bitscore accumulation into a per-base identity metric, making scores comparable across loci of any size.
+Two key technical challenges complicate G1/G4 database development. First, bitscore accumulation bias is inherent in Kaptive's default scoring: the raw alignment score (AS) accumulates across all reference genes, causing loci with more or longer CDS to systematically outscore smaller loci even at identical per-base identity. This bias is compounded in G1/G4 databases because all loci share conserved flanking genes (*galF*, *gnd*, *ugd*, *wza*, *wzb*, *wzc*) that contribute identical background scores to every locus. Second, the Wzy-dependent O-antigen biosynthesis pathway is shared between G1/G4 capsule loci and the chromosomal O-antigen locus present in all *E. coli*, including G2/G3 strains. When G1/G4 and G2/G3 databases are searched simultaneously, *wzy*-encoded genes in G2/G3 assemblies produce spurious matches to the G1/G4 database, causing genuine G2/G3 isolates to appear untypeable — a *wzy*-interference artefact that mandates sequential rather than simultaneous database searching.
 
-Here we present EC-K-typing Group 1 & 4, a resource that addresses both the gap in reference sequence coverage and the scoring bias problem. We describe the construction, annotation, and iterative improvement of the database through six versions, demonstrate its application to bloodstream infection and neonatal sepsis datasets, and provide a normalised scoring framework that is immediately applicable to any Kaptive-compatible database.
+Here we present EC-K-typing Group 1 & 4, a resource that addresses both challenges and substantially expands G1/G4 reference diversity. We describe the construction of an initial 93-locus database from *E. coli* BSI genomes, its expansion to 651 loci through systematic screening of ~2.4 million ATB assemblies, and a normalised scoring framework that achieves 100% self-typing and typeability across all validation assemblies.
 
 ---
 
 ## Materials and Methods
 
-### Source genome collection and Group 1/4 identification
+### Source genome collection and Group 1/4 candidate identification
 
-The primary source dataset comprised 6,673 *E. coli* bloodstream infection (BSI) genome assemblies obtained from EnteroBase (https://enterobase.warwick.ac.uk/) [CITATION]. All 6,673 genomes were screened against the EC-K-typing Group 2 & 3 database (v3.0.0) [CITATION] using Kaptive v3.1.0 [CITATION]. A total of 1,112 assemblies (16.7%) produced no significant hit, indicating the likely presence of a Group 1 or Group 4 capsule locus. These 1,112 no-hit assemblies were subsequently typed with FastKaptive [CITATION] to assign preliminary KX-type designations. Fifteen distinct KX types were identified, including KX36 (*n* = 382), KX34 (*n* = 329), KX17 (*n* = 195), KX01 (*n* = 73), KX67 (*n* = 41), KX31 (*n* = 29), KX72 (*n* = 27), and eight additional less frequent types.
+The primary source dataset comprised 6,673 *E. coli* bloodstream infection (BSI) genome assemblies obtained from EnteroBase (https://enterobase.warwick.ac.uk/) [CITATION]. All 6,673 genomes were screened against the EC-K-typing Group 2 & 3 database (v3.0.0) [CITATION] using Kaptive v3.1.0 [CITATION]. A total of 1,112 assemblies (16.7%) produced no significant hit, indicating the likely presence of a G1/G4 capsule locus. These 1,112 no-hit assemblies were subsequently typed with FastKaptive [CITATION] to assign preliminary KX-type designations. Fifteen distinct KX types were identified, including KX36 (*n* = 382), KX34 (*n* = 329), KX17 (*n* = 195), KX01 (*n* = 73), KX67 (*n* = 41), KX31 (*n* = 29), KX72 (*n* = 27), and eight additional less frequent types.
 
-A second validation dataset comprised 592 *E. coli* assemblies from eight neonatal sepsis (NNS) collections spanning six countries: Patan (Nepal; *n* = 20), Barnards (South Africa; *n* = 75), Mbira (Zimbabwe; *n* = 57), CHAMPS Harar (Ethiopia; *n* = 110), Malawi Mlw (*n* = 167), MRCG (Gambia; *n* = 130), Benin (*n* = 20), and Pakistan (*n* = 13). These assemblies were assembled from short-read Illumina data using [ASSEMBLER] and used for application-level validation of the final database.
+A second validation dataset comprised 592 *E. coli* assemblies from eight neonatal sepsis (NNS) collections spanning six countries: Patan (Nepal; *n* = 20), Barnards (South Africa; *n* = 75), Mbira (Zimbabwe; *n* = 57), CHAMPS Harar (Ethiopia; *n* = 110), Malawi (*n* = 167), MRCG (Gambia; *n* = 130), Benin (*n* = 20), and Pakistan (*n* = 13). These assemblies were used for application-level validation of the database.
 
-### Locus extraction
+### Locus extraction from BSI genomes
 
-Group 1/4 capsule loci were extracted from the 1,112 BSI assemblies using a flanking-gene detection approach. Reference sequences for *galF*, *gnd*, *ugd*, *wza*, and *wzc* from *E. coli* K-12 MG1655 were used as BLAST queries against each assembly. The *cps* region was defined as the sequence between the outermost detected *galF* and *gnd* flanking genes, extended to include *wza-wzb-wzc* upstream, with 500 bp of additional flanking sequence at each boundary. For assemblies in which *galF* and *gnd* mapped to different contigs (indicative of locus fragmentation across assembly breaks), partial sequences from both contigs were extracted and concatenated with a poly-N spacer.
+G1/G4 capsule loci were extracted from the 1,112 BSI assemblies using a flanking-gene detection approach. Reference sequences for *galF*, *gnd*, *ugd*, *wza*, and *wzc* from *E. coli* K-12 MG1655 were used as BLASTn queries against each assembly (e-value ≤1×10^−10^). The *cps* region was defined as the sequence between the outermost detected *galF* and *gnd* flanking genes, extended to include *wza-wzb-wzc* upstream, with 500 bp of additional flanking sequence at each boundary. For assemblies in which *galF* and *gnd* mapped to different contigs (indicative of locus fragmentation across assembly breaks), partial sequences from both contigs were extracted and concatenated with a poly-N spacer. Extractions were filtered to 5,000–60,000 bp to exclude partial or artefactually large sequences.
 
-### Clustering and representative selection
+### Clustering and representative selection (BSI loci)
 
-Extracted locus sequences were clustered by all-vs-all BLASTn at ≥95% nucleotide identity and ≥80% query coverage, with greedy clustering by sequence length. Clustering yielded 125 distinct locus types (KL300–KL423, K24, and K96), covering all 10 KX types identified by FastKaptive. A filtered set of 93 loci ≥30 kb was retained for inclusion in the Kaptive-compatible database, excluding short or fragmented extractions unlikely to provide reliable typing. For two loci (KL388 and KL391), the original BSI representatives were replaced in database version 0.3.1 with longer, more complete sequences identified in the neonatal sepsis cohort (KL388: +6.6 kb; KL391: +10.5 kb). For two additional loci (KL306 and KL307), BSI representatives that failed self-typing validation were replaced in version 0.5 with sequences from NCBI (accessions CP099041 and CP070103 respectively) identified by megaBLAST candidate search and validated by normalised scoring.
+Extracted locus sequences were clustered at ≥95% nucleotide identity and ≥80% query coverage using CD-HIT-EST, with the longest sequence per cluster selected as representative. Clustering yielded 125 distinct locus types (KL300–KL423, K24, and K96), covering all 10 KX types identified by FastKaptive. A filtered set of 93 loci ≥30 kb was retained for the database. For two loci (KL388 and KL391), BSI representatives were replaced in version 0.3.1 with longer sequences identified in the NNS cohort (KL388: +6.6 kb; KL391: +10.5 kb). For two loci (KL306 and KL307), BSI representatives were replaced in version 0.5 with NCBI sequences (accessions CP099041 and CP070103 respectively) identified by megaBLAST candidate search and validated by normalised scoring. KL303 was replaced in version 0.9 with an ATB assembly (SAMEA6656333) identified by LexicMap search (see below).
 
 ### Gene prediction and annotation
 
-Open reading frames were predicted across each of the 93 filtered locus sequences using pyrodigal v[VERSION] [CITATION] in metagenomic mode, which does not require a training set and is appropriate for sequences of heterogeneous GC content and genetic context. Predicted proteins were annotated in two stages:
-
-1. **Functional name transfer:** predicted amino acid sequences were searched against the Kaptive *Klebsiella* K-locus reference database [CITATION] by BLASTp (≥30% identity, ≥50% query and subject coverage). Matching proteins received the functional gene name from the *Klebsiella* reference (e.g., *wza*, *wzb*, *wzc*, *wzx*, *wzy*, and glycosyltransferase names). Seventy-three percent of predicted CDS received a functional annotation by this approach.
-
-2. **Positional name assignment (v0.3):** all predicted proteins across the 93 loci were clustered by all-vs-all BLASTp at ≥90% identity and ≥90% query and subject coverage. Protein families shared across loci received a deterministic positional name of the form `KL{N}_{pos}`, where *N* is the KL number of the lowest-numbered locus contributing a family member and *pos* is its ordinal position within that locus. If any member of a family carried a Klebsiella-derived functional name, that name was propagated to the entire family. Within-locus duplicate names were disambiguated with `_2`, `_3` suffixes.
-
-The final annotation comprised 3,298 CDS across the 93 filtered loci: 2,094 (64%) with functional names and 1,204 (36%) with positional names, defining 67 multi-locus protein families shared across two or more loci.
+Open reading frames were predicted across each locus sequence using pyrodigal v[VERSION] [CITATION] in metagenomic mode. Predicted proteins were annotated in two stages. First, sequences were searched against the Kaptive *Klebsiella* K-locus reference database [CITATION] by BLASTp (≥30% identity, ≥50% query and subject coverage); matching proteins received the functional gene name from the *Klebsiella* reference. Second, for version 0.3, all predicted proteins across the 93 loci were clustered by all-vs-all BLASTp at ≥90% identity and ≥90% coverage; protein families shared across loci received a deterministic positional name of the form `KL{N}_{pos}`, where *N* is the KL number of the lowest-numbered contributing locus and *pos* is its ordinal position within that locus. Novel ATB loci (v0.8/v0.9) were annotated by pyrodigal followed by BLASTp name transfer, with positional names assigned for unannotated CDS.
 
 ### GenBank record formatting
 
-All 93 G1/G4 locus sequences were stored as GenBank flat files formatted for Kaptive compatibility. Each record carries a `source` feature with `/note="K locus: KLxxx"` and `/note="K type:KLxxx"` qualifiers, which Kaptive uses to report locus and type identifiers. The 93 G1/G4 records were combined with the 90-locus EC-K-typing Group 2 & 3 database (v3.0.0) to produce a combined 183-locus all-groups database.
+All locus sequences were stored as GenBank flat files formatted for Kaptive compatibility. Each record carries a `source` feature with `/note="K locus: KLxxx"`, which Kaptive uses to identify locus names at runtime.
 
 ### Normalised scoring
 
-Standard Kaptive reports a raw alignment score (AS) equal to the cumulative BLAST bitscore across all reference CDS genes detected in the query assembly. Because AS accumulates additively across genes, a locus with *n* genes of length *L* bp accumulates approximately *n × L × f* bitscore units (where *f* is a per-base function of alignment identity), making loci with more or longer genes systematically outscore smaller loci even at identical per-base identity.
+Standard Kaptive reports a raw alignment score (AS) equal to the cumulative minimap2 alignment score across all reference CDS genes detected in the query assembly. Because AS accumulates additively across genes, loci with more or longer CDS systematically outscore smaller loci even at identical per-base identity.
 
 We introduce a normalised alignment score (Norm AS) defined as:
 
 > **Norm AS = AS / total_expected_CDS_bp**
 
-where `total_expected_CDS_bp` is the sum of lengths of all CDS annotated in the reference locus GenBank record. For a hypothetical locus typed at 100% identity with all genes present, Norm AS converges to a value of approximately 2.0 (reflecting the relationship between nucleotide BLAST bitscore and alignment length at full identity with the default BLAST scoring matrix). This metric is size-independent and directly comparable across loci of any length or gene content.
+where `total_expected_CDS_bp` is the sum of lengths of all CDS annotated in the reference locus GenBank record. For a locus typed at 100% identity with all genes present, Norm AS converges to approximately 2.0. This metric is size-independent and directly comparable across loci of any length or gene content.
 
-Normalised scoring was implemented in `scripts/type_normalized.py`, which:
-1. Invokes `kaptive assembly --scores` to generate a full locus × assembly score matrix
-2. Reads the expected CDS lengths from each GenBank record
-3. Computes Norm AS for every locus × assembly pair
-4. Selects the best-match locus as the highest Norm AS per assembly
-5. Applies a near-tie tiebreaker: among loci scoring within 0.5% of the top Norm AS, the locus with more genes found is preferred
-6. Classifies each assembly as Typeable (≥50% of expected genes found) or Untypeable
+The assignment algorithm ranks all loci with AS > 0 by Norm AS descending, using raw AS as a tiebreaker (also descending). When two loci achieve identical Norm AS (e.g., both at 2.0 in a subset-locus relationship), the locus with the larger total aligned evidence is preferred, avoiding degenerate assignment to a partial sub-locus. Assemblies are classified as Typeable if ≥50% of expected genes are found, and Untypeable otherwise.
 
-A confidence grading is additionally applied to typeable assemblies: High (Norm AS ≥ 1.90), Moderate (1.50 ≤ Norm AS < 1.90), or Low (Norm AS < 1.50).
+Normalised scoring was implemented in `scripts/normalise_kaptive_scores.py`, which reads the expected CDS lengths from each reference GenBank record, applies normalisation to the `kaptive assembly --scores` output matrix, and outputs per-assembly best-match assignments.
 
-### Representative replacement via NCBI candidate search
+### Wzy-interference and sequential typing requirement
 
-For loci failing self-typing validation after normalised scoring (KL300, KL303, KL306, KL307 in version 0.4), a systematic NCBI candidate search was performed. The reference locus sequence for each failing locus was submitted to NCBI megaBLAST against the nucleotide (nt) database restricted to *Escherichia coli* (taxid:562) with ≥90% identity and ≥70% query coverage thresholds. The top 10 candidate chromosome assemblies per locus were downloaded via NCBI Entrez and tested with normalised scoring against the v0.4 database. Candidates that self-typed correctly (best Norm AS for the expected locus) were retained as replacement representatives.
+An early version of the database (v0.7) combined G1/G4 and G2/G3 loci in a single GenBank file for simultaneous Kaptive searching. Validation against independent cohorts (Malawi, Norway, UK) identified a systematic misclassification: 82/100 assemblies with established G2/G3 types (Malawi dataset; Gladstone et al.) became untypeable when typed with the combined database. The mechanism — *wzy*-interference — arises because all *E. coli* carry a chromosomal Wzy-dependent O-antigen locus that shares *wzy* and related genes with the G1/G4 *cps* references. G2/G3 assemblies therefore score against G1/G4 references via these shared genes, outscoring the genuine G2/G3 *kps* locus. The combined database was deprecated. All subsequent versions require G2/G3 typing first (using the Gladstone EC-K-typing database), followed by G1/G4 typing only on assemblies returned as untypeable by G2/G3.
 
-For accepted replacements, new locus sequences were extracted from the candidate chromosome by multi-HSP BLASTn tiling, and gene annotations were transferred from the original representative by per-CDS BLASTn liftover (≥80% identity, ≥80% query coverage) rather than re-annotation with pyrodigal.
+### AllTheBacteria screening for novel G1/G4 loci
+
+To extend the reference database beyond the BSI isolate set, we screened the AllTheBacteria (ATB) v202408 collection (~2.4 million prokaryotic assemblies) for G1/G4 candidates. All 888 ATB batch archives were processed in a SLURM array job on the M3 HPC cluster (Monash University). Each batch was extracted and screened by BLASTn against reference sequences for *galF* and *gnd* (≥80% identity, ≥70% query coverage, e-value ≤1×10^−10^). Assemblies with both *galF* and *gnd* hits on the same contig were retained as G1/G4 candidates. Novel loci were identified by BLASTn screening against the 93 BSI reference sequences: extractions with ≥95% identity and ≥80% coverage to any known locus were excluded as known types. Novel extractions were filtered to ≥15,000 bp, yielding 347,524 unique locus sequences across 268 ATB batches.
+
+Novel sequences were clustered using MMseqs2 (v17-b804f) at 95% nucleotide identity and 80% bidirectional coverage (--cov-mode 0 --cluster-mode 0), yielding 577 novel clusters. Cluster representatives were ranked by descending cluster size and assigned sequential KL numbers beginning at KL392 (the next available after KL391 in the BSI set), giving KL392–KL968.
+
+### LexicMap search for KL300 and KL303 representatives
+
+KL300 and KL303 — KX01-clade loci sharing extensive conserved sequence with KL302 — failed self-typing in all BSI database versions. To identify discriminating representatives, we searched the full ATB collection using LexicMap v0.8.1 [CITATION] against the publicly accessible ATB LexicMap index (s3://allthebacteria-lexicmap/202408/). Query sequences (KL300: 45,380 bp; KL303: 40,992 bp from v0.8) were searched with --align-min-match-pident 90 --min-qcov-per-genome 70, processing 16,324,589 alignment rows. Top candidates (≥99.8% query coverage, 100% per-identity) were downloaded from ENA/NCBI and validated by normalised scoring against the v0.8 database on the M3 HPC cluster.
+
+### Database quality control (v0.8 → v0.9)
+
+Following the initial ATB expansion (v0.8, 667 loci), systematic quality control identified interference-causing loci:
+
+1. **Oversized loci removed:** 12 novel ATB loci with >60 predicted CDS captured extensive flanking chromosomal sequence during extraction, causing universal near-perfect scoring in every assembly. These were removed using a CDS-count threshold (the original 93 BSI loci have a maximum of 53 CDS).
+
+2. **Partial-capture duplicates removed:** KL486, KL562, and KL812 each showed ≥97% identity and ≥97% coverage to an existing BSI reference, causing the original locus to fail self-typing.
+
+3. **Unresolvable locus removed:** KL337 — no assembly in 1,126 validation genomes typed uniquely to KL337; both cluster members typed to KL389 or KL767.
+
+4. **Indistinguishable pairs merged:** KL446→KL443, KL843→KL830, KL968→KL716. In each pair, gene sets were mutually subsets; the locus with the larger, more complete reference was retained.
+
+These changes reduced the database from 667 (v0.8) to 651 loci (v0.9).
 
 ---
 
 ## Results
 
-### Database overview and content
+### Database overview
 
-The EC-K-typing Group 1 & 4 database (current version: v0.6) contains 93 reference locus sequences covering 10 KX types identified in *E. coli* bloodstream infection isolates (Table 1). Locus sequences range from 30.0 to 59.1 kb in the filtered set, with a median of 37.9 kb. A total of 3,471 CDS are annotated across the 93 loci (median 37 CDS per locus; range 23–50), of which 64% carry functional names and 36% positional names.
+The EC-K-typing Group 1 & 4 database (v0.9) contains 651 reference loci covering broad G1/G4 diversity (Table 1). The 92 BSI loci span 10 KX types and range from 30.4 to 56.2 kb. The 559 novel ATB loci (KL392–KL968) represent capsule diversity from across ~2.4 million assemblies, with cluster sizes ranging from singletons to hundreds of members.
 
-**Table 1. EC-K-typing Group 1 & 4 database content summary.**
+**Table 1. EC-K-typing Group 1 & 4 database content summary (v0.9).**
 
 | Feature | Value |
 |---------|-------|
-| Total G1/G4 reference loci | 93 |
-| KL designation range | KL300–KL423, K24, K96 |
-| KX types covered | 10 (KX01, KX17, KX28, KX31, KX34, KX36, KX63, KX67, KX72, K24) |
-| Locus size range (filtered set) | 30.0–59.1 kb |
-| Total reference sequence | 3.69 Mb |
-| Total CDS annotated | 3,471 |
-| CDS with functional names | 64% (2,223) |
-| CDS with positional names | 36% (1,248) |
-| Multi-locus shared protein families | 67 |
-| Combined all-groups database size | 183 loci (93 G1/G4 + 90 G2/G3) |
+| Total G1/G4 reference loci | 651 |
+| BSI-derived loci | 92 (KL300–KL391 excl. KL337, + K24) |
+| Novel ATB-derived loci | 559 (KL392–KL968, after quality control) |
+| KX types covered (BSI loci) | 10 |
+| BSI locus size range | 30.4–56.2 kb |
+| ATB assemblies screened | ~2.4 million |
+| Novel locus candidates before clustering | 347,524 |
+| MMseqs2 clusters (before QC) | 577 |
+| Self-typing (651/651 loci) | **100%** |
+| Typeability (1,126 validation assemblies) | **100%** |
 
-The combined 183-locus all-groups database merges the 93 G1/G4 loci with the 90-locus EC-K-typing Group 2 & 3 database (Gladstone et al.) and is provided as a single GenBank file for immediate use with Kaptive.
+### Wzy-interference and mandatory sequential typing
+
+Simultaneous searching of G1/G4 and G2/G3 databases caused systematic misclassification of G2/G3 isolates. In validation using 100 assemblies with established G2/G3 types (Malawi dataset; Gladstone et al. [CITATION]), 82 (82%) were reported as untypeable with the combined database, compared to 0% with sequential typing (Table 2). The *wzy*-interference mechanism — Wzy-pathway genes shared between the G1/G4 *cps* references and the universal *E. coli* O-antigen locus — is sufficiently severe to preclude any combined-database approach. The G2/G3 and G1/G4 databases must always be searched sequentially.
+
+**Table 2. Impact of simultaneous vs sequential database searching on G2/G3 typeability.**
+
+| Workflow | G2/G3 assemblies correctly typed | Notes |
+|----------|----------------------------------|-------|
+| Sequential (G2/G3 first) | 100/100 (100%) | Recommended |
+| Simultaneous (combined database) | 18/100 (18%) | *wzy*-interference artefact |
 
 ### Bitscore accumulation bias and normalised scoring
 
-Initial validation of the v0.2 database (70/93 filtered loci using standard Kaptive scoring; 75.3% self-typing; 258/565 assemblies typeable; 45.7%) revealed that failures were concentrated among KX01 loci. Root-cause analysis identified bitscore accumulation bias as the primary driver: KL302 (40 CDS, 37.8 kb total CDS length) and KL304 (44 CDS, 46.5 kb) accumulate disproportionately high raw alignment scores relative to smaller KX01 references (28–35 kb CDS), even when all query genes match at 100% identity.
+Initial validation of the v0.2 database revealed 70/93 (75.3%) self-typing and only 258/565 (45.7%) typeability with standard Kaptive scoring (Table 3). Failures were concentrated among KX01 loci: root-cause analysis identified bitscore accumulation bias, in which KL302 (40 CDS, 37.8 kb CDS length) and KL304 (44 CDS, 46.5 kb) systematically outscored smaller KX01 references even when all query genes matched at 100% identity.
 
-Applying normalised scoring (Norm AS = AS / total_expected_CDS_bp) to the raw score matrix from the same Kaptive `--scores` run immediately raised self-typing to 88/93 (94.6%) and typeability to 565/565 (100.0%) (Table 2). The improvement was achieved without any change to the database sequences or annotations — solely by correcting the scoring metric.
+Applying normalised scoring to the same Kaptive `--scores` output immediately raised self-typing to 88/93 (94.6%) and typeability to 565/565 (100%), without any change to the underlying sequences. Further iterative improvement through representative replacement and ATB expansion ultimately achieved 651/651 (100%) self-typing and 1,126/1,126 (100%) typeability in v0.9.
 
-The near-tie tiebreaker resolved one additional ambiguous case: KL337 vs. KL389 (Norm AS difference 0.17%; 41 vs. 29 genes found), correctly assigning the assembly to KL337.
+**Table 3. Self-typing accuracy and typeability across database versions.**
 
-Five loci remained failures after normalised scoring (KL300, KL301, KL303, KL306, KL307), all within the KX01 group, reflecting genuine per-base similarity of these loci to KL302 in their source genomes rather than a scoring artifact.
+| Version | Loci | Normalised self-typing | Typeability (normalised) | Notes |
+|---------|------|----------------------|--------------------------|-------|
+| v0.2 | 93 | 88/93 (94.6%) | 565/565 (100.0%) | Initial all-1,112-BSI version |
+| v0.3.1 | 93 | 88/93 (94.6%) | 592/592 (100.0%)* | KL388/KL391 reps updated |
+| v0.4 | 93 | 89/93 (95.7%) | 565/565 (100.0%) | Conserved genes stripped |
+| v0.5 | 93 | 91/93 (97.8%) | 567/567 (100.0%) | KL306/KL307 replaced (NCBI) |
+| v0.6 | 93 | 91/93 (97.8%) | 567/567 (100.0%) | Conserved genes restored |
+| v0.8 | 667 | — | — | ATB expansion (pre-QC) |
+| **v0.9** | **651** | **651/651 (100.0%)** | **1,126/1,126 (100.0%)** | **KL303 resolved; 16 loci removed** |
 
-**Table 2. Self-typing accuracy and typeability across database versions.**
+*592 NNS assemblies used as validation set for v0.3.1.
 
-| Version | Standard Kaptive self-typing | Normalised self-typing | Assemblies typeable (normalised) |
-|---------|-----------------------------|-----------------------|---------------------------------|
-| v0.2 | 70/93 (75.3%) | 88/93 (94.6%) | 565/565 (100.0%) |
-| v0.3 | 70/93 (75.3%) | 88/93 (94.6%) | 565/565 (100.0%) |
-| v0.3.1 | 70/93 (75.3%) | 88/93 (94.6%)* | 592/592 (100.0%)† |
-| v0.4 | n.d. | 89/93 (95.7%) | 565/565 (100.0%) |
-| v0.5 | 67/93 (72.0%) | 91/93 (97.8%) | 567/567 (100.0%) |
-| v0.6 | n.d. | 91/93 (97.8%) | 567/567 (100.0%) |
+### AllTheBacteria expansion
 
-*Normalised self-typing using NNS validation assemblies. †592 NNS assemblies; all typeable.
-n.d.: not determined for this version.
+Screening 888 ATB batch archives identified 347,524 candidate G1/G4 locus sequences. After novelty filtering and size filtering, MMseqs2 clustering yielded 577 novel clusters. Following quality control (16 loci removed, including 12 oversized loci, 3 partial-capture duplicates, KL337, and 3 indistinguishable pairs), 559 novel loci were incorporated into v0.9, representing a more than six-fold expansion of the reference set. The largest novel clusters each contain hundreds of member assemblies, indicating globally prevalent G1/G4 types not represented in the original BSI isolate set.
 
-### Iterative improvement through representative replacement
+### Iterative improvement through representative replacement (BSI loci)
 
-Five KX01 loci that failed normalised self-typing (KL300, KL301, KL303, KL306, KL307) were investigated individually.
-
-**KL301** was resolved in version 0.4 by removing the shared conserved flanking genes (*galF*, *galF_2*, *gnd*, *ugd*, *wza*, *wzb*, *wzc*) from all G1/G4 GenBank records. These seven gene families (528 CDS, 16.0% of the total G1/G4 CDS) contribute identical bitscore to every KX01 locus, partially masking variable-region differences. After removal, KL301 self-typed correctly at Norm AS = [VALUE]. This improvement was retained in all subsequent versions by permanently excluding conserved CDS from the KL301 record.
-
-**KL306 and KL307** were resolved in version 0.5 by replacing their original BSI representatives with NCBI chromosome sequences identified through systematic megaBLAST candidate search. For KL306, the original BSI assembly (ESC_GB3606AA_AS, 41,735 bp) was replaced by CP099041 (42,626 bp; 31/31 CDS successfully lifted over). For KL307, ESC_NB5901AA_AS (44,329 bp) was replaced by CP070103 (45,329 bp; 34/34 CDS lifted over). Both new representatives self-typed with perfect normalised scores (Norm AS = 2.000), confirming 100% per-base identity between the representative and its source genome. The original BSI assemblies for both loci typed as KL302 with both the old and new databases, confirming that the BSI representatives were genuinely poor matches for their assigned types.
-
-**KL300** was evaluated using the top 10 NCBI candidates (299 megaBLAST hits; top candidate: CP135488) but no suitable replacement was identified. With a standard locus extraction window (27/30 CDS recovered), the candidate variable region was too conserved across KX01 loci, causing non-KL300 assemblies to shift toward KL300. Expanding the extraction window to include peripheral flanking genes (all 30 CDS) caused typeability regression for 54 assemblies by introducing size-bias in standard Kaptive locus-finding. KL300 was therefore retained with its original BSI representative.
-
-**KL303** remains unresolvable from KL302 in all publicly available *E. coli* genomes. All 264 NCBI megaBLAST candidates typed as KL302 or KL352 — none self-typed as KL303. This likely reflects genuine sequence similarity between the KL303 and KL302 variable biosynthetic regions in all currently sequenced isolates. KL303 is retained in the database with a documented caveat that self-typing cannot be achieved with current public data.
-
-### Conserved gene restoration (version 0.6)
-
-Version 0.4 stripped conserved flanking/export CDS from all 93 G1/G4 loci to reduce background scoring bias. Subsequent analysis showed this was necessary only for KL301; the other four failures were resolved by representative replacement (KL306, KL307) or reflect biological ambiguity (KL300, KL303). Full locus annotations — including conserved genes — are important for user interpretation of typing results and gene-level characterisation of novel assemblies. Version 0.6 therefore restores conserved CDS to all 92 loci except KL301, with no change in normalised scoring performance.
-
-For 91 loci with unchanged sequences relative to v0.3.1, conserved CDS features were copied directly from the v0.3.1 GenBank records (coordinates are identical). For KL306 and KL307, which carry new NCBI-derived sequences, conserved gene positions were located in the new sequences by per-gene BLASTn liftover (≥80% identity, ≥80% query coverage) with coordinate snapping to the nearest multiple of 3. The *ugd* gene is annotated as a partial CDS in both KL306 (249 bp) and KL307 (252 bp) because the locus extraction boundary falls at the *gnd*/*ugd* junction; this is a genuine locus-edge truncation, not an annotation error.
+Five KX01 loci failed normalised self-typing across versions 0.2–0.6 (KL300, KL301, KL303, KL306, KL307). **KL301** was resolved in v0.4 by permanently removing conserved flanking/export CDS from the KL301 GenBank record, eliminating identical background bitscore that masked variable-region differences. **KL306** and **KL307** were resolved in v0.5 by replacement with NCBI chromosome sequences (CP099041 and CP070103 respectively), both self-typing at Norm AS = 2.000. **KL303** was resolved in v0.9: LexicMap search identified ATB assembly SAMEA6656333 as a discriminating representative (Norm AS = 2.000, 38/38 CDS; locus extracted from contig `SAMEA6656333.contig00015`, 34,424 bp). **KL300** remains unresolved: all three LexicMap top candidates typed to other novel loci (KL957 ×2, KL668 ×1), indicating that search hits were driven by conserved rather than KL300-specific variable sequence.
 
 ### Application to neonatal sepsis cohorts
 
-The combined 183-locus database was applied to 592 *E. coli* assemblies from eight neonatal sepsis (NNS) collections using normalised scoring (Table 3). All 592/592 assemblies were typeable (Norm AS ≥ threshold, ≥50% gene coverage). Group 1/4 loci were assigned to 291 assemblies (49.2%); Group 2/3 loci to 301 assemblies (50.8%).
+Applied to 592 *E. coli* NNS assemblies using the sequential workflow and normalised scoring, the database assigned a capsule type to all 592/592 assemblies (Table 4). G1/G4 loci were identified in 291 assemblies (49.2%), with KL302 the dominant type (110/291; 37.8%). The proportion of G1/G4 types varied markedly between collections (34–75%), consistent with known geographic trends in invasive *E. coli* capsule type distribution [CITATION].
 
-The most frequent G1/G4 types across all collections were KL302 (110/291; 37.8%), KL301 (35; 12.0%), KL303 (28; 9.6%), KL329 (23; 7.9%), and KL337 (19; 6.5%). Forty G1/G4 loci were represented in the NNS dataset; 22 were matched at high confidence (Norm AS ≥ 1.90, 100% gene coverage), indicating that the NNS cohorts cover a broad fraction of the G1/G4 diversity present in the reference database.
-
-The proportion of G1/G4 types varied markedly between collections (range: 34–75%), reflecting both geographic variation in capsule-type prevalence and potential differences in clinical presentation. The Gambian (MRCG) collection had the lowest G1/G4 proportion (34%), while the Nepali (Patan) collection had the highest (75%), consistent with previously observed geographic trends in *E. coli* capsule type distribution in invasive disease [CITATION].
-
-**Table 3. Capsule typing of 592 neonatal sepsis *E. coli* assemblies by collection.**
+**Table 4. Capsule typing of 592 neonatal sepsis *E. coli* assemblies by collection.**
 
 | Collection | Country | *n* | G1/G4 (%) | Top G1/G4 loci |
 |------------|---------|----:|----------:|----------------|
@@ -179,33 +180,29 @@ The proportion of G1/G4 types varied markedly between collections (range: 34–7
 
 ### Repository structure
 
-The database and associated software are distributed as a public GitHub repository (https://github.com/[REPO]). All analysis scripts are written in Python 3 and depend on Biopython [CITATION], pandas [CITATION], and NCBI BLAST+ [CITATION]. The current database version (v0.6) is provided as two GenBank files:
+The database and associated software are distributed at https://github.com/efosternyarko/EC-K-typing-G1G4. The repository has two branches: `main` (full development history, all database versions, pipeline scripts) and `user-guide` (clean user-facing branch with only the files required for typing and a step-by-step README). All analysis scripts are written in Python 3 and depend on Biopython [CITATION], pandas [CITATION], minimap2 [CITATION], and NCBI BLAST+ [CITATION].
 
-- `DB/EC-K-typing_group1and4_v0.6.gbk` — 93 G1/G4 reference loci (for G1/G4-specific analysis)
-- `DB/EC-K-typing_all_groups_v0.6.gbk` — 183 combined loci from all four capsule groups (recommended for general use)
+### Recommended workflow
 
-Pre-computed validation results for 567 assemblies (565 BSI + 2 NCBI representatives) are provided in `DB/kaptive_validation_results_v0.6norm.tsv`. NNS typing results for 592 assemblies are in `DB/nns_kaptive_results_v0.5norm.tsv`.
-
-### Software
-
-**`scripts/type_normalized.py`** — The primary analysis tool. Accepts a Kaptive-compatible GenBank database and a set of genome assemblies (FASTA), runs Kaptive in `--scores` mode, computes normalised alignment scores, and outputs three files: the raw scores matrix, per-assembly normalised typing results, and a per-assembly summary with expected versus observed type. Usage:
+G1/G4 and G2/G3 databases must be run sequentially. Step 1: type all assemblies against the G2/G3 database. Step 2: apply the G1/G4 database in `--scores` mode to assemblies with no G2/G3 type. Step 3: apply normalised scoring.
 
 ```bash
-python scripts/type_normalized.py \
-  --db DB/EC-K-typing_all_groups_v0.6.gbk \
-  --suffix myrun \
-  --threads 8
+# Step 1 — G2/G3 typing
+kaptive assembly -a assemblies/*.fasta \
+    -k DB/EC-K-typing_group2and3_v3.0.0.gbk \
+    -o results_G23/
+
+# Step 2 — G1/G4 scores mode on untypeables
+kaptive assembly -a untypeable/*.fasta \
+    -k DB/EC-K-typing_group1and4_v0.9.gbk \
+    --scores results_G14/kaptive_scores.tsv -t 8
+
+# Step 3 — Normalise scores
+python3 scripts/normalise_kaptive_scores.py \
+    --db DB/EC-K-typing_group1and4_v0.9.gbk \
+    --in results_G14/kaptive_scores.tsv \
+    --out results_G14/kaptive_results_norm.tsv
 ```
-
-A `--skip-kaptive` flag allows re-normalisation of a pre-computed scores matrix without re-running Kaptive, enabling rapid parameter exploration.
-
-**Standard Kaptive** can also be used directly with the GenBank database:
-
-```bash
-kaptive assembly DB/EC-K-typing_all_groups_v0.6.gbk genome.fasta -o results.tsv
-```
-
-Standard Kaptive achieves 72.0% self-typing for G1/G4 loci and types approximately 43% of assemblies (the remainder are reported as Untypeable due to locus fragmentation across contigs or divergence from the reference that prevents initial locus localisation by full-sequence BLAST). Normalised scoring is therefore strongly recommended for G1/G4 typing.
 
 ### Interpreting normalised alignment scores
 
@@ -216,21 +213,23 @@ Standard Kaptive achieves 72.0% self-typing for G1/G4 loci and types approximate
 | 1.50–1.90 | Moderate: partial locus or gene-level divergence |
 | < 1.50 | Low confidence: possible novel type, divergent variant, or assembly issue |
 
-KL302, KL303, and KL300 calls should be treated with particular caution, as KL303 cannot currently be distinguished from KL302 in any public genome sequence (see Discussion).
-
 ---
 
 ## Discussion
 
-We present EC-K-typing Group 1 & 4, the first comprehensive sequence typing database for *E. coli* Group 1 and Group 4 capsule loci, together with a normalised scoring framework that substantially improves typing accuracy over standard Kaptive while maintaining 100% typeability. The database fills a significant gap in *E. coli* genomic epidemiology toolkits: until now, automated K-antigen typing was restricted to Group 2 and Group 3 loci, leaving approximately 15–20% of BSI isolates and a large fraction of neonatal sepsis isolates uncharacterised at the capsule level.
+We present EC-K-typing Group 1 & 4, a comprehensive sequence typing database for *E. coli* G1/G4 capsule loci that achieves 100% self-typing and typeability across 651 loci and 1,126 validation assemblies. The database fills a long-standing gap in *E. coli* genomic epidemiology toolkits, enabling automated K-antigen assignment for the substantial fraction of clinical isolates that carry G1/G4 rather than G2/G3 capsule loci.
 
-The normalised scoring approach introduced here addresses a fundamental limitation of cumulative bitscore-based typing that extends beyond this specific database. Any Kaptive database covering loci of different sizes will exhibit bitscore accumulation bias unless scores are normalised by locus size. The approach is computationally trivial — requiring only a single division per locus × assembly pair — and requires no changes to Kaptive itself or to the underlying BLAST analysis. We recommend that it be considered for adoption in other Kaptive-based typing databases, particularly those covering closely related loci of variable gene content.
+A key finding of this work is the *wzy*-interference artefact that prevents simultaneous G1/G4 and G2/G3 database searching. The 82% misclassification rate observed in the Malawi validation dataset underscores that this is not a marginal issue: users of combined-database pipelines will systematically fail to type G2/G3 isolates. This has implications beyond the database presented here — any typing resource that combines Wzy-dependent and non-Wzy-dependent loci in a single Kaptive database must account for this interference if G2/G3 loci are also present.
 
-The five KX01 loci (KL300–KL307 with the exception of KL302 and KL304) present a persistent challenge. Three of the five (KL301, KL306, KL307) have been successfully resolved through a combination of conserved gene manipulation and NCBI representative replacement, respectively. KL303 represents a genuinely hard biological case: despite 264 public genomes matching the locus at high similarity, none carry a variable region distinguishable from KL302 by sequence alone. This may reflect a very recent divergence event, ongoing horizontal gene transfer between KL302 and KL303 biosynthetic loci, or an error in the original KL303 designation. We retain KL303 in the database to ensure that loci morphologically consistent with this type can still be detected and flagged, but users should treat KL303 assignments as requiring confirmatory evidence (e.g., antigen serology or independent sequencing of the biosynthetic region with long-read technology).
+The normalised scoring approach addresses bitscore accumulation bias in a computationally straightforward manner applicable to any Kaptive-compatible database. The tiebreaker (raw AS descending when Norm AS values are equal) is critical for resolving subset-locus relationships introduced by the ATB expansion: when one reference locus has a gene set that is a strict subset of another, standard ranking by Norm AS alone cannot distinguish them, and the larger-evidence assignment is biologically correct.
 
-The neonatal sepsis application reveals that Group 1/4 types constitute nearly half (49.2%) of all capsule types in these cohorts, with substantial geographic variation. KL302 is the dominant G1/G4 type across all sites, consistent with the broad prevalence of KX36-type *E. coli* in invasive disease. The high frequency of KL301 (12% of G1/4 calls) and KL303 (9.6%) in the African collections mirrors the known predominance of KX01-type *E. coli* in neonatal bacteraemia in sub-Saharan Africa [CITATION]. Caution is warranted in interpreting KL303 calls in clinical datasets given its indistinguishability from KL302, and future work should prioritise resolving this ambiguity.
+The ATB expansion more than six-fold expands the reference diversity. The scale of novel loci (347,524 candidate sequences yielding 577 clusters) confirms that the global G1/G4 diversity is substantially larger than was represented in the original BSI collection, and that large-scale public assembly repositories are an efficient source of novel reference loci. The removal of 16 loci in the v0.9 quality control pass highlights that automated extraction from fragmented short-read assemblies introduces artefacts (oversized loci, partial captures), and that a CDS-count threshold and BLASTn self-identity screen are effective quality controls.
 
-Several limitations should be noted. First, the source BSI dataset (EnteroBase, UK-centric) may not fully represent the global diversity of Group 1 and Group 4 capsule types; loci present only in low-income country settings or specific endemic regions may be absent from the current database. Second, all locus sequences are derived from short-read assemblies; loci fragmented across contig boundaries may be incompletely represented, and long-read assembly would be expected to improve reference quality. Third, the positional gene naming scheme (e.g., KL302_04_wzx) is not directly equivalent to established *E. coli* gene names or classical capsule gene designations, limiting direct comparison with serotype-based literature. Future work will focus on mining the AllTheBacteria dataset (~2.4 million prokaryotic assemblies) [CITATION] for discriminating representatives for KL300 and KL303, expanding the reference set to include loci from under-represented geographic regions, and producing a v1.0 release with 100% self-typing once remaining ambiguities are resolved.
+KL303 has now been resolved through LexicMap search of the ATB collection, demonstrating that the previously intractable ambiguity with KL302 was a sampling limitation rather than a genuine biological indistinguishability. ATB-scale search is therefore a viable approach for resolving other difficult loci. KL300 remains unresolved; the LexicMap hits to KL300 were driven by conserved biosynthetic genes shared with novel loci KL957 and KL668, and a *wzy*-targeted approach is recommended to identify a discriminating representative.
+
+The NNS application reveals that G1/G4 types constitute nearly half of all capsule types in these cohorts, with KL302 dominant across all sites. The high frequency of KL301 and KL303 in sub-Saharan African collections is consistent with the known prevalence of KX01-clade *E. coli* in invasive neonatal disease in this region [CITATION]. The NNS results presented here used v0.5 database; application of the full 651-locus v0.9 database to these and other clinical cohorts may reveal additional novel types, particularly KL337 (removed from v0.9, present in 19 NNS assemblies) which requires re-evaluation with the updated database.
+
+Several limitations should be noted. KL300 remains unresolvable from other KX01 loci; KL300 assignments should be treated with caution when distinguishing from KL302. The novel ATB loci have limited functional annotation; systematic positional gene naming, as applied to the BSI loci in version 0.3, has not yet been extended at scale to the ATB-derived loci. Finally, while ATB screening achieved broad coverage, the collection is not uniformly distributed across geography or clinical context, and G1/G4 types prevalent in under-represented settings may be absent from the current database.
 
 ---
 
@@ -238,19 +237,19 @@ Several limitations should be noted. First, the source BSI dataset (EnteroBase, 
 
 All database files, annotation scripts, normalised scoring code, and pre-computed validation results are freely available at:
 
-**https://github.com/[REPO]**
+**https://github.com/efosternyarko/EC-K-typing-G1G4**
 
-The current recommended database for all-groups typing is `DB/EC-K-typing_all_groups_v0.6.gbk`. The normalised scoring script is `scripts/type_normalized.py`. Pre-computed results for 567 BSI validation assemblies and 592 NNS assemblies are provided in the `DB/` directory.
+The current recommended database is `DB/EC-K-typing_group1and4_v0.9.gbk`. The normalised scoring script is `scripts/normalise_kaptive_scores.py`. Pre-computed validation results for 1,126 assemblies are in `DB/kaptive_validation_results_v0.9norm_full.tsv`.
 
-The EC-K-typing Group 2 & 3 database (v3.0.0) used as the complementary G2/G3 component is available at https://github.com/rgladstone/EC-K-typing.
+The EC-K-typing Group 2 & 3 database (v3.0.0) is available at https://github.com/rgladstone/EC-K-typing.
 
-Source genome assemblies are available from EnteroBase (https://enterobase.warwick.ac.uk/) under the accessions listed in `DB/KL_G1G4_mapping_filtered.tsv`. NCBI accessions CP099041 (KL306 representative) and CP070103 (KL307 representative) are available from NCBI Nucleotide.
+Source BSI genome assemblies are available from EnteroBase (https://enterobase.warwick.ac.uk/) under the accessions listed in `DB/KL_G1G4_mapping.tsv`. NCBI accessions CP099041 (KL306) and CP070103 (KL307) are available from NCBI Nucleotide. ATB assemblies are available via the AllTheBacteria project (https://allthebacteria.org).
 
 ---
 
 ## Acknowledgements
 
-[ACKNOWLEDGEMENTS — funding, data access agreements, sequencing centres, etc.]
+[ACKNOWLEDGEMENTS — funding, data access agreements, sequencing centres, HPC resources (M3/Monash), AllTheBacteria team, etc.]
 
 ---
 
@@ -258,7 +257,7 @@ Source genome assemblies are available from EnteroBase (https://enterobase.warwi
 
 1. Whitfield C, Roberts IS. Structure, assembly and regulation of expression of capsules in *Escherichia coli*. *Mol Microbiol*. 1999;31:1307–1319.
 
-2. Russo TA, Marr CM. Hypervirulent *Klebsiella pneumoniae*. *Clin Microbiol Rev*. 2019;32:e00001-19. [Note: replace with appropriate *E. coli* K antigen virulence citation]
+2. [*E. coli* K antigen virulence and clinical distribution citation]
 
 3. Whitfield C, Wear SS, Sande C. Assembly of bacterial capsular polysaccharides and exopolysaccharides. *Annu Rev Microbiol*. 2020;74:521–543.
 
@@ -266,7 +265,7 @@ Source genome assemblies are available from EnteroBase (https://enterobase.warwi
 
 5. Lam MMC, Wick RR, Judd LM, Holt KE, Wyres KL. Kaptive 2.0: updated capsule and lipopolysaccharide locus typing for the *Klebsiella pneumoniae* species complex. *Microb Genom*. 2022;8:000800.
 
-6. Alikhan NF, Zhou Z, Sergeant MJ, Achtman M. A genomic overview of the population structure of *Salmonella*. *PLoS Genet*. 2018;14:e1007261. [EnteroBase citation — replace with correct EnteroBase ref]
+6. [EnteroBase citation]
 
 7. Larralde M, Zeller G. Pyrodigal: faster gene predictions with Prodigal. *J Open Source Softw*. 2022;7:4296.
 
@@ -278,10 +277,15 @@ Source genome assemblies are available from EnteroBase (https://enterobase.warwi
 
 11. Shaw LP, [CO-AUTHORS]. LexicMap: efficient sequence search in large-scale microbial genome collections. *Nat Biotechnol*. 2025. https://doi.org/10.1038/s41587-025-02812-8
 
-12. [NEONATAL SEPSIS CITATION — relevant papers for Patan/Barnards/Mlw/MRCG/CHAMPS collections]
+12. Li H. Minimap2: pairwise alignment for nucleotide sequences. *Bioinformatics*. 2018;34:3094–3100.
+
+13. [Neonatal sepsis collection citations — Patan/Barnards/Malawi/MRCG/CHAMPS/Mbira/Benin/Pakistan]
+
+14. [FastKaptive citation]
+
+15. [Geographic distribution of *E. coli* capsule types in invasive/neonatal disease citation]
 
 ---
 
-*Manuscript prepared: [DATE]*
-*Database version: v0.6*
-*GitHub: https://github.com/[REPO]*
+*Database version: v0.9 (651 loci)*
+*GitHub: https://github.com/efosternyarko/EC-K-typing-G1G4*
