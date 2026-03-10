@@ -53,6 +53,28 @@ kaptive assembly -a untypeable/*.fasta \
 
 Combine Step 1 (typeable) and Step 2 results for a complete capsule-type assignment across all four groups.
 
+### Alternative: kpsM pre-screen
+
+For large collections where running the full G2/G3 Kaptive database is time-prohibitive, you can replace Step 1 with a faster `kpsM` gene screen. The `kpsM` gene encodes an inner membrane component of the Group 2/3 ABC-transporter capsule export system — it is present in all Group 2/3 strains and absent from Group 1/4 strains, making it a reliable marker to separate the two groups.
+
+> **Limitation:** The kpsM screen identifies whether an assembly is Group 2/3 or a G1/G4 candidate, but does **not** assign a G2/G3 K-locus type. Use this approach only when G2/G3 K-locus typing is not needed.
+
+**Requirements:** `blastn` and `makeblastdb` (NCBI BLAST+) on your `PATH`.
+
+```bash
+# Screen a directory of assemblies; run Kaptive on kpsM-negative ones:
+python3 scripts/kpsm_screen.py \
+    --assembly-dir assemblies/ \
+    --kpsm-ref DB/kpsM_reference.fasta \
+    --kaptive-db DB/EC-K-typing_group1and4_v0.9.gbk \
+    --output-dir results/kpsm_screen/ \
+    --run-kaptive
+```
+
+`DB/kpsM_reference.fasta` contains the reference sequences for `kpsM` (Group 2 marker) and `kpsM_3` (Group 3 marker). Detection of either at ≥90% identity and ≥80% query coverage marks an assembly as Group 2/3; all others are passed to G1/G4 typing.
+
+Assemblies where `kpsM_screen_results.tsv` reports `group = Group2_3` are Group 2/3 strains — G1/G4 typing should not be applied to them. Assemblies with `group = G1_G4_candidate` should be passed to Step 2.
+
 ### Why normalised scoring?
 
 Standard Kaptive accumulates raw alignment score across all reference genes. Because large loci accumulate proportionally more score, smaller loci of the same KX type are systematically outscored — even at equal per-base identity. Standard mode achieves only ~43% typeability on G1/G4 assemblies; normalised scoring achieves **100%**.
