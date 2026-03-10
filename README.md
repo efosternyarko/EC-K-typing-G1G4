@@ -55,7 +55,7 @@ Combine Step 1 (typeable) and Step 2 results for a complete capsule-type assignm
 
 ### Why normalised scoring?
 
-Standard Kaptive accumulates raw BLAST alignment score across all reference genes. Because large loci accumulate proportionally more score, smaller loci of the same KX type are systematically outscored — even at equal per-base identity. Standard mode achieves only ~43% typeability on G1/G4 assemblies; normalised scoring achieves **100%**.
+Standard Kaptive accumulates raw alignment score across all reference genes. Because large loci accumulate proportionally more score, smaller loci of the same KX type are systematically outscored — even at equal per-base identity. Standard mode achieves only ~43% typeability on G1/G4 assemblies; normalised scoring achieves **100%**.
 
 Normalised scoring divides the raw alignment score by the total expected CDS length of each reference locus, converting it to a per-base identity metric that is size-independent:
 
@@ -180,7 +180,7 @@ sample_E            KL305             Typeable               50           50    
 | `Best match confidence` | `Typeable` if ≥ 50% of expected genes found; `Untypeable` otherwise |
 | `Genes found` / `Genes expected` | Count of reference CDS found vs expected |
 | `Gene coverage` | Fraction of expected genes found (found ÷ expected) |
-| `Raw AS` | Cumulative BLAST alignment score — **not** comparable across loci of different sizes (range ~10,000–100,000+) |
+| `Raw AS` | Cumulative alignment score — **not** comparable across loci of different sizes (range ~10,000–100,000+) |
 | `Norm AS` | Raw AS ÷ total expected CDS base-pairs — size-independent per-base identity (~2.0 = perfect) |
 
 ---
@@ -191,8 +191,8 @@ Kaptive can be run in two fundamentally different modes, which are **independent
 
 **Standard mode** (`kaptive assembly -a genome.fasta -k db.gbk -o out.tsv`):
 
-1. BLAST the full reference locus sequence against the assembly → locate the locus *region*
-2. Within that region, BLAST each reference CDS → count genes found
+1. minimap2 aligns the full reference locus sequence against the assembly → locate the locus *region*
+2. Within that region, align each reference CDS → count genes found
 3. If step 1 fails (no clear full-sequence hit), the locus is never located and the assembly is reported as **None** or **Untypeable**, regardless of whether individual genes exist somewhere in the assembly
 
 Standard Kaptive reports a graded confidence level based on the fraction and identity of genes found:
@@ -209,7 +209,7 @@ Standard Kaptive reports a graded confidence level based on the fraction and ide
 
 **Scores mode** (`kaptive assembly -a genome.fasta -k db.gbk --scores matrix.tsv`), used for normalised scoring:
 
-1. BLAST each reference CDS **directly against the whole assembly** — no locus region is identified first
+1. minimap2 aligns each reference CDS **directly against the whole assembly** — no locus region is identified first
 2. Scores are accumulated per locus across all genes found anywhere in the assembly
 3. Every assembly receives a score for every reference locus; the best-scoring locus is the type call
 
