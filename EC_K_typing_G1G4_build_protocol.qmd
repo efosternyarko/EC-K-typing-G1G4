@@ -11,7 +11,6 @@ format:
     toc-title: "Contents"
     number-sections: true
     theme: cosmo
-    code-fold: false
     code-copy: true
     highlight-style: github
     self-contained: true
@@ -22,9 +21,6 @@ format:
     colorlinks: true
     geometry: margin=2.5cm
     fontsize: 11pt
-execute:
-  eval: false
-  echo: true
 ---
 
 ## Overview {.unnumbered}
@@ -185,9 +181,10 @@ directory for this phase is:
 python3 scripts/build_G1G4_db.py
 ```
 
-```{python}
-#| code-fold: true
-#| code-summary: "Show full script: build_G1G4_db.py"
+::: {.callout-note collapse="true" icon="false"}
+## Show full script: `build_G1G4_db.py`
+
+```python
 #!/usr/bin/env python3
 """
 Build E. coli Group 1 & 4 K-locus reference database.
@@ -443,6 +440,8 @@ if __name__ == '__main__':
     main()
 ```
 
+:::
+
 For each of the 1,112 candidate assemblies:
 
 1. **BLASTn flanking genes** (*galF*, *gnd*, *ugd*, *wza*, *wzb*, *wzc*)
@@ -469,9 +468,10 @@ evidence; the remaining 32 were excluded as redundant or ambiguous types.
 python3 scripts/annotate_loci.py
 ```
 
-```{python}
-#| code-fold: true
-#| code-summary: "Show full script: annotate_loci.py"
+::: {.callout-note collapse="true" icon="false"}
+## Show full script: `annotate_loci.py`
+
+```python
 #!/usr/bin/env python3
 """
 Annotate Group 1/4 K-locus reference sequences using Klebsiella K-locus gene models.
@@ -697,6 +697,8 @@ if __name__ == '__main__':
     main()
 ```
 
+:::
+
 CDS prediction used pyrodigal (metagenomic mode), with gene names transferred
 by BLASTp against the Klebsiella K-locus primary reference.
 
@@ -724,9 +726,10 @@ discriminating variable-region signal.
 python3 scripts/make_v04_db.py
 ```
 
-```{python}
-#| code-fold: true
-#| code-summary: "Show full script: make_v04_db.py"
+::: {.callout-note collapse="true" icon="false"}
+## Show full script: `make_v04_db.py`
+
+```python
 #!/usr/bin/env python3
 """
 make_v04_db.py — Build v0.4 database by stripping conserved CDS from G1/G4 loci.
@@ -815,6 +818,8 @@ if __name__ == "__main__":
     main()
 ```
 
+:::
+
 All conserved CDS features (*wza*, *wzb*, *wzc*, *galF*, *galF_2*, *gnd*,
 *ugd*) were removed from all 93 G1/G4 GenBank records. Kaptive then scored
 exclusively on discriminating biosynthetic genes.
@@ -832,9 +837,10 @@ KL306, and KL307 remained failures.
 python3 scripts/make_v05_db.py
 ```
 
-```{python}
-#| code-fold: true
-#| code-summary: "Show full script: blast_ncbi_candidates.py"
+::: {.callout-note collapse="true" icon="false"}
+## Show full script: `blast_ncbi_candidates.py`
+
+```python
 #!/usr/bin/env python3
 """
 blast_ncbi_candidates.py — Search NCBI for better KL300/303/306/307 representatives.
@@ -989,9 +995,12 @@ if __name__ == "__main__":
     main()
 ```
 
-```{python}
-#| code-fold: true
-#| code-summary: "Show full script: test_blast_candidates.py"
+:::
+
+::: {.callout-note collapse="true" icon="false"}
+## Show full script: `test_blast_candidates.py`
+
+```python
 #!/usr/bin/env python3
 """
 test_blast_candidates.py — Download NCBI BLAST candidates and test with Kaptive.
@@ -1150,9 +1159,12 @@ if __name__ == "__main__":
     main()
 ```
 
-```{python}
-#| code-fold: true
-#| code-summary: "Show full script: make_v05_db.py"
+:::
+
+::: {.callout-note collapse="true" icon="false"}
+## Show full script: `make_v05_db.py`
+
+```python
 #!/usr/bin/env python3
 """
 make_v05_db.py — Build v0.5 database by replacing KL306 and KL307 with
@@ -1417,6 +1429,8 @@ if __name__ == "__main__":
     main()
 ```
 
+:::
+
 `blast_ncbi_candidates.py` was used to identify NCBI chromosome sequences
 that type unambiguously as KL306 or KL307:
 
@@ -1445,9 +1459,10 @@ assemblies.
 python3 scripts/make_v06_db.py
 ```
 
-```{python}
-#| code-fold: true
-#| code-summary: "Show full script: make_v06_db.py"
+::: {.callout-note collapse="true" icon="false"}
+## Show full script: `make_v06_db.py`
+
+```python
 #!/usr/bin/env python3
 """
 make_v06_db.py — Restore conserved CDS annotations to all G1/G4 loci except KL301.
@@ -1582,6 +1597,8 @@ g2g3_recs  = [r for r in SeqIO.parse(str(V05_ALL), "genbank")
 SeqIO.write(v05_recs + g2g3_recs, str(V06_ALL), "genbank")
 ```
 
+:::
+
 Conserved genes were restored to 91 of the 93 loci by copying CDS features
 from v0.3.1 (coordinates are identical for 91 loci; BLASTn liftover used for
 the two loci with new sequences: KL306 and KL307).
@@ -1626,9 +1643,10 @@ cd /home/ebenezef/js66_scratch/ebenn/atb_screen
 sbatch /home/ebenezef/js66_scratch/ebenn/EC-K-typing-G1G4/scripts/submit_atb_screen.sh
 ```
 
-```{bash}
-#| code-fold: true
-#| code-summary: "Show full script: submit_atb_screen.sh"
+::: {.callout-note collapse="true" icon="false"}
+## Show full script: `submit_atb_screen.sh`
+
+```bash
 #!/bin/bash
 # =============================================================================
 # submit_atb_screen.sh
@@ -1667,9 +1685,12 @@ python3 "$SCRIPT" "${SLURM_ARRAY_TASK_ID}"
 echo "Task ${SLURM_ARRAY_TASK_ID} finished at $(date)"
 ```
 
-```{python}
-#| code-fold: true
-#| code-summary: "Show full script: atb_screen_batch.py"
+:::
+
+::: {.callout-note collapse="true" icon="false"}
+## Show full script: `atb_screen_batch.py`
+
+```python
 #!/usr/bin/env python3
 """
 atb_screen_batch.py — Screen one AllTheBacteria batch for G1/G4 flanking genes.
@@ -1801,6 +1822,8 @@ if __name__ == "__main__":
     main()
 ```
 
+:::
+
 Each array task (`1–888`, max 50 concurrent):
 
 1. Extracts all assemblies from the `.tar.xz` archive into a temp directory
@@ -1825,9 +1848,10 @@ ls results/batch_*_hits.tsv | wc -l   # expect 665 with candidates
 python3 /home/ebenezef/js66_scratch/ebenn/EC-K-typing-G1G4/scripts/combine_atb_hits.py
 ```
 
-```{python}
-#| code-fold: true
-#| code-summary: "Show full script: combine_atb_hits.py"
+::: {.callout-note collapse="true" icon="false"}
+## Show full script: `combine_atb_hits.py`
+
+```python
 #!/usr/bin/env python3
 """
 combine_atb_hits.py — Combine per-batch screening results and identify G1/G4 candidates.
@@ -1932,6 +1956,8 @@ if __name__ == "__main__":
     main()
 ```
 
+:::
+
 Filters for genomes with **both** *galF* AND *gnd* hits on the **same contig**.
 Outputs:
 
@@ -1953,9 +1979,10 @@ sequences that match the existing reference database.
 bash /home/ebenezef/js66_scratch/ebenn/EC-K-typing-G1G4/scripts/setup_novelty_db.sh
 ```
 
-```{bash}
-#| code-fold: true
-#| code-summary: "Show full script: setup_novelty_db.sh"
+::: {.callout-note collapse="true" icon="false"}
+## Show full script: `setup_novelty_db.sh`
+
+```bash
 #!/bin/bash
 # =============================================================================
 # setup_novelty_db.sh
@@ -1990,6 +2017,8 @@ echo "Done. DB at: ${DB_PATH}"
 echo "Verify with: blastdbcmd -db ${DB_PATH} -info"
 ```
 
+:::
+
 Builds a BLAST nucleotide database from `DB/reference_loci_v0.6.fasta`
 (93 existing loci) at:
 `/home/ebenezef/js66_scratch/ebenn/atb_screen/novelty_db/g1g4_refs`
@@ -2002,9 +2031,10 @@ Builds a BLAST nucleotide database from `DB/reference_loci_v0.6.fasta`
 sbatch /home/ebenezef/js66_scratch/ebenn/EC-K-typing-G1G4/scripts/submit_extract_novel.sh
 ```
 
-```{bash}
-#| code-fold: true
-#| code-summary: "Show full script: submit_extract_novel.sh"
+::: {.callout-note collapse="true" icon="false"}
+## Show full script: `submit_extract_novel.sh`
+
+```bash
 #!/bin/bash
 # =============================================================================
 # submit_extract_novel.sh
@@ -2045,9 +2075,12 @@ python3 "$SCRIPT" "${SLURM_ARRAY_TASK_ID}"
 echo "Task ${SLURM_ARRAY_TASK_ID} finished at $(date)"
 ```
 
-```{python}
-#| code-fold: true
-#| code-summary: "Show full script: extract_novel_loci.py"
+:::
+
+::: {.callout-note collapse="true" icon="false"}
+## Show full script: `extract_novel_loci.py`
+
+```python
 #!/usr/bin/env python3
 """
 extract_novel_loci.py — Extract G1/G4 cps loci from novel ATB candidates.
@@ -2278,6 +2311,8 @@ if __name__ == "__main__":
     main()
 ```
 
+:::
+
 Each array task (`1–268`, max 50 concurrent):
 
 1. Loads same-contig candidates for the batch
@@ -2304,9 +2339,10 @@ Each array task (`1–268`, max 50 concurrent):
 sbatch /home/ebenezef/js66_scratch/ebenn/EC-K-typing-G1G4/scripts/cluster_novel_loci.sh
 ```
 
-```{bash}
-#| code-fold: true
-#| code-summary: "Show full script: cluster_novel_loci.sh"
+::: {.callout-note collapse="true" icon="false"}
+## Show full script: `cluster_novel_loci.sh`
+
+```bash
 #!/bin/bash
 # =============================================================================
 # cluster_novel_loci.sh
@@ -2461,6 +2497,8 @@ echo "  Summary TSV     : ${OUT_DIR}/novel_kl_summary.tsv"
 echo "  Cluster membership: ${OUT_DIR}/cluster_membership.tsv"
 ```
 
+:::
+
 MMseqs2 parameters:
 
 ```bash
@@ -2513,9 +2551,10 @@ atb_screen/clustering/
 python3 scripts/annotate_and_merge_atb_loci.py 2>&1 | tee /tmp/annotate_v08.log
 ```
 
-```{python}
-#| code-fold: true
-#| code-summary: "Show full script: annotate_and_merge_atb_loci.py"
+::: {.callout-note collapse="true" icon="false"}
+## Show full script: `annotate_and_merge_atb_loci.py`
+
+```python
 #!/usr/bin/env python3
 """
 annotate_and_merge_atb_loci.py
@@ -2782,6 +2821,8 @@ if __name__ == "__main__":
     main()
 ```
 
+:::
+
 Pipeline steps:
 
 1. **Partial-capture screening:** BLASTn each novel locus against v0.6.
@@ -2813,9 +2854,10 @@ python3 scripts/type_normalized.py \
     --suffix v0.8norm
 ```
 
-```{python}
-#| code-fold: true
-#| code-summary: "Show full script: type_normalized.py"
+::: {.callout-note collapse="true" icon="false"}
+## Show full script: `type_normalized.py`
+
+```python
 #!/usr/bin/env python3
 """
 type_normalized.py — Normalised K-locus typing using Kaptive scores.
@@ -3175,6 +3217,8 @@ if __name__ == "__main__":
     main()
 ```
 
+:::
+
 ::: callout-note
 ## Deleting stale scores files
 
@@ -3237,9 +3281,10 @@ scp scripts/validate_novel_loci_m3.sh \
 sbatch ~/EC-K-typing-G1G4/scripts/validate_novel_loci_m3.sh
 ```
 
-```{bash}
-#| code-fold: true
-#| code-summary: "Show full script: validate_novel_loci_m3.sh"
+::: {.callout-note collapse="true" icon="false"}
+## Show full script: `validate_novel_loci_m3.sh`
+
+```bash
 #!/bin/bash
 # =============================================================================
 # validate_novel_loci_m3.sh
@@ -3411,6 +3456,8 @@ echo " Validation complete — $(date)"
 echo "=================================================="
 ```
 
+:::
+
 The script:
 
 1. Installs Kaptive v3 (`pip install --user "kaptive>=3.0"`)
@@ -3462,9 +3509,10 @@ carry KL300 or KL303.
 bash scripts/run_atb_lexicmap_ec2.sh
 ```
 
-```{bash}
-#| code-fold: true
-#| code-summary: "Show full script: run_atb_lexicmap_ec2.sh"
+::: {.callout-note collapse="true" icon="false"}
+## Show full script: `run_atb_lexicmap_ec2.sh`
+
+```bash
 #!/usr/bin/env bash
 # =============================================================================
 # run_atb_lexicmap_ec2.sh
@@ -3692,6 +3740,8 @@ aws ec2 terminate-instances --region "$REGION" --instance-ids "$INSTANCE_ID"
 echo "    Done! Results in: $RESULTS_DIR/atb_lexicmap_raw.tsv.gz"
 ```
 
+:::
+
 Launches an `r7g.4xlarge` on-demand EC2 instance (16 vCPU, 128 GB RAM,
 ARM64, eu-west-2) and runs LexicMap against the ATB S3 index:
 
@@ -3725,9 +3775,10 @@ ssh -i ~/.ssh/atb_search_key ec2-user@<PUBLIC_IP> \
 bash scripts/fetch_atb_results.sh <INSTANCE_ID> <PUBLIC_IP>
 ```
 
-```{bash}
-#| code-fold: true
-#| code-summary: "Show full script: fetch_atb_results.sh"
+::: {.callout-note collapse="true" icon="false"}
+## Show full script: `fetch_atb_results.sh`
+
+```bash
 #!/usr/bin/env bash
 # fetch_atb_results.sh — Fetch LexicMap results from EC2 and terminate instance
 #
@@ -3769,6 +3820,8 @@ echo ""
 echo "Next: python scripts/analyse_atb_results.py"
 ```
 
+:::
+
 ::: callout-note
 ## EC2 troubleshooting notes
 
@@ -3785,9 +3838,10 @@ echo "Next: python scripts/analyse_atb_results.py"
 python3 scripts/analyse_atb_results.py
 ```
 
-```{python}
-#| code-fold: true
-#| code-summary: "Show full script: analyse_atb_results.py"
+::: {.callout-note collapse="true" icon="false"}
+## Show full script: `analyse_atb_results.py`
+
+```python
 #!/usr/bin/env python3
 """
 analyse_atb_results.py — Rank ATB matches to identify better KL300/303/306/307 reps.
@@ -3902,6 +3956,8 @@ if __name__ == "__main__":
     main()
 ```
 
+:::
+
 **Results:** 16,324,589 alignment rows processed.
 
 | Locus | Candidates | Top candidates (99.8% qcov, 100% pident) |
@@ -3923,9 +3979,10 @@ scp scripts/validate_kl300_kl303_m3.sh \
 sbatch ~/EC-K-typing-G1G4/scripts/validate_kl300_kl303_m3.sh
 ```
 
-```{bash}
-#| code-fold: true
-#| code-summary: "Show full script: validate_kl300_kl303_m3.sh"
+::: {.callout-note collapse="true" icon="false"}
+## Show full script: `validate_kl300_kl303_m3.sh`
+
+```bash
 #!/bin/bash
 # =============================================================================
 # validate_kl300_kl303_m3.sh
@@ -4122,6 +4179,8 @@ echo " Results: ${REPO_DIR}/DB/kl300_303_validation_summary.tsv"
 echo "=================================================="
 ```
 
+:::
+
 The script downloads assemblies for the 6 top candidates directly from ENA
 portal API, NCBI datasets, and ATB S3 (in order of priority) — extracting
 from M3 archives is not possible as only 223 of 888 ATB batches are downloaded.
@@ -4178,9 +4237,10 @@ python3 scripts/replace_kl300_kl303.py \
     --kl303_fasta DB/kl300_303_fastas/SAMEA6656333.fa
 ```
 
-```{python}
-#| code-fold: true
-#| code-summary: "Show full script: replace_kl300_kl303.py"
+::: {.callout-note collapse="true" icon="false"}
+## Show full script: `replace_kl300_kl303.py`
+
+```python
 #!/usr/bin/env python3
 """
 replace_kl300_kl303.py
@@ -4463,6 +4523,8 @@ if __name__ == "__main__":
     main()
 ```
 
+:::
+
 The script accepts either or both loci (`--kl300_fasta`, `--kl303_fasta`,
 or `--auto`). With only KL303 specified, only KL303 is replaced.
 
@@ -4539,9 +4601,10 @@ or were indistinguishable from other types, reducing the database from
 python3 scripts/remove_oversized_loci.py --cds-threshold 60
 ```
 
-```{python}
-#| code-fold: true
-#| code-summary: "Show full script: remove_oversized_loci.py"
+::: {.callout-note collapse="true" icon="false"}
+## Show full script: `remove_oversized_loci.py`
+
+```python
 #!/usr/bin/env python3
 """
 remove_oversized_loci.py — Remove aberrantly large novel loci from the v0.9 GenBank.
@@ -4645,6 +4708,8 @@ def main():
 if __name__ == "__main__":
     main()
 ```
+
+:::
 
 Novel ATB extractions with >60 predicted CDS captured extensive flanking
 chromosomal sequence. These loci universally outscored legitimate loci
@@ -4779,9 +4844,10 @@ python3 scripts/kpsm_screen.py \
     --output-dir results/kpsm_screen/
 ```
 
-```{python}
-#| code-fold: true
-#| code-summary: "Show full script: kpsm_screen.py"
+::: {.callout-note collapse="true" icon="false"}
+## Show full script: `kpsm_screen.py`
+
+```python
 #!/usr/bin/env python3
 """
 kpsm_screen.py — Group 2/3 pre-screen for E. coli G1/G4 K-locus typing.
@@ -4972,6 +5038,8 @@ if __name__ == "__main__":
     main()
 ```
 
+:::
+
 **Output:** `kpsm_screen_results/kpsm_screen_results.tsv` — one row per
 assembly with columns `assembly`, `kpsM_hit`, `pident`, `qcov`, `group`
 (`Group2_3` or `G1_G4_candidate`).
@@ -4991,9 +5059,10 @@ python3 scripts/validate_kpsm_screen.py \
     --workers 8
 ```
 
-```{python}
-#| code-fold: true
-#| code-summary: "Show full script: validate_kpsm_screen.py"
+::: {.callout-note collapse="true" icon="false"}
+## Show full script: `validate_kpsm_screen.py`
+
+```python
 #!/usr/bin/env python3
 """
 validate_kpsm_screen.py — Batch kpsM screen for validation.
@@ -5154,6 +5223,8 @@ if __name__ == "__main__":
     main()
 ```
 
+:::
+
 ::: callout-note
 ## kpsM screen vs sequential Kaptive
 
@@ -5231,9 +5302,10 @@ python3 scripts/normalise_kaptive_scores.py \
     --out results_G14/kaptive_results_norm.tsv
 ```
 
-```{python}
-#| code-fold: true
-#| code-summary: "Show full script: normalise_kaptive_scores.py"
+::: {.callout-note collapse="true" icon="false"}
+## Show full script: `normalise_kaptive_scores.py`
+
+```python
 #!/usr/bin/env python3
 """
 normalise_kaptive_scores.py — Re-rank Kaptive scores by AS / total_expected_gene_bp.
@@ -5347,6 +5419,8 @@ def main():
 if __name__ == "__main__":
     main()
 ```
+
+:::
 
 ### Key Design Decisions
 
