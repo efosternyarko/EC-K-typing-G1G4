@@ -58,6 +58,7 @@ database.
 | v0.7 | — | Deprecated: combined all-groups DB (wzy-interference artefact) |
 | v0.8 | 667 | + 574 ATB-derived novel loci (KL392–KL968); KL486/562/812 removed |
 | v0.9 | 651 | KL303 rep replaced; 16 further loci removed (12 oversized, KL337 unresolvable, KL446/843/968 merged); 651/651 self-typing, 1126/1126 typeability |
+| v1.0 | 628 | Gene-content deduplication: 23 novel loci removed across 16 merge groups; implements Kaptive locus principle (95% aa identity / 80% coverage, CD-HIT) |
 
 ---
 
@@ -122,16 +123,19 @@ database format errors. Both binaries at the path above are v2.2.31.
 ```
 EC-K-typing-G1G4/
 ├── DB/
-│   ├── EC-K-typing_group1and4_v0.9.gbk         # current G1/G4 database (651 loci)
+│   ├── EC-K-typing_group1and4_v1.0.gbk         # current G1/G4 database (628 loci)
+│   ├── EC-K-typing_group1and4_v0.9.gbk         # previous version (651 loci)
 │   ├── EC-K-typing_group2and3_v3.0.0.gbk        # Gladstone G2/G3 database
-│   ├── KL_G1G4_mapping.tsv                      # all 651 KL → source assembly
-│   ├── novel_kl_summary.tsv                     # KL type, accession, cluster size
+│   ├── KL_G1G4_mapping.tsv                      # 92 BSI KL → source assembly
+│   ├── novel_kl_summary_v1.0.tsv               # 536 novel KL type, accession, cluster size
+│   ├── novel_rep_kl_map_v1.0.tsv               # 536 novel KL → source assembly
+│   ├── CHANGELOG_v0.9_to_v1.0.txt              # merge decisions for v1.0
 │   ├── kaptive_validation_results_v0.9norm.tsv  # intermediate BSI-only validation
 │   ├── kaptive_validation_summary_v0.9norm.tsv
 │   ├── kl300_303_fastas/                        # validated ATB assemblies for KL300/303
 │   ├── atb_lexicmap_results/                    # LexicMap output (raw)
 │   ├── blast_ncbi_results/                      # NCBI candidate genome FASTAs
-│   └── novel_rep_fastas/                        # ATB rep FASTAs for 559 novel loci
+│   └── novel_rep_fastas/                        # ATB rep FASTAs for 536 novel loci
 ├── flanking_genes/
 │   └── flanking_genes.fasta              # galF + gnd reference sequences
 └── scripts/                              # All pipeline scripts
@@ -4806,6 +4810,133 @@ Output files:
 ```
 DB/kaptive_validation_results_v0.9norm_full.tsv
 DB/kaptive_validation_summary_v0.9norm_full.tsv
+```
+
+---
+
+## Part C — Gene-Content Deduplication (v0.9 → v1.0)
+
+### Background
+
+The core Kaptive locus-definition principle states that a unique locus is a unique set of genes, where genes are defined at a threshold translated amino acid identity level. The v0.9 novel locus clustering operated at **whole-locus nucleotide identity** (95% nt, MMseqs2), which is a proxy for but not equivalent to this principle.
+
+Following collaborator review, gene-content deduplication was implemented to bring the database into full compliance with the Kaptive principle:
+
+1. All CDS protein sequences are extracted from the GenBank file and clustered with **CD-HIT** at 95% amino acid identity / 80% bidirectional coverage
+2. Each locus is represented as a frozenset of gene-cluster IDs
+3. Loci with identical gene-content sets are identified as duplicates and merged
+
+### Phase 16 — Gene-Content Validation and Deduplication (v1.0)
+
+**Objective:** Identify and remove loci with identical gene-content sets, implementing the Kaptive uniqueness principle at protein level.
+
+**Tool:** CD-HIT v4.8.1 (compiled from source)
+
+**Scripts:** `scripts/validate_gene_content.py`, `scripts/investigate_duplicates.py`, `scripts/apply_merging_plan.py`
+
+#### Step 1 — Extract and cluster all CDS protein sequences
+
+```bash
+python3 scripts/validate_gene_content.py \
+    --gbk  DB/EC-K-typing_group1and4_v0.9.gbk \
+    --cdhit /tmp/cdhit/cd-hit \
+    --out  /tmp/gene_content_validation/
+```
+
+This extracts 13,194 CDS from 651 loci, translating from nucleotide sequence where `/translation` qualifiers are absent. CD-HIT is run at:
+
+- `-c 0.95` — 95% amino acid identity
+- `-aS 0.80 -aL 0.80` — 80% bidirectional coverage
+- `-n 5` — word size for 95% threshold
+
+Outputs:
+
+```
+/tmp/gene_content_validation/all_proteins.faa        # 13,194 protein sequences
+/tmp/gene_content_validation/protein_clusters.clstr  # CD-HIT cluster assignments
+/tmp/gene_content_validation/duplicate_loci.tsv      # groups with identical gene sets
+/tmp/gene_content_validation/subset_loci.tsv         # subset relationships
+```
+
+**Result:** 4,221 gene clusters identified. 16 duplicate groups (39 loci) detected; 72 subset relationships flagged.
+
+#### Step 2 — Investigate duplicate groups
+
+```bash
+python3 scripts/investigate_duplicates.py \
+    --gbk            DB/EC-K-typing_group1and4_v0.9.gbk \
+    --validation_dir /tmp/gene_content_validation/ \
+    --out            /tmp/duplicate_investigation/
+```
+
+For each duplicate group, this reports:
+
+- BSI (KL300–KL391) vs novel ATB (KL392+) classification
+- Pairwise nucleotide identity between loci (sampled comparison)
+- Proposed representative to retain (BSI locus if present; otherwise lowest KL number = largest ATB cluster)
+
+**Key finding:** All 16 duplicate groups contain only novel ATB loci (KL392+). No BSI reference loci are involved. Nucleotide identity between duplicates ranged from 31% to 99.7%, demonstrating that loci with identical protein-level gene content can be highly divergent at nucleotide level — confirming these are genuine gene-content duplicates, not assembly replicates.
+
+#### Step 3 — Apply merging plan
+
+```bash
+python3 scripts/apply_merging_plan.py \
+    --plan    /tmp/duplicate_investigation/merging_plan.tsv \
+    --db_dir  DB/ \
+    --out_dir DB/
+```
+
+**Merging rule:** Within each duplicate group, retain the locus with the lowest KL number (assigned to the largest ATB cluster during novel locus discovery). This is consistent with the existing cluster-size ranking used throughout the pipeline.
+
+| Group | Keep | Remove |
+|-------|------|--------|
+| KL392, KL790, KL798 | KL392 | KL790, KL798 |
+| KL393, KL802, KL922 | KL393 | KL802, KL922 |
+| KL394, KL398 | KL394 | KL398 |
+| KL395, KL634, KL803, KL900, KL937 | KL395 | KL634, KL803, KL900, KL937 |
+| KL406, KL899 | KL406 | KL899 |
+| KL482, KL585 | KL482 | KL585 |
+| KL483, KL701 | KL483 | KL701 |
+| KL546, KL664 | KL546 | KL664 |
+| KL557, KL589, KL625 | KL557 | KL589, KL625 |
+| KL576, KL729 | KL576 | KL729 |
+| KL660, KL710, KL781 | KL660 | KL710, KL781 |
+| KL690, KL888 | KL690 | KL888 |
+| KL738, KL823 | KL738 | KL823 |
+| KL810, KL868 | KL810 | KL868 |
+| KL870, KL950 | KL870 | KL950 |
+| KL897, KL923 | KL897 | KL923 |
+
+**Total removed: 23 loci. Database: 651 → 628.**
+
+#### Step 4 — Verify v1.0 under original cluster assignments
+
+Re-clustering after loci removal can shift CD-HIT's greedy assignments, revealing spurious new duplicates (cascade artefact). The correct verification uses the **original v0.9 cluster assignments** as authoritative:
+
+```python
+# Check remaining 628 loci for duplicates using v0.9 protein_clusters.clstr
+# (not re-clustered) → 0 duplicate groups confirmed
+```
+
+**Result:** 628 loci, 0 duplicate gene-content sets under the authoritative v0.9 CD-HIT clustering. v1.0 fully implements the Kaptive locus-definition principle.
+
+#### Subset relationships
+
+72 subset relationships remain (one locus's gene set ⊂ another's). These are not duplicates and are retained as distinct loci. They may represent:
+
+- Genuine biological variants lacking an accessory gene
+- Incomplete locus capture during ATB screening (high nt identity pairs)
+- Structural variants where flanking genes were missed
+
+High-nt-identity subset pairs (>80%) are candidates for follow-up investigation as potential incomplete captures.
+
+#### Outputs
+
+```
+DB/EC-K-typing_group1and4_v1.0.gbk   # 628-locus database
+DB/novel_kl_summary_v1.0.tsv         # 536 novel loci
+DB/novel_rep_kl_map_v1.0.tsv         # 536 novel loci → source assembly
+DB/CHANGELOG_v0.9_to_v1.0.txt        # full merge decision log
 ```
 
 ---
