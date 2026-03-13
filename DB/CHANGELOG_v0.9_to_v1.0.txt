@@ -1,0 +1,32 @@
+EC-K-typing G1/G4 Database — v0.9 → v1.0 Changelog
+Date: 2026-03-13
+
+CHANGE: Gene-content deduplication implementing Kaptive locus-definition principle
+        'A unique locus is a unique set of genes, defined at 95% amino acid
+        identity / 80% bidirectional coverage (CD-HIT)'
+
+METHOD: All CDS protein sequences were clustered with CD-HIT (95% aa / 80% cov).
+        Each locus was represented as a frozenset of gene-cluster IDs.
+        Loci with identical gene-content sets were merged; the lowest KL number
+        (corresponding to the largest ATB cluster) was retained.
+
+RESULT: 23 redundant loci removed across 16 merge groups.
+        Database reduced from 651 → 628 loci.
+
+MERGE GROUPS:
+  KEEP KL392      REMOVE KL790, KL798
+  KEEP KL393      REMOVE KL802, KL922
+  KEEP KL394      REMOVE KL398
+  KEEP KL395      REMOVE KL634, KL803, KL900, KL937
+  KEEP KL406      REMOVE KL899
+  KEEP KL482      REMOVE KL585
+  KEEP KL483      REMOVE KL701
+  KEEP KL546      REMOVE KL664
+  KEEP KL557      REMOVE KL589, KL625
+  KEEP KL576      REMOVE KL729
+  KEEP KL660      REMOVE KL710, KL781
+  KEEP KL690      REMOVE KL888
+  KEEP KL738      REMOVE KL823
+  KEEP KL810      REMOVE KL868
+  KEEP KL870      REMOVE KL950
+  KEEP KL897      REMOVE KL923
