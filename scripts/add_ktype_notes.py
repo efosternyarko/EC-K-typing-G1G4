@@ -88,25 +88,26 @@ def annotate_records(records: list, label: str) -> int:
     return n
 
 
-# ---------------------------------------------------------------------------
-# G1/G4 database
-# ---------------------------------------------------------------------------
-print(f"\n[1] Processing G1/G4 database: {G1G4_GBK.name}")
-recs_g1g4 = list(SeqIO.parse(str(G1G4_GBK), "genbank"))
-n_mod = annotate_records(recs_g1g4, "G1G4")
-print(f"    Modified {n_mod}/{len(recs_g1g4)} records.")
-SeqIO.write(recs_g1g4, str(G1G4_GBK), "genbank")
-print(f"    Written: {G1G4_GBK.name}")
+def main():
+    # G1/G4 database
+    print(f"\n[1] Processing G1/G4 database: {G1G4_GBK.name}")
+    recs_g1g4 = list(SeqIO.parse(str(G1G4_GBK), "genbank"))
+    n_mod = annotate_records(recs_g1g4, "G1G4")
+    print(f"    Modified {n_mod}/{len(recs_g1g4)} records.")
+    SeqIO.write(recs_g1g4, str(G1G4_GBK), "genbank")
+    print(f"    Written: {G1G4_GBK.name}")
 
-# ---------------------------------------------------------------------------
-# Combined all-groups database
-# ---------------------------------------------------------------------------
-print(f"\n[2] Processing combined database: {ALL_GBK.name}")
-recs_all = list(SeqIO.parse(str(ALL_GBK), "genbank"))
-n_mod_all = annotate_records(recs_all, "ALL")
-print(f"    Modified {n_mod_all}/{len(recs_all)} records "
-      f"({len(recs_all)-n_mod_all} G2/G3 records already annotated).")
-SeqIO.write(recs_all, str(ALL_GBK), "genbank")
-print(f"    Written: {ALL_GBK.name}")
+    # Combined all-groups database
+    print(f"\n[2] Processing combined database: {ALL_GBK.name}")
+    recs_all = list(SeqIO.parse(str(ALL_GBK), "genbank"))
+    n_mod_all = annotate_records(recs_all, "ALL")
+    print(f"    Modified {n_mod_all}/{len(recs_all)} records "
+          f"({len(recs_all)-n_mod_all} G2/G3 records already annotated).")
+    SeqIO.write(recs_all, str(ALL_GBK), "genbank")
+    print(f"    Written: {ALL_GBK.name}")
 
-print("\nDone. Run kaptive to verify 'Best match type' now shows KL names directly.")
+    print("\nDone. Run kaptive to verify 'Best match type' now shows KL names directly.")
+
+
+if __name__ == "__main__":
+    main()

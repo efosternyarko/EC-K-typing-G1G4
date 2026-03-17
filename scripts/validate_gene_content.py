@@ -261,7 +261,7 @@ def compare_gene_sets(
         for loci_list in duplicates.values():
             print(f"    {', '.join(sorted(loci_list))}")
     else:
-        print("  ✓ No duplicate loci — all 651 loci have unique gene-content sets")
+        print(f"  ✓ No duplicate loci — all {n} loci have unique gene-content sets")
 
     if subset_pairs:
         print(f"\n  ⚠ SUBSET RELATIONSHIPS ({len(subset_pairs)} pairs):")
