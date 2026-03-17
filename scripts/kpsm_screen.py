@@ -85,9 +85,6 @@ def blast_kpsm(assembly: Path, kpsm_ref: Path, tmpdir: str):
         ],
         capture_output=True, text=True
     )
-    if result.returncode != 0:
-        print(f"WARNING: blastn failed (rc={result.returncode})", file=sys.stderr)
-        return False, None, None
 
     best_pident, best_qcov = None, None
     for line in result.stdout.strip().splitlines():
@@ -205,29 +202,19 @@ def main():
     KPSM_PIDENT_THRESH = args.pident
     KPSM_QCOV_THRESH   = args.qcov
 
-    # Validate input files
-    if not args.kpsm_ref.is_file():
-        sys.exit(f"ERROR: kpsM reference not found: {args.kpsm_ref}")
-
     # Collect assemblies
     if args.assembly:
-        if not args.assembly.is_file():
-            sys.exit(f"ERROR: assembly not found: {args.assembly}")
         assemblies = [args.assembly]
     elif args.assembly_dir:
-        if not args.assembly_dir.is_dir():
-            sys.exit(f"ERROR: directory not found: {args.assembly_dir}")
         assemblies = sorted(
-            list(args.assembly_dir.glob("*.fa")) +
+            args.assembly_dir.glob("*.fa") +
             list(args.assembly_dir.glob("*.fasta")) +
             list(args.assembly_dir.glob("*.fna"))
         )
         if not assemblies:
             sys.exit(f"No FASTA files found in {args.assembly_dir}")
     else:
-        if not args.assembly_list.is_file():
-            sys.exit(f"ERROR: assembly list not found: {args.assembly_list}")
-        assemblies = [Path(line.strip()) for line in args.assembly_list.read_text().splitlines() if line.strip()]
+        assemblies = [Path(l.strip()) for l in args.assembly_list.read_text().splitlines() if l.strip()]
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
 

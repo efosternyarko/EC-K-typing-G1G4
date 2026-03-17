@@ -22,7 +22,7 @@ import re
 from collections import defaultdict
 from pathlib import Path
 
-from Bio import SeqIO
+from Bio import SeqIO, pairwise2
 
 
 # ── Defaults ──────────────────────────────────────────────────────────────────
