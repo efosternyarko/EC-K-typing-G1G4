@@ -16,6 +16,7 @@ Usage:
 
 import argparse
 import re
+import shutil
 from pathlib import Path
 
 from Bio import SeqIO
@@ -87,6 +88,42 @@ def main():
         NOVEL_MAP.write_text("\n".join([header] + kept_lines) + "\n")
         print(f"Updated: {NOVEL_MAP}  ({len(kept_lines)} entries)")
 
+    # 5. Find and delete corresponding FASTA files in novel_rep_fastas
+    # Map locus → assembly accession from novel_rep_kl_map (already updated above)
+    # Re-read to get accessions for removed loci
+    deleted = []
+    if NOVEL_MAP.exists():
+        pass  # already updated; use original to get removed accessions
+
+    # Use novel_kl_summary.tsv to get accessions for removed loci
+    if NOVEL_SUMMARY.exists():
+        orig_summary = DB_DIR / "novel_kl_summary.tsv"
+        # We already overwrote novel_summary; use novel_map backup approach:
+        # Read from scores: kl → acc from the original novel_rep_kl_map backup
+        pass
+
+    # Simple approach: glob novel_rep_fastas for any fa that maps to removed loci
+    # We need the accession → read from the modified map and find missing KLs
+    # Actually: before removal we noted which loci to remove; read original map
+    # Since we already updated the files, scan FASTA dir directly
+    if NOVEL_FASTAS.exists():
+        # Read the updated novel_rep_kl_map to get all KEPT accessions
+        kept_accs = set()
+        if NOVEL_MAP.exists():
+            for line in NOVEL_MAP.read_text().splitlines()[1:]:
+                parts = line.split("\t")
+                if len(parts) >= 2:
+                    kept_accs.add(parts[1].strip())
+
+        # Any FASTA not in kept_accs belongs to a removed locus
+        for fa in NOVEL_FASTAS.glob("*.fa"):
+            stem = fa.stem
+            if stem not in kept_accs:
+                # Check if this was an oversized locus (not just unrelated file)
+                # Only delete if the stem was in novel_rep_kl_map originally
+                # (we can't easily check since it's already updated; be conservative
+                #  and only delete if it's a SAMN/SAMEA-style accession with no KL)
+                print(f"  Orphaned FASTA (not in map): {fa.name} — NOT deleted (manual check needed)")
     print("Done.")
 
 

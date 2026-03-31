@@ -18,9 +18,13 @@ The *Escherichia coli* capsular polysaccharide (K antigen) is a major virulence 
 
 ## Introduction
 
-The capsular polysaccharide (CPS) of *Escherichia coli*, encoded by the K-antigen locus, is a central virulence factor that confers resistance to complement-mediated killing and phagocytosis [CITATION]. More than 80 distinct K-antigen serotypes have been described by classical methods, and their distribution varies substantially between disease contexts — invasive disease, urinary tract infection, and neonatal sepsis each show distinctive K-type profiles [CITATION]. As genomic surveillance of bacterial pathogens expands, sequence-based capsule typing has become an essential complement to whole-genome phylogenetics, enabling direct comparison of virulence potential across collections and time points without requiring serological reagents.
+The capsular polysaccharide (CPS) of *Escherichia coli*, encoded by the K-antigen locus, is a central virulence factor that confers resistance to complement-mediated killing and phagocytosis by forming a hydrophilic outer layer that impairs C3b deposition and opsonisation [2,3]. More than 80 distinct K-antigen serotypes have been described by classical methods, and their distribution varies substantially between disease contexts — invasive disease, urinary tract infection, and neonatal sepsis each show distinctive K-type profiles, with the K1 capsule being the dominant antigen in neonatal meningitis and certain invasive bloodstream infections [2,18]. As genomic surveillance of bacterial pathogens expands, sequence-based capsule typing has become an essential complement to whole-genome phylogenetics, enabling direct comparison of virulence potential across collections and time points without requiring serological reagents.
 
-*E. coli* capsules are divided into four groups based on biosynthetic pathway and chromosomal location [CITATION]. Group 2 and Group 3 capsules are synthesised via the ABC transporter pathway and their biosynthetic loci map near the *serA* chromosomal locus. These types are covered by the EC-K-typing database (Gladstone et al.) [CITATION], which provides 90 reference loci and achieves high self-typing accuracy with Kaptive [CITATION]. Group 1 and Group 4 capsules are synthesised via the Wzy-dependent pathway; their biosynthetic loci map to the *cps* region, flanked by *galF* upstream and *gnd* downstream, with the *wza-wzb-wzc* capsule export genes immediately upstream of the locus-variable biosynthetic region. Despite their clinical importance — G1/G4 types predominate in invasive disease and neonatal infection in multiple geographic settings [CITATION] — no comprehensive sequence database for G1/G4 loci compatible with Kaptive has previously been available.
+*E. coli* capsules are divided into four groups on the basis of biosynthetic pathway, chromosomal location, and regulatory logic [1,16]. Group 2 and Group 3 capsules are synthesised via the ABC transporter export pathway and their biosynthetic loci map near the *serA* chromosomal locus. These types are covered by the EC-K-typing database (Gladstone et al.) [4], which provides 90 reference loci and achieves high self-typing accuracy with Kaptive [5]. Group 1 and Group 4 capsules are both assembled by the Wzy-dependent polymerisation pathway — a mechanism mechanistically distinct from the ABC transporter route and shared with numerous *Klebsiella pneumoniae* capsule types [16,17].
+
+The Group 1 (G1) capsule locus (*cps*) occupies the chromosomal region between *galF* and *gnd* — the same niche occupied by the O-antigen biosynthetic locus in non-capsulate strains — and is co-regulated with colanic acid biosynthesis via the Rcs phosphorelay, a two-component signal-transduction system activated by cell-surface stress [16]. Biosynthesis proceeds through Wzx-mediated flipping of undecaprenyl pyrophosphate-linked repeat units across the inner membrane and Wzy-catalysed periplasmic polymerisation, before export to the cell surface through the tripartite Wza–Wzb–Wzc trans-envelope complex: Wza forms a ring-shaped outer-membrane channel, Wzb functions as a phosphotyrosine phosphatase, and Wzc is a tyrosine autokinase essential for chain-length regulation [17]. The conserved locus architecture includes *ugd* (encoding UDP-glucose dehydrogenase, required for precursor UDP-glucuronic acid synthesis) flanking the variable biosynthetic region. The prototypic G1 capsule, K30, has been the most extensively characterised biochemically and structurally [16].
+
+Group 4 (G4) capsules share the same Wzy-dependent export machinery and *galF–gnd*-flanked chromosomal context as G1, but carry an additional duplicated copy of the *wza-wzb-wzc* export cluster at a separate locus near the 22-minute position of the *E. coli* K-12 map [16]. The biochemical and regulatory parallels between G1 and G4 are sufficiently strong that some authors have proposed merging them into a single biosynthetic group [17]. Both groups are collectively distinguished from G2/G3 capsules by their *cps* chromosomal position, Wzy-dependent polymerisation, and the presence of *ugd* as part of the conserved locus architecture. Despite their clinical importance — G1/G4 types predominate in invasive disease and neonatal infection in multiple geographic settings [18,19] — no comprehensive sequence database for G1/G4 loci compatible with Kaptive has previously been available.
 
 Two key technical challenges complicate G1/G4 database development. First, bitscore accumulation bias is inherent in Kaptive's default scoring: the raw alignment score (AS) accumulates across all reference genes, causing loci with more or longer CDS to systematically outscore smaller loci even at identical per-base identity. This bias is compounded in G1/G4 databases because all loci share conserved flanking genes (*galF*, *gnd*, *ugd*, *wza*, *wzb*, *wzc*) that contribute identical background scores to every locus. Second, the Wzy-dependent O-antigen biosynthesis pathway is shared between G1/G4 capsule loci and the chromosomal O-antigen locus present in all *E. coli*, including G2/G3 strains. When G1/G4 and G2/G3 databases are searched simultaneously, *wzy*-encoded genes in G2/G3 assemblies produce spurious matches to the G1/G4 database, causing genuine G2/G3 isolates to appear untypeable — a *wzy*-interference artefact that mandates sequential rather than simultaneous database searching.
 
@@ -32,9 +36,9 @@ Here we present EC-K-typing Group 1 & 4, a resource that addresses both challeng
 
 ### Source genome collection and Group 1/4 candidate identification
 
-The primary source dataset comprised 6,673 *E. coli* bloodstream infection (BSI) genome assemblies obtained from EnteroBase (https://enterobase.warwick.ac.uk/) [CITATION]. All 6,673 genomes were screened against the EC-K-typing Group 2 & 3 database (v3.0.0) [CITATION] using Kaptive v3.1.0 [CITATION]. A total of 1,112 assemblies (16.7%) produced no significant hit, indicating the likely presence of a G1/G4 capsule locus. These 1,112 no-hit assemblies were subsequently typed with FastKaptive [CITATION] to assign preliminary KX-type designations. Fifteen distinct KX types were identified, including KX36 (*n* = 382), KX34 (*n* = 329), KX17 (*n* = 195), KX01 (*n* = 73), KX67 (*n* = 41), KX31 (*n* = 29), KX72 (*n* = 27), and eight additional less frequent types.
+The primary source dataset comprised 6,673 *E. coli* bloodstream infection (BSI) genome assemblies obtained from EnteroBase (https://enterobase.warwick.ac.uk/) [6]. All 6,673 genomes were screened against the EC-K-typing Group 2 & 3 database (v3.0.0) [4] using Kaptive v3.1.0 [14]. A total of 1,112 assemblies (16.7%) produced no significant hit, indicating the likely presence of a G1/G4 capsule locus. These 1,112 no-hit assemblies were subsequently typed with FastKaptive (https://github.com/rmostowy/fastKaptive; no associated publication) to assign preliminary KX-type designations. Fifteen distinct KX types were identified, including KX36 (*n* = 382), KX34 (*n* = 329), KX17 (*n* = 195), KX01 (*n* = 73), KX67 (*n* = 41), KX31 (*n* = 29), KX72 (*n* = 27), and eight additional less frequent types.
 
-A second validation dataset comprised 592 *E. coli* assemblies from eight neonatal sepsis (NNS) collections spanning six countries: Patan (Nepal; *n* = 20), Barnards (South Africa; *n* = 75), Mbira (Zimbabwe; *n* = 57), CHAMPS Harar (Ethiopia; *n* = 110), Malawi (*n* = 167), MRCG (Gambia; *n* = 130), Benin (*n* = 20), and Pakistan (*n* = 13). These assemblies were used for application-level validation of the database.
+A second validation dataset comprised 592 *E. coli* assemblies from eight neonatal sepsis (NNS) collections spanning six countries: Patan (Nepal; *n* = 20), Barnards (South Africa; *n* = 75), Mbira (Zimbabwe; *n* = 57), CHAMPS Harar (Ethiopia; *n* = 110), Malawi (*n* = 167), MRCG (Gambia; *n* = 130), Benin (*n* = 20), and Pakistan (*n* = 13) [13,18,19]. These assemblies were used for application-level validation of the database.
 
 ### Locus extraction from BSI genomes
 
@@ -46,7 +50,7 @@ Extracted locus sequences were clustered at ≥95% nucleotide identity and ≥80
 
 ### Gene prediction and annotation
 
-Open reading frames were predicted across each locus sequence using pyrodigal v[VERSION] [CITATION] in metagenomic mode. Predicted proteins were annotated in two stages. First, sequences were searched against the Kaptive *Klebsiella* K-locus reference database [CITATION] by BLASTp (≥30% identity, ≥50% query and subject coverage); matching proteins received the functional gene name from the *Klebsiella* reference. Second, for version 0.3, all predicted proteins across the 93 loci were clustered by all-vs-all BLASTp at ≥90% identity and ≥90% coverage; protein families shared across loci received a deterministic positional name of the form `KL{N}_{pos}`, where *N* is the KL number of the lowest-numbered contributing locus and *pos* is its ordinal position within that locus. Novel ATB loci (v0.8/v0.9) were annotated by pyrodigal followed by BLASTp name transfer, with positional names assigned for unannotated CDS.
+Open reading frames were predicted across each locus sequence using pyrodigal v[VERSION] [7] in metagenomic mode. Predicted proteins were annotated in two stages. First, sequences were searched against the Kaptive *Klebsiella* K-locus reference database [5] by BLASTp (≥30% identity, ≥50% query and subject coverage); matching proteins received the functional gene name from the *Klebsiella* reference. Second, for version 0.3, all predicted proteins across the 93 loci were clustered by all-vs-all BLASTp at ≥90% identity and ≥90% coverage; protein families shared across loci received a deterministic positional name of the form `KL{N}_{pos}`, where *N* is the KL number of the lowest-numbered contributing locus and *pos* is its ordinal position within that locus. Novel ATB loci (v0.8/v0.9) were annotated by pyrodigal followed by BLASTp name transfer, with positional names assigned for unannotated CDS.
 
 ### GenBank record formatting
 
@@ -78,7 +82,7 @@ Novel sequences were clustered using MMseqs2 (v17-b804f) at 95% nucleotide ident
 
 ### LexicMap search for KL300 and KL303 representatives
 
-KL300 and KL303 — KX01-clade loci sharing extensive conserved sequence with KL302 — failed self-typing in all BSI database versions. To identify discriminating representatives, we searched the full ATB collection using LexicMap v0.8.1 [CITATION] against the publicly accessible ATB LexicMap index (s3://allthebacteria-lexicmap/202408/). Query sequences (KL300: 45,380 bp; KL303: 40,992 bp from v0.8) were searched with --align-min-match-pident 90 --min-qcov-per-genome 70, processing 16,324,589 alignment rows. Top candidates (≥99.8% query coverage, 100% per-identity) were downloaded from ENA/NCBI and validated by normalised scoring against the v0.8 database on the M3 HPC cluster.
+KL300 and KL303 — KX01-clade loci sharing extensive conserved sequence with KL302 — failed self-typing in all BSI database versions. To identify discriminating representatives, we searched the full ATB collection using LexicMap v0.8.1 [11] against the publicly accessible ATB LexicMap index (s3://allthebacteria-lexicmap/202408/). Query sequences (KL300: 45,380 bp; KL303: 40,992 bp from v0.8) were searched with --align-min-match-pident 90 --min-qcov-per-genome 70, processing 16,324,589 alignment rows. Top candidates (≥99.8% query coverage, 100% per-identity) were downloaded from ENA/NCBI and validated by normalised scoring against the v0.8 database on the M3 HPC cluster.
 
 ### Database quality control (v0.8 → v0.9)
 
@@ -119,7 +123,7 @@ The EC-K-typing Group 1 & 4 database (v0.9) contains 651 reference loci covering
 
 ### Wzy-interference and mandatory sequential typing
 
-Simultaneous searching of G1/G4 and G2/G3 databases caused systematic misclassification of G2/G3 isolates. In validation using 100 assemblies with established G2/G3 types (Malawi dataset; Gladstone et al. [CITATION]), 82 (82%) were reported as untypeable with the combined database, compared to 0% with sequential typing (Table 2). The *wzy*-interference mechanism — Wzy-pathway genes shared between the G1/G4 *cps* references and the universal *E. coli* O-antigen locus — is sufficiently severe to preclude any combined-database approach. The G2/G3 and G1/G4 databases must always be searched sequentially.
+Simultaneous searching of G1/G4 and G2/G3 databases caused systematic misclassification of G2/G3 isolates. In validation using 100 assemblies with established G2/G3 types (Malawi dataset; Gladstone et al. [4]), 82 (82%) were reported as untypeable with the combined database, compared to 0% with sequential typing (Table 2). The *wzy*-interference mechanism — Wzy-pathway genes shared between the G1/G4 *cps* references and the universal *E. coli* O-antigen locus — is sufficiently severe to preclude any combined-database approach. The G2/G3 and G1/G4 databases must always be searched sequentially.
 
 **Table 2. Impact of simultaneous vs sequential database searching on G2/G3 typeability.**
 
@@ -158,7 +162,7 @@ Five KX01 loci failed normalised self-typing across versions 0.2–0.6 (KL300, K
 
 ### Application to neonatal sepsis cohorts
 
-Applied to 592 *E. coli* NNS assemblies using the sequential workflow and normalised scoring, the database assigned a capsule type to all 592/592 assemblies (Table 4). G1/G4 loci were identified in 291 assemblies (49.2%), with KL302 the dominant type (110/291; 37.8%). The proportion of G1/G4 types varied markedly between collections (34–75%), consistent with known geographic trends in invasive *E. coli* capsule type distribution [CITATION].
+Applied to 592 *E. coli* NNS assemblies using the sequential workflow and normalised scoring, the database assigned a capsule type to all 592/592 assemblies (Table 4). G1/G4 loci were identified in 291 assemblies (49.2%), with KL302 the dominant type (110/291; 37.8%). The proportion of G1/G4 types varied markedly between collections (34–75%), consistent with known geographic trends in invasive *E. coli* capsule type distribution [15,18].
 
 **Table 4. Capsule typing of 592 neonatal sepsis *E. coli* assemblies by collection.**
 
@@ -180,7 +184,7 @@ Applied to 592 *E. coli* NNS assemblies using the sequential workflow and normal
 
 ### Repository structure
 
-The database and associated software are distributed at https://github.com/efosternyarko/EC-K-typing-G1G4. The repository has two branches: `main` (full development history, all database versions, pipeline scripts) and `user-guide` (clean user-facing branch with only the files required for typing and a step-by-step README). All analysis scripts are written in Python 3 and depend on Biopython [CITATION], pandas [CITATION], minimap2 [CITATION], and NCBI BLAST+ [CITATION].
+The database and associated software are distributed at https://github.com/efosternyarko/EC-K-typing-G1G4. The repository has two branches: `main` (full development history, all database versions, pipeline scripts) and `user-guide` (clean user-facing branch with only the files required for typing and a step-by-step README). All analysis scripts are written in Python 3 and depend on Biopython [9], pandas [20], minimap2 [12], and NCBI BLAST+ [8].
 
 ### Recommended workflow
 
@@ -227,7 +231,7 @@ The ATB expansion more than six-fold expands the reference diversity. The scale 
 
 KL303 has now been resolved through LexicMap search of the ATB collection, demonstrating that the previously intractable ambiguity with KL302 was a sampling limitation rather than a genuine biological indistinguishability. ATB-scale search is therefore a viable approach for resolving other difficult loci. KL300 remains unresolved; the LexicMap hits to KL300 were driven by conserved biosynthetic genes shared with novel loci KL957 and KL668, and a *wzy*-targeted approach is recommended to identify a discriminating representative.
 
-The NNS application reveals that G1/G4 types constitute nearly half of all capsule types in these cohorts, with KL302 dominant across all sites. The high frequency of KL301 and KL303 in sub-Saharan African collections is consistent with the known prevalence of KX01-clade *E. coli* in invasive neonatal disease in this region [CITATION]. The NNS results presented here used v0.5 database; application of the full 651-locus v0.9 database to these and other clinical cohorts may reveal additional novel types, particularly KL337 (removed from v0.9, present in 19 NNS assemblies) which requires re-evaluation with the updated database.
+The NNS application reveals that G1/G4 types constitute nearly half of all capsule types in these cohorts, with KL302 dominant across all sites. The high frequency of KL301 and KL303 in sub-Saharan African collections is consistent with the known prevalence of KX01-clade *E. coli* in invasive neonatal disease in this region [18,19]. The NNS results presented here used v0.5 database; application of the full 651-locus v0.9 database to these and other clinical cohorts may reveal additional novel types, particularly KL337 (removed from v0.9, present in 19 NNS assemblies) which requires re-evaluation with the updated database.
 
 Several limitations should be noted. KL300 remains unresolvable from other KX01 loci; KL300 assignments should be treated with caution when distinguishing from KL302. The novel ATB loci have limited functional annotation; systematic positional gene naming, as applied to the BSI loci in version 0.3, has not yet been extended at scale to the ATB-derived loci. Finally, while ATB screening achieved broad coverage, the collection is not uniformly distributed across geography or clinical context, and G1/G4 types prevalent in under-represented settings may be absent from the current database.
 
@@ -257,15 +261,15 @@ Source BSI genome assemblies are available from EnteroBase (https://enterobase.w
 
 1. Whitfield C, Roberts IS. Structure, assembly and regulation of expression of capsules in *Escherichia coli*. *Mol Microbiol*. 1999;31:1307–1319.
 
-2. [*E. coli* K antigen virulence and clinical distribution citation]
+2. Kaper JB, Nataro JP, Mobley HLT. Pathogenic *Escherichia coli*. *Nat Rev Microbiol*. 2004;2:123–140.
 
-3. Whitfield C, Wear SS, Sande C. Assembly of bacterial capsular polysaccharides and exopolysaccharides. *Annu Rev Microbiol*. 2020;74:521–543.
+3. Horwitz MA, Silverstein SC. Influence of the *Escherichia coli* capsule on complement fixation and on phagocytosis and killing by human phagocytes. *J Clin Invest*. 1980;65:82–94.
 
-4. Gladstone RA, [CO-AUTHORS]. A sequence typing database for *Escherichia coli* capsular K antigens (Group 2 & 3). *medRxiv*. 2024. https://doi.org/10.1101/2024.11.22.24317484
+4. Gladstone RA, [CO-AUTHORS]. Group 2 and 3 ABC-transporter-dependent capsular K-loci contribute significantly to variation in the estimated invasive potential of *Escherichia coli*. *medRxiv*. 2024. https://doi.org/10.1101/2024.11.22.24317484
 
 5. Lam MMC, Wick RR, Judd LM, Holt KE, Wyres KL. Kaptive 2.0: updated capsule and lipopolysaccharide locus typing for the *Klebsiella pneumoniae* species complex. *Microb Genom*. 2022;8:000800.
 
-6. [EnteroBase citation]
+6. Zhou Z, Alikhan NF, Mohamed K, Fan Y, Agama Study Group; Achtman M. The EnteroBase user's guide, with case studies on Salmonella transmissions, Yersinia pestis phylogeny, and *Escherichia* core genomic diversity. *Genome Res*. 2020;30:138–152.
 
 7. Larralde M, Zeller G. Pyrodigal: faster gene predictions with Prodigal. *J Open Source Softw*. 2022;7:4296.
 
@@ -279,11 +283,37 @@ Source BSI genome assemblies are available from EnteroBase (https://enterobase.w
 
 12. Li H. Minimap2: pairwise alignment for nucleotide sequences. *Bioinformatics*. 2018;34:3094–3100.
 
-13. [Neonatal sepsis collection citations — Patan/Barnards/Malawi/MRCG/CHAMPS/Mbira/Benin/Pakistan]
+13. [Neonatal sepsis collection citations — see note below]
 
-14. [FastKaptive citation]
+14. Stanton TD, Hetland MAK, Löhr IH, Holt KE, Wyres KL. Fast and accurate in silico antigen typing with Kaptive 3. *Microb Genom*. 2025;11:001428. doi:10.1099/mgen.0.001428
 
-15. [Geographic distribution of *E. coli* capsule types in invasive/neonatal disease citation]
+    *Note: FastKaptive (used for preliminary KX-type designations of BSI assemblies) is a BLAST-based tool distributed at https://github.com/rmostowy/fastKaptive; no associated peer-reviewed publication exists. If a citation is required, cite the GitHub repository.*
+
+15. [Geographic distribution of *E. coli* capsule types in invasive/neonatal disease citation — see note below]
+
+16. Whitfield C. Biosynthesis and assembly of capsular polysaccharides in *Escherichia coli*. *Annu Rev Biochem*. 2006;75:39–68.
+
+17. Sande C, Whitfield C. Capsules and extracellular polysaccharides in *Escherichia coli* and *Salmonella*. *EcoSal Plus*. 2021. doi:10.1128/ecosalplus.esp-0033-2020
+
+18. McKnight CJ, Cross ELA, Kuebler A, et al. High diversity of *Escherichia coli* causing invasive disease in neonates in Malawi poses challenges for O-antigen based vaccine approach. *Commun Med*. 2025;5:133. doi:10.1038/s43856-025-01007-1
+
+19. Abubakar A, et al. Characterization of antimicrobial-resistant Gram-negative bacteria that cause neonatal sepsis in seven low- and middle-income countries. *Nat Microbiol*. 2021;6:512–523. doi:10.1038/s41564-021-00870-7
+
+    *(This covers the BARNARDS network including South Africa [Barnards collection] and Pakistan sites; also encompasses Ethiopia sites. Patan [Nepal], Mbira [Zimbabwe], MRCG [Gambia], and Benin collections — please provide specific publication references or confirm if these are unpublished/pre-publication datasets.)*
+
+20. McKinney W. Data structures for statistical computing in Python. *Proc 9th Python Sci Conf*. 2010;445:51–56.
+
+---
+
+### Notes on unresolved citations
+
+**[CITATION] — G1/G4 prevalence in invasive/neonatal disease (refs 15 and in-text):** The Malawi *E. coli* diversity paper (ref 18) documents capsule type prevalence in neonatal sepsis; this or an equivalent multi-country comparative study should be cited. Please advise on preferred reference(s) for the geographic distribution claim.
+
+**[FastKaptive]:** No peer-reviewed paper exists for FastKaptive by R. Mostowy. Options: (a) cite the GitHub repo URL; (b) describe the method in text without a formal citation; (c) use Kaptive 3 (ref 14) as a citation for the Kaptive framework and note FastKaptive as a predecessor pipeline.
+
+**NNS collection citations (ref 13):** The BARNARDS paper (ref 19) covers South Africa, Pakistan, and Ethiopia. Please provide the specific publication or ENA submission references for: Patan (Nepal), Mbira (Zimbabwe), MRCG (Gambia), Benin. If these are Gladstone lab collections or in-house unpublished datasets, they should be cited as "data not yet published" or via ENA/NCBI accession numbers.
+
+**[AUTHORS], [AFFILIATIONS], [ACKNOWLEDGEMENTS], pyrodigal v[VERSION]:** Please fill in directly.
 
 ---
 

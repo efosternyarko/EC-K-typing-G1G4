@@ -32,7 +32,7 @@ import tempfile
 from pathlib import Path
 
 from Bio import SeqIO
-from Bio.SeqFeature import SeqFeature, FeatureLocation
+from Bio.SeqFeature import SeqFeature, FeatureLocation, CompoundLocation
 
 # ---------------------------------------------------------------------------
 REPO_DIR  = Path(__file__).resolve().parent.parent
@@ -119,98 +119,101 @@ def blastn_lift(query_seq: str, subject_seq: str, gene_name: str,
     return new_feat
 
 
-def main():
-    # 1. Load v0.3.1 conserved features indexed by locus name
-    print("[1] Loading v0.3.1 conserved CDS features...")
-    v031_conserved: dict[str, list] = {}
-    v031_recs: dict[str, object] = {}
-    for rec in SeqIO.parse(str(V031_G1G4), "genbank"):
-        ln = get_locus_name(rec)
-        feats = conserved_features(rec)
-        v031_conserved[ln] = feats
-        v031_recs[ln] = rec
-        if feats:
-            print(f"    {ln:8s}: {len(feats)} conserved CDS  ({[f.qualifiers.get('gene',[''])[0] for f in feats]})")
+# ---------------------------------------------------------------------------
+# 1. Load v0.3.1 conserved features indexed by locus name
+# ---------------------------------------------------------------------------
+print("[1] Loading v0.3.1 conserved CDS features...")
+v031_conserved: dict[str, list] = {}
+v031_recs: dict[str, object] = {}
+for rec in SeqIO.parse(str(V031_G1G4), "genbank"):
+    ln = get_locus_name(rec)
+    feats = conserved_features(rec)
+    v031_conserved[ln] = feats
+    v031_recs[ln] = rec
+    if feats:
+        print(f"    {ln:8s}: {len(feats)} conserved CDS  ({[f.qualifiers.get('gene',[''])[0] for f in feats]})")
 
-    # 2. Process v0.5 G1/G4 records
-    print("\n[2] Restoring conserved CDS features...")
-    v05_recs = list(SeqIO.parse(str(V05_G1G4), "genbank"))
-    stats = {"skipped": 0, "direct_copy": 0, "blastn_lift": 0, "no_v031": 0}
+# ---------------------------------------------------------------------------
+# 2. Process v0.5 G1/G4 records
+# ---------------------------------------------------------------------------
+print("\n[2] Restoring conserved CDS features...")
+v05_recs = list(SeqIO.parse(str(V05_G1G4), "genbank"))
+stats = {"skipped": 0, "direct_copy": 0, "blastn_lift": 0, "no_v031": 0}
 
-    for rec in v05_recs:
-        ln = get_locus_name(rec)
+for rec in v05_recs:
+    ln = get_locus_name(rec)
 
-        if ln in SKIP_LOCI:
-            print(f"    {ln:8s}: SKIPPED (conserved genes stripped intentionally)")
-            stats["skipped"] += 1
+    if ln in SKIP_LOCI:
+        print(f"    {ln:8s}: SKIPPED (conserved genes stripped intentionally)")
+        stats["skipped"] += 1
+        continue
+
+    if ln in LIFTOVER_LOCI:
+        # New sequence: blast each conserved CDS from v0.3.1 onto new seq
+        src = v031_recs.get(ln)
+        if src is None:
+            print(f"    {ln:8s}: WARNING — no v0.3.1 record found, skipping")
+            stats["no_v031"] += 1
             continue
+        added = []
+        for feat in v031_conserved[ln]:
+            gene = feat.qualifiers.get("gene", ["?"])[0]
+            cds_seq = str(feat.extract(src.seq))
+            new_feat = blastn_lift(cds_seq, str(rec.seq), gene, feat)
+            if new_feat:
+                added.append(new_feat)
+                print(f"    {ln:8s}: {gene} → blastn hit at {new_feat.location}")
+            else:
+                print(f"    {ln:8s}: {gene} → NO BLASTN HIT (check manually)")
+        rec.features.extend(added)
+        stats["blastn_lift"] += 1
 
-        if ln in LIFTOVER_LOCI:
-            # New sequence: blast each conserved CDS from v0.3.1 onto new seq
-            src = v031_recs.get(ln)
-            if src is None:
-                print(f"    {ln:8s}: WARNING — no v0.3.1 record found, skipping")
-                stats["no_v031"] += 1
-                continue
-            added = []
-            for feat in v031_conserved[ln]:
-                gene = feat.qualifiers.get("gene", ["?"])[0]
-                cds_seq = str(feat.extract(src.seq))
-                new_feat = blastn_lift(cds_seq, str(rec.seq), gene, feat)
-                if new_feat:
-                    added.append(new_feat)
-                    print(f"    {ln:8s}: {gene} -> blastn hit at {new_feat.location}")
-                else:
-                    print(f"    {ln:8s}: {gene} -> NO BLASTN HIT (check manually)")
-            rec.features.extend(added)
-            stats["blastn_lift"] += 1
+    else:
+        # Same sequence: copy features directly (coordinates are identical)
+        feats = v031_conserved.get(ln, [])
+        if not feats:
+            stats["no_v031"] += 1
+            continue
+        rec.features.extend([copy.deepcopy(f) for f in feats])
+        stats["direct_copy"] += 1
 
-        else:
-            # Same sequence: copy features directly (coordinates are identical)
-            feats = v031_conserved.get(ln, [])
-            if not feats:
-                stats["no_v031"] += 1
-                continue
-            rec.features.extend([copy.deepcopy(f) for f in feats])
-            stats["direct_copy"] += 1
+    # Sort all features by position
+    rec.features.sort(key=lambda f: (int(f.location.start), int(f.location.end)))
 
-        # Sort all features by position
-        rec.features.sort(key=lambda f: (int(f.location.start), int(f.location.end)))
+print(f"\n    Skipped (KL301): {stats['skipped']}")
+print(f"    Direct copy (same seq): {stats['direct_copy']}")
+print(f"    Blastn liftover (new seq): {stats['blastn_lift']}")
+print(f"    No v0.3.1 record: {stats['no_v031']}")
 
-    print(f"\n    Skipped (KL301): {stats['skipped']}")
-    print(f"    Direct copy (same seq): {stats['direct_copy']}")
-    print(f"    Blastn liftover (new seq): {stats['blastn_lift']}")
-    print(f"    No v0.3.1 record: {stats['no_v031']}")
+# ---------------------------------------------------------------------------
+# 3. Verify — print CDS counts before/after
+# ---------------------------------------------------------------------------
+print("\n[3] Verification (conserved CDS count in v0.6):")
+for rec in v05_recs:
+    ln = get_locus_name(rec)
+    n_cons = len(conserved_features(rec))
+    n_var  = len([f for f in rec.features
+                  if f.type == "CDS" and
+                  f.qualifiers.get("gene", [""])[0] not in CONSERVED_NAMES])
+    n_expected = v031_conserved.get(ln, [])
+    if ln in SKIP_LOCI:
+        ok = "OK" if n_cons == 0 else "MISMATCH"
+    elif ln in LIFTOVER_LOCI:
+        ok = "OK (liftover)" if n_cons <= len(n_expected) else "MISMATCH"
+    else:
+        ok = "OK" if n_cons == len(n_expected) else "MISMATCH"
+    print(f"    {ln:8s}: cons={n_cons}  var={n_var}  expected={len(n_expected)}  {ok}")
 
-    # 3. Verify — print CDS counts before/after
-    print("\n[3] Verification (conserved CDS count in v0.6):")
-    for rec in v05_recs:
-        ln = get_locus_name(rec)
-        n_cons = len(conserved_features(rec))
-        n_var  = len([f for f in rec.features
-                      if f.type == "CDS" and
-                      f.qualifiers.get("gene", [""])[0] not in CONSERVED_NAMES])
-        expected_feats = v031_conserved.get(ln, [])
-        if ln in SKIP_LOCI:
-            ok = "OK" if n_cons == 0 else "MISMATCH"
-        elif ln in LIFTOVER_LOCI:
-            ok = "OK (liftover)" if n_cons <= len(expected_feats) else "MISMATCH"
-        else:
-            ok = "OK" if n_cons == len(expected_feats) else "MISMATCH"
-        print(f"    {ln:8s}: cons={n_cons}  var={n_var}  expected={len(expected_feats)}  {ok}")
+# ---------------------------------------------------------------------------
+# 4. Write outputs
+# ---------------------------------------------------------------------------
+print("\n[4] Writing databases...")
+SeqIO.write(v05_recs, str(V06_G1G4), "genbank")
+print(f"    Written: {V06_G1G4.name}")
 
-    # 4. Write outputs
-    print("\n[4] Writing databases...")
-    SeqIO.write(v05_recs, str(V06_G1G4), "genbank")
-    print(f"    Written: {V06_G1G4.name}")
-
-    g1g4_names = {get_locus_name(r) for r in v05_recs}
-    g2g3_recs  = [r for r in SeqIO.parse(str(V05_ALL), "genbank")
-                  if get_locus_name(r) not in g1g4_names]
-    SeqIO.write(v05_recs + g2g3_recs, str(V06_ALL), "genbank")
-    print(f"    Written: {V06_ALL.name}  ({len(v05_recs)} G1/G4 + {len(g2g3_recs)} G2/G3 = {len(v05_recs)+len(g2g3_recs)} total)")
-    print("\nDone. Next: run type_normalized.py --db DB/EC-K-typing_all_groups_v0.6.gbk --suffix v0.6norm")
-
-
-if __name__ == "__main__":
-    main()
+g1g4_names = {get_locus_name(r) for r in v05_recs}
+g2g3_recs  = [r for r in SeqIO.parse(str(V05_ALL), "genbank")
+              if get_locus_name(r) not in g1g4_names]
+SeqIO.write(v05_recs + g2g3_recs, str(V06_ALL), "genbank")
+print(f"    Written: {V06_ALL.name}  ({len(v05_recs)} G1/G4 + {len(g2g3_recs)} G2/G3 = {len(v05_recs)+len(g2g3_recs)} total)")
+print("\nDone. Next: run type_normalized.py --db DB/EC-K-typing_all_groups_v0.6.gbk --suffix v0.6norm")

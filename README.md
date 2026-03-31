@@ -800,7 +800,7 @@ BSI loci (K24, KL300–KL391) rebuilt with Kaptive-style full gene content from 
 
 | Tool/Database | Scope | Reference |
 |---------------|-------|-----------|
-| [EC-K-typing](https://github.com/rgladstone/EC-K-typing) | *E. coli* Group 2 & 3 (90 loci) | [Gladstone et al. 2026](https://doi.org/10.1038/s41564-026-02283-w) |
+| [EC-K-typing](https://github.com/rgladstone/EC-K-typing) | *E. coli* Group 2 & 3 (90 loci) | [Gladstone et al. 2024](https://www.medrxiv.org/content/10.1101/2024.11.22.24317484v1) |
 | [kTYPr](https://github.com/SushiLab/kTYPr) | *E. coli* Group 2 & 3 (85 loci, HMM-based) | [Schwengers et al. 2025](https://www.biorxiv.org/content/10.1101/2025.08.07.669119v1) |
 | [Kaptive](https://github.com/klebgenomics/Kaptive) | *Klebsiella* and *E. coli* K/O typing | [Lam et al. 2022](https://doi.org/10.1099/mgen.0.000800) |
 | [FastKaptive](https://github.com/rmostowy/fastKaptive) | Fast K-locus pre-screening | Mostowy et al. |
@@ -811,7 +811,7 @@ BSI loci (K24, KL300–KL391) rebuilt with Kaptive-style full gene content from 
 If you use this database, please cite:
 
 - This repository
-- Gladstone RA et al. (2026). Identification of transporter-dependent capsular loci associated with the invasive potential of *Escherichia coli*. *Nature Microbiology*. [https://doi.org/10.1038/s41564-026-02283-w](https://doi.org/10.1038/s41564-026-02283-w)
+- Gladstone RA et al. (2024). *E. coli* capsule typing. [medRxiv preprint](https://www.medrxiv.org/content/10.1101/2024.11.22.24317484v1)
 - The [EC-K-typing](https://github.com/rgladstone/EC-K-typing) Group 2 & 3 database
 
 ## License

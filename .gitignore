@@ -6,3 +6,10 @@ __pycache__/
 DB/blast_ncbi_results/
 *.pptx
 *.xml
+
+# Large local-only directories (not tracked on remote)
+DB/novel_rep_fastas/
+DB/novel_rep_fastas_v1.1/
+DB/atb_lexicmap_results/
+DB/kl300_303_fastas/
+DB/subset_candidates/

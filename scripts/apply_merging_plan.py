@@ -124,7 +124,6 @@ def write_changelog(
     merge_map: dict[str, str],
     loci_to_remove: set[str],
     out_path: Path,
-    n_input_loci: int = 0,
 ) -> None:
     # Reconstruct groups for the changelog
     groups: dict[str, list[str]] = {}
@@ -145,7 +144,7 @@ def write_changelog(
         f"        (corresponding to the largest ATB cluster) was retained.",
         f"",
         f"RESULT: {len(loci_to_remove)} redundant loci removed across {len(groups)} merge groups.",
-        f"        Database reduced from {n_input_loci} → {n_input_loci - len(loci_to_remove)} loci.",
+        f"        Database reduced from 651 → {651 - len(loci_to_remove)} loci.",
         f"",
         f"MERGE GROUPS:",
     ]
@@ -197,12 +196,11 @@ def main():
     print(f"  Kept: {kept_rows2}  |  Removed: {removed_rows2}")
 
     print(f"\nStep 4: Writing changelog → {changelog}")
-    n_input_loci = n_kept + n_removed
-    write_changelog(args.plan, merge_map, loci_to_remove, changelog, n_input_loci)
+    write_changelog(args.plan, merge_map, loci_to_remove, changelog)
 
     print(f"\n{'='*60}")
     print(f"v1.0 database: {out_gbk}")
-    print(f"  Loci: {n_input_loci} → {n_kept}")
+    print(f"  Loci: 651 → {n_kept}")
     print(f"  Duplicates removed: {n_removed}")
     print(f"{'='*60}")
 
