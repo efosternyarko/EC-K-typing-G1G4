@@ -26,7 +26,7 @@ USAGE
     python kpsm_screen.py \
         --assembly-dir assemblies/ \
         --kpsm-ref DB/kpsM_reference.fasta \
-        --kaptive-db DB/EC-K-typing_group1and4_v1.0.gbk \
+        --kaptive-db DB/EC-K-typing_group1and4_v1.2.gbk \
         --output-dir results/ \
         --run-kaptive
 
@@ -39,62 +39,51 @@ TSV COLUMNS
 -----------
     assembly        Path to assembly FASTA
     kpsM_hit        True / False
-    kpsM_pident     % identity of best kpsM BLAST hit (NaN if no hit)
-    kpsM_qcov       % query coverage of best hit (NaN if no hit)
-    group           Group2_3 / G1_G4_candidate / no_hit
+    kpsM_pident     % identity of best kpsM hit (NA if no hit)
+    kpsM_qcov       % query coverage of best hit (NA if no hit)
+    group           Group2_3 / G1_G4_candidate
     kaptive_run     True / False (was Kaptive run?)
 """
 
 import argparse
-import os
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 # ── Thresholds ────────────────────────────────────────────────────────────────
 KPSM_PIDENT_THRESH = 90.0   # % nucleotide identity for a kpsM hit
 KPSM_QCOV_THRESH   = 80.0   # % query coverage for a kpsM hit
-BLAST_EVALUE       = 1e-10
 
 
-def make_blast_db(fasta: Path, tmpdir: str) -> str:
-    """Build a temporary BLAST nucleotide database from a FASTA file."""
-    db = os.path.join(tmpdir, "query_db")
-    subprocess.run(
-        ["makeblastdb", "-in", str(fasta), "-dbtype", "nucl", "-out", db],
-        check=True, capture_output=True
-    )
-    return db
-
-
-def blast_kpsm(assembly: Path, kpsm_ref: Path, tmpdir: str):
+def minimap2_kpsm(assembly: Path, kpsm_ref: Path):
     """
-    BLAST kpsM reference against the assembly.
+    Map kpsM reference sequences against the assembly using minimap2.
     Returns (hit: bool, pident: float|None, qcov: float|None).
+
+    Parses PAF output. Identity = matching_bases / alignment_block_len.
+    Query coverage = aligned_query_bases / query_len.
     """
-    db = make_blast_db(assembly, tmpdir)
     result = subprocess.run(
-        [
-            "blastn",
-            "-query", str(kpsm_ref),
-            "-db", db,
-            "-evalue", str(BLAST_EVALUE),
-            "-outfmt", "6 qseqid sseqid pident length qstart qend sstart send qlen",
-            "-max_target_seqs", "5",
-        ],
+        ["minimap2", "-c", "--secondary=no", str(assembly), str(kpsm_ref)],
         capture_output=True, text=True
     )
 
     best_pident, best_qcov = None, None
     for line in result.stdout.strip().splitlines():
         parts = line.split("\t")
-        if len(parts) < 9:
+        if len(parts) < 11:
             continue
-        pident = float(parts[2])
-        aln_len = int(parts[3])
-        qlen    = int(parts[8])
-        qcov    = 100.0 * aln_len / qlen
+        query_len    = int(parts[1])
+        query_start  = int(parts[2])
+        query_end    = int(parts[3])
+        n_matches    = int(parts[9])
+        aln_block    = int(parts[10])
+
+        if aln_block == 0:
+            continue
+
+        pident = 100.0 * n_matches / aln_block
+        qcov   = 100.0 * (query_end - query_start) / query_len
 
         if best_pident is None or pident > best_pident:
             best_pident = pident
@@ -109,14 +98,11 @@ def blast_kpsm(assembly: Path, kpsm_ref: Path, tmpdir: str):
 
 def run_kaptive(assemblies: list, kaptive_db: Path, output_dir: Path):
     """Run Kaptive on a list of assembly paths."""
-    assembly_list = output_dir / "kaptive_input.txt"
-    assembly_list.write_text("\n".join(str(a) for a in assemblies) + "\n")
-
     kaptive_out = output_dir / "kaptive_output.tsv"
     cmd = [
         "kaptive", "assembly",
-        "-a", *[str(a) for a in assemblies],
-        "-k", str(kaptive_db),
+        str(kaptive_db),
+        *[str(a) for a in assemblies],
         "-o", str(kaptive_out),
     ]
     print(f"  Running Kaptive on {len(assemblies)} assembly/assemblies...")
@@ -127,29 +113,28 @@ def run_kaptive(assemblies: list, kaptive_db: Path, output_dir: Path):
 def screen_assemblies(assemblies: list, kpsm_ref: Path):
     """Screen a list of assemblies for kpsM. Returns list of result dicts."""
     results = []
-    with tempfile.TemporaryDirectory() as tmpdir:
-        for i, asm in enumerate(assemblies, 1):
-            asm = Path(asm)
-            print(f"  [{i}/{len(assemblies)}] {asm.name} ...", end=" ", flush=True)
-            hit, pident, qcov = blast_kpsm(asm, kpsm_ref, tmpdir)
+    for i, asm in enumerate(assemblies, 1):
+        asm = Path(asm)
+        print(f"  [{i}/{len(assemblies)}] {asm.name} ...", end=" ", flush=True)
+        hit, pident, qcov = minimap2_kpsm(asm, kpsm_ref)
 
-            if hit:
-                group = "Group2_3"
-                print(f"kpsM+ (pident={pident:.1f}%, qcov={qcov:.1f}%) -> Group 2/3, G1/G4 suppressed")
-            elif pident is not None:
-                group = "G1_G4_candidate"
-                print(f"kpsM- (best pident={pident:.1f}%) -> G1/G4 candidate")
-            else:
-                group = "G1_G4_candidate"
-                print("no kpsM hit -> G1/G4 candidate")
+        if hit:
+            group = "Group2_3"
+            print(f"kpsM+ (pident={pident:.1f}%, qcov={qcov:.1f}%) -> Group 2/3, G1/G4 suppressed")
+        elif pident is not None:
+            group = "G1_G4_candidate"
+            print(f"kpsM- (best pident={pident:.1f}%) -> G1/G4 candidate")
+        else:
+            group = "G1_G4_candidate"
+            print("no kpsM hit -> G1/G4 candidate")
 
-            results.append({
-                "assembly":   str(asm),
-                "kpsM_hit":   hit,
-                "kpsM_pident": f"{pident:.1f}" if pident is not None else "NA",
-                "kpsM_qcov":   f"{qcov:.1f}"   if qcov   is not None else "NA",
-                "group":       group,
-            })
+        results.append({
+            "assembly":    str(asm),
+            "kpsM_hit":    hit,
+            "kpsM_pident": f"{pident:.1f}" if pident is not None else "NA",
+            "kpsM_qcov":   f"{qcov:.1f}"   if qcov   is not None else "NA",
+            "group":        group,
+        })
     return results
 
 
@@ -207,7 +192,7 @@ def main():
         assemblies = [args.assembly]
     elif args.assembly_dir:
         assemblies = sorted(
-            args.assembly_dir.glob("*.fa") +
+            list(args.assembly_dir.glob("*.fa")) +
             list(args.assembly_dir.glob("*.fasta")) +
             list(args.assembly_dir.glob("*.fna"))
         )

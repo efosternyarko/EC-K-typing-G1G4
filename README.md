@@ -42,8 +42,7 @@ Assemblies that are kpsM-negative can be passed directly to Step 2.
 > assign a K-locus type. Use it only when you do not need G2/G3 K-locus
 > assignments. For full G2/G3 typing, use Step 1 as described below.
 
-**Requirements:** `blastn` (NCBI BLAST+) on your `PATH`; `makeblastdb` for
-per-assembly database creation.
+**Requirements:** `minimap2` on your `PATH` (`conda install -c bioconda minimap2` or `pip install minimap2`).
 
 ```bash
 # Screen a directory of assemblies; run Kaptive on kpsM-negative ones:
