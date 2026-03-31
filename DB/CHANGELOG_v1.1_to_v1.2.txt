@@ -1,0 +1,31 @@
+EC-K-typing G1/G4 Database — v1.1 → v1.2 Changelog
+Date: 2026-03-30
+
+CHANGE: BSI loci (K24, KL300–KL391) updated to Kaptive-style gene content
+
+METHOD: All BSI loci were rebuilt from the original EnteroBase assemblies
+        using Kaptive's locus definition principle: gene content is defined by
+        the set of CDS within the extracted locus region, named with
+        zero-padded positional locus tags (e.g. KL300_00001, KL300_00002...).
+        This is consistent with the gene-content representation used in the
+        Klebsiella pneumoniae Kaptive databases.
+
+        Previously, some flanking/conserved genes were stripped from BSI loci
+        in earlier versions (v0.4–v0.6). The v1.2 BSI loci reflect the full
+        gene content of the extracted locus region.
+
+        KL337 is excluded: validation confirmed that its representative assembly
+        (ESC_IA2252AA_AS) is not discriminating — it scores to KL389 rather than
+        KL337. This is consistent with its removal in v0.9.
+
+CONTENT:
+  - K24, KL300–KL336, KL338–KL391 (92 BSI loci): replaced with Kaptive-style
+    rebuilt loci; representative assemblies reflect the full 1,112-genome
+    EnteroBase no-hit collection
+  - KL337: excluded (non-discriminating representative)
+  - KL392–KL967 (531 ATB novel loci): carried forward unchanged from v1.1
+  - Total loci: 623 (unchanged from v1.1 in count; BSI loci have new gene content)
+
+VALIDATION (v1.2):
+  - Self-typing:   623/623 (100.0%)
+  - Typeability:   1,096/1,096 (100.0%)

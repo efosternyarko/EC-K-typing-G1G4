@@ -68,8 +68,8 @@ GENOMES_DIR        = Path(
 # NCBI candidate genomes: checked when a mapping entry stem isn't in GENOMES_DIR
 NCBI_GENOMES_DIR   = REPO_DIR / "DB" / "blast_ncbi_results" / "candidate_genomes"
 # ATB novel loci representative FASTAs and their KL mapping
-NOVEL_FASTAS_DIR   = DB_DIR / "novel_rep_fastas"
-NOVEL_MAPPING_FILE = DB_DIR / "novel_rep_kl_map.tsv"
+NOVEL_FASTAS_DIR   = DB_DIR / "novel_rep_fastas_v1.1"
+NOVEL_MAPPING_FILE = DB_DIR / "novel_rep_kl_map_v1.1.tsv"
 
 # Typeable threshold: fraction of expected genes that must be found
 MIN_GENE_COVERAGE = 0.50
