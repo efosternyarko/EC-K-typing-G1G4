@@ -250,6 +250,12 @@ If you use this database, please cite:
 - Gladstone RA et al. (2026). *E. coli* capsule typing. [*Nature Microbiology*](https://doi.org/10.1038/s41564-026-02283-w)
 - [Kaptive](https://github.com/klebgenomics/Kaptive): Lam MMC et al. (2022). [doi:10.1099/mgen.0.000800](https://doi.org/10.1099/mgen.0.000800)
 
+## Contributors
+
+- [Emmanuel Foster-Nyarko](https://github.com/efosternyarko)
+- [Louise Cerdeira](https://github.com/lcerdeira)
+- Mary Maranga
+
 ## License
 
 MIT License — see [LICENSE](LICENSE).
