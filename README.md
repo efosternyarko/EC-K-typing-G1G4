@@ -252,9 +252,9 @@ If you use this database, please cite:
 
 ## Contributors
 
-- [Emmanuel Foster-Nyarko](https://github.com/efosternyarko)
+- [Ebenezer Foster-Nyarko](https://github.com/efosternyarko)
 - [Louise Cerdeira](https://github.com/lcerdeira)
-- Mary Maranga
+- [Mary Maranga](https://github.com/Marysteph)
 
 ## License
 
