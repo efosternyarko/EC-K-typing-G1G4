@@ -2,9 +2,11 @@
 
 A [Kaptive](https://github.com/klebgenomics/Kaptive)-compatible reference database for typing *Escherichia coli* **Group 1 and Group 4** capsular K-loci.
 
-**Current version: v1.2** — 623 reference loci · 100% self-typing · 100% typeability
+**Current version: v1.3** — 490 reference loci · 100% self-typing · 100% typeability
 
 This database complements [EC-K-typing](https://github.com/rgladstone/EC-K-typing) (Group 2 & 3, Gladstone et al.) to enable K-locus typing across all four *E. coli* capsule groups.
+
+See [PROTOCOL.md](PROTOCOL.md) for how the database was built.
 
 ---
 ## Prerequisites
@@ -49,7 +51,7 @@ Assemblies that are kpsM-negative can be passed directly to Step 2.
 python3 scripts/kpsm_screen.py \
     --assembly-dir assemblies/ \
     --kpsm-ref DB/kpsM_reference.fasta \
-    --kaptive-db DB/EC-K-typing_group1and4_v1.2.gbk \
+    --kaptive-db DB/EC-K-typing_group1and4_v1.3.gbk \
     --output-dir results/kpsm_screen/ \
     --run-kaptive
 
@@ -124,7 +126,7 @@ done < untypeable_ids.txt
 ```bash
 mkdir -p results_G14
 kaptive assembly \
-    DB/EC-K-typing_group1and4_v1.2.gbk \
+    DB/EC-K-typing_group1and4_v1.3.gbk \
     untypeable/*.fasta \
     --scores results_G14/kaptive_scores.tsv \
     -t 8
@@ -160,7 +162,7 @@ Download [`scripts/normalise_kaptive_scores.py`](scripts/normalise_kaptive_score
 
 ```bash
 python3 scripts/normalise_kaptive_scores.py \
-    --db DB/EC-K-typing_group1and4_v1.2.gbk \
+    --db DB/EC-K-typing_group1and4_v1.3.gbk \
     --in results_G14/kaptive_scores.tsv \
     --out results_G14/kaptive_results_norm.tsv
 ```
@@ -223,7 +225,8 @@ Only these files are needed for typing:
 
 | File | Description |
 |------|-------------|
-| `DB/EC-K-typing_group1and4_v1.2.gbk` | **G1/G4 database — 623 loci** |
+| `DB/EC-K-typing_group1and4_v1.3.gbk` | **G1/G4 database — 490 loci (current)** |
+| `DB/EC-K-typing_group1and4_v1.2.gbk` | G1/G4 database — 623 loci (previous, pre-variant consolidation) |
 | `DB/EC-K-typing_group2and3_v3.0.0.gbk` | Gladstone G2/G3 database (included for convenience) |
 | `DB/kpsM_reference.fasta` | kpsM/kpsM_3 reference sequences for optional Group 2/3 pre-screen |
 | `scripts/normalise_kaptive_scores.py` | Normalisation script for Step 3 |
