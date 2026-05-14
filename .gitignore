@@ -3,6 +3,19 @@ __pycache__/
 .DS_Store
 *.db
 *_db.n*
-DB/blast_ncbi_results/
 *.pptx
 *.xml
+
+# Large intermediate / reproducible files
+DB/blast_ncbi_results/
+DB/novel_rep_fastas/
+DB/novel_rep_fastas_v1.1/
+DB/atb_lexicmap_results/
+DB/panaroo_inputs/
+DB/panaroo_out/
+DB/kl300_303_fastas/
+DB/subset_candidates/
+DB/kaptive_validation/loci_fasta/
+DB/is_analysis/blastp_allvsall.tsv
+DB/is_analysis/all_proteins.faa
+DB/EC-K-typing_group1and4_v1.2.gbk.bak_pre_kl337
